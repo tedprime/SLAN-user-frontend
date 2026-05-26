@@ -1,34 +1,18 @@
-import { Landmark, GraduationCap, Users, Network } from "lucide-react";
+import Trcn from "../../assets/images/trcn.jpg";
+import Ancopps from "../../assets/images/ancopps.jpg";
+import TedPrime from "../../assets/images/tedprime.png";
+import Napps from "../../assets/images/napps.jpg";
 
 interface Endorser {
   name: string;
-  icon: React.ReactNode;
-  hoverColor: string;
+  logo: string;
 }
 
 const endorsers: Endorser[] = [
-  {
-    name: "TRCN",
-    icon: <Landmark className="w-10 h-10 transition-colors duration-200" />,
-    hoverColor: "group-hover:text-secondary-500",
-  },
-  {
-    name: "ANCOPPS",
-    icon: (
-      <GraduationCap className="w-10 h-10 transition-colors duration-200" />
-    ),
-    hoverColor: "group-hover:text-primary-500",
-  },
-  {
-    name: "NAPPS",
-    icon: <Users className="w-10 h-10 transition-colors duration-200" />,
-    hoverColor: "group-hover:text-secondary-500",
-  },
-  {
-    name: "TedPrime Hub",
-    icon: <Network className="w-10 h-10 transition-colors duration-200" />,
-    hoverColor: "group-hover:text-primary-500",
-  },
+  { name: "TRCN", logo: Trcn },
+  { name: "ANCOPPS", logo: Ancopps },
+  { name: "NAPPS", logo: Napps },
+  { name: "TedPrime Hub", logo: TedPrime },
 ];
 
 export default function TrustBar() {
@@ -39,18 +23,19 @@ export default function TrustBar() {
           Endorsed &amp; Trusted By
         </p>
 
-        <div className="group flex flex-wrap items-center justify-between gap-10 md:gap-16 max-w-4xl mx-auto">
+        {/* horizontal scroll on mobile, normal flex on md+ */}
+        <div className="flex overflow-x-auto md:overflow-x-visible md:flex-wrap md:justify-between items-center gap-10 md:gap-16 max-w-4xl mx-auto pb-2 md:pb-0 scrollbar-hide">
           {endorsers.map((org) => (
             <div
               key={org.name}
-              className="group flex flex-col items-center gap-2 opacity-50 font-semibold transition-opacity duration-200 cursor-pointer"
+              className="flex flex-col items-center gap-3 shrink-0 md:shrink"
             >
-              <span
-                className={`text-neutral-600 font-semibold ${org.hoverColor}`}
-              >
-                {org.icon}
-              </span>
-              <span className="font-label font-600 text-sm text-tertiary-500">
+              <img
+                src={org.logo}
+                alt={org.name}
+                className="h-16 md:h-20 w-auto object-contain"
+              />
+              <span className="font-label font-semibold text-sm text-tertiary-500 whitespace-nowrap">
                 {org.name}
               </span>
             </div>
