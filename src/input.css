@@ -1,0 +1,176 @@
+@import "tailwindcss";
+
+@theme {
+  /* --- Colors --- */
+  --color-primary: #006400;
+  --color-primary-dark: #004d00;
+  --color-primary-light: #1a7a1a;
+  --color-primary-50: #e6f2e6;
+  --color-primary-100: #b3d9b3;
+  --color-primary-200: #80c080;
+  --color-primary-300: #4da64d;
+  --color-primary-400: #268d26;
+  --color-primary-500: #006400; /* base */
+  --color-primary-600: #005200;
+  --color-primary-700: #004000;
+  --color-primary-800: #002e00;
+  --color-primary-900: #001c00;
+
+  --color-secondary: #d4af37;
+  --color-secondary-dark: #b8941f;
+  --color-secondary-light: #e0c256;
+  --color-secondary-50: #fdf8e7;
+  --color-secondary-100: #f9ecbb;
+  --color-secondary-200: #f4e08f;
+  --color-secondary-300: #efd363;
+  --color-secondary-400: #e9c74c; /* mid */
+  --color-secondary-500: #d4af37; /* base */
+  --color-secondary-600: #b8941f;
+  --color-secondary-700: #9c7a0a;
+  --color-secondary-800: #7a5f00;
+
+  --color-tertiary: #101b37;
+  --color-tertiary-dark: #090f1f;
+  --color-tertiary-light: #1e2e55;
+  --color-tertiary-50: #e8eaf0;
+  --color-tertiary-100: #c0c6d8;
+  --color-tertiary-200: #98a2c0;
+  --color-tertiary-300: #6f7ea8;
+  --color-tertiary-400: #546492;
+  --color-tertiary-500: #101b37; /* base */
+
+  --color-neutral: #fafafa;
+  --color-neutral-50: #ffffff;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e8e8e8;
+  --color-neutral-300: #d1d1d1;
+  --color-neutral-400: #b0b0b0;
+  --color-neutral-500: #888888;
+  --color-neutral-600: #666666;
+  --color-neutral-700: #444444;
+  --color-neutral-800: #222222;
+  --color-neutral-900: #111111;
+
+  --color-surface: #f4f4f2;
+  --color-surface-card: #ffffff;
+
+  /* --- Typography --- */
+  --font-headline: "Manrope", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-label: "Inter", sans-serif;
+
+  /* --- Font Sizes --- */
+  --text-display-xl: clamp(2.5rem, 5vw, 4rem);
+  --text-display-lg: clamp(2rem, 4vw, 3rem);
+  --text-display-md: clamp(1.5rem, 3vw, 2.25rem);
+
+  /* --- Spacing / Radius --- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* --- Shadows --- */
+  --shadow-card: 0 2px 12px 0 rgba(0, 0, 0, 0.08);
+  --shadow-hover: 0 8px 32px 0 rgba(0, 100, 0, 0.15);
+  --shadow-cta: 0 4px 24px 0 rgba(0, 100, 0, 0.25);
+
+  /* --- Transitions --- */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 400ms;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-neutral);
+  color: var(--color-tertiary);
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-headline);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s var(--ease-smooth) both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-delay-100 {
+  animation-delay: 100ms;
+}
+.animate-delay-200 {
+  animation-delay: 200ms;
+}
+.animate-delay-300 {
+  animation-delay: 300ms;
+}
+.animate-delay-400 {
+  animation-delay: 400ms;
+}
+
+/* badge pill */
+.badge-initiative {
+  display: inline-block;
+  font-family: var(--font-label);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-secondary-50);
+  color: var(--color-secondary-700);
+  border: 1px solid var(--color-secondary-200);
+}
+
+/* card hover lift */
+.card-hover {
+  transition:
+    transform var(--duration-base) var(--ease-smooth),
+    box-shadow var(--duration-base) var(--ease-smooth);
+}
+.card-hover:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-hover);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-neutral-100);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-primary-300);
+  border-radius: 3px;
+}
