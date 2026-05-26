@@ -6,14 +6,14 @@ import Napps from "../../assets/images/napps.jpg";
 interface Endorser {
   name: string;
   logo: string;
-  scale: string;
+  isWordmark?: boolean;
 }
 
 const endorsers: Endorser[] = [
-  { name: "TRCN", logo: Trcn, scale: "scale-100" },
-  { name: "ANCOPPS", logo: Ancopps, scale: "scale-125" },
-  { name: "NAPPS", logo: Napps, scale: "scale-125" },
-  { name: "TedPrime Hub", logo: TedPrime, scale: "scale-110" },
+  { name: "TRCN", logo: Trcn },
+  { name: "ANCOPPS", logo: Ancopps },
+  { name: "NAPPS", logo: Napps },
+  { name: "TedPrime Hub", logo: TedPrime, isWordmark: true },
 ];
 
 export default function TrustBar() {
@@ -30,13 +30,21 @@ export default function TrustBar() {
               key={org.name}
               className="flex flex-col items-center gap-3 sm:gap-4 shrink-0 sm:shrink"
             >
-              <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 flex items-center justify-center overflow-hidden">
+              {org.isWordmark ? (
+                <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 flex items-center justify-center">
+                  <img
+                    src={org.logo}
+                    alt={org.name}
+                    className="w-full h-auto object-contain"
+                  />
+                </div>
+              ) : (
                 <img
                   src={org.logo}
                   alt={org.name}
-                  className={`w-full h-full object-contain ${org.scale}`}
+                  className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full object-cover"
                 />
-              </div>
+              )}
               <span className="font-label font-semibold text-sm lg:text-base text-tertiary-500 whitespace-nowrap">
                 {org.name}
               </span>
