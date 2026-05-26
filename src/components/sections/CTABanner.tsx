@@ -2,35 +2,36 @@ import Button from "../ui/Button";
 
 export default function CTABanner() {
   return (
-    <section className="py-6 px-6">
+    <section className="py-8 sm:py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div
-          className="bg-primary-500 rounded-2xl px-8 md:px-12 py-10 
-                     flex flex-col md:flex-row items-start md:items-center 
-                     justify-between gap-6"
+          className="bg-primary-500 rounded-xl sm:rounded-2xl 
+                     px-5 sm:px-8 lg:px-12 py-8 sm:py-10 lg:py-12
+                     flex flex-col lg:flex-row items-center lg:items-center 
+                     justify-between gap-6 lg:gap-8"
         >
-          //
-          <div>
-            <h3 className="font-headline font-800 text-white text-2xl md:text-3xl mb-2">
+          {/* Text content */}
+          <div className="text-center lg:text-left w-full lg:w-auto">
+            <h3 className="font-headline font-extrabold text-white text-xl sm:text-2xl lg:text-3xl mb-2 sm:mb-3 leading-tight">
               Ready to lead with earned authority?
             </h3>
-            <p className="font-body text-white/80 text-sm md:text-base max-w-xl">
+            <p className="font-body text-white/80 text-sm sm:text-base max-w-xl mx-auto lg:mx-0 leading-relaxed">
               Enrol in the upcoming April 2026 Cohort and join 500
               future-focused school leaders across Nigeria.
             </p>
           </div>
 
           {/* CTA box */}
-          <div className="flex flex-col items-start md:items-end gap-2 shrink-0">
+          <div className="flex flex-col items-center lg:items-end gap-2 sm:gap-3 w-full lg:w-auto shrink-0">
             <Button
               variant="secondary"
               size="lg"
               href="#enroll"
-              className="min-w-50 justify-center"
+              className="w-full sm:w-auto sm:min-w-50 justify-center"
             >
               Enrol Now
             </Button>
-            <span className="text-xs text-white/60 font-body">
+            <span className="text-xs text-white/60 font-body text-center lg:text-right">
               Flexible 3-month payment plan available
             </span>
           </div>
