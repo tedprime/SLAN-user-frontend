@@ -1,6 +1,7 @@
+import Image1 from "../../assets/images/image-1.jpg";
+import Image2 from "../../assets/images/image-2.jpg";
 import FeatureCard from "../ui/FeatureCard";
 import { Gavel, Download, Globe } from "lucide-react";
-
 const features = [
   {
     id: "nigeria-specific",
@@ -27,7 +28,7 @@ const features = [
     description:
       "Access a peer mentorship network that outlives the programme itself, featuring retired principals and sector experts.",
     cta: { label: "Explore the Community  →", href: "#community" },
-    image: "../../../public/image-2.jpg",
+    image: Image2,
     variant: "split" as const,
   },
 ];
@@ -63,7 +64,7 @@ export default function WhyChoose() {
            rounded-2xl"
           >
             <img
-              src="../../../public/image-1.jpg"
+              src={Image1}
               alt="image"
               className="w-full h-full rounded-sm object-cover"
             />

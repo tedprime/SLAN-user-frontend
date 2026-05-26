@@ -1,3 +1,4 @@
+import HeroImage from "../../assets/images/hero-image.png";
 import Button from "../ui/Button";
 import Badge from "../ui/Badge";
 import { ShieldCheck } from "lucide-react";
@@ -57,10 +58,9 @@ export default function Hero() {
         {/* Right – Image + floating cards */}
         <div className="relative flex justify-center lg:justify-end">
           <div className="relative w-full max-w-lg bg-white p-2 rounded-2xl">
-
             {/* Hero image */}
             <img
-              src="../../../public/hero-image.png"
+              src={HeroImage}
               alt="Nigerian educators collaborating"
               className="w-full object-cover object-top rounded-2xl shadow-2xl"
               style={{ height: "460px" }}
@@ -80,7 +80,6 @@ export default function Hero() {
                 across all cohorts
               </p>
             </div>
-
           </div>
         </div>
       </div>
