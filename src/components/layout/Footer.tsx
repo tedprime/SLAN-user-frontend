@@ -64,7 +64,7 @@ export default function Footer() {
                 <li key={link}>
                   <a
                     href="#"
-                    className="text-sm text-neutral-800 hover:text-secondary-400 transition-colors duration-150"
+                    className="text-sm text-neutral-800 hover:text-secondary-500 transition-colors duration-150"
                   >
                     {link}
                   </a>
@@ -86,7 +86,7 @@ export default function Footer() {
               </span>
               <a
                 href={`mailto:${contact.email}`}
-                className="hover:text-secondary-400 transition-colors"
+                className="hover:text-secondary-500 transition-colors"
               >
                 {contact.email}
               </a>

@@ -54,6 +54,23 @@
   --color-surface: #f4f4f2;
   --color-surface-card: #ffffff;
 
+  /* --- Existing Base Tokens --- */
+  --color-primary: #006400;
+  --color-primary-dark: #004d00;
+  --color-primary-light: #1a7a1a;
+  
+  /* --- Auth / Surface Interface Extensions --- */
+  --color-surface-container-high: #e8e8e8;
+  --color-surface-container-highest: #e2e2e2;
+  --color-surface-container-low: #f3f3f3;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-surface-variant: #404a3b;
+  --color-border-subtle: #e0e0e0;
+  --color-success-green: #2e7d32;
+  --color-error-red: #d32f2f;
+ 
+
+
   /* --- Typography --- */
   --font-headline: "Manrope", sans-serif;
   --font-body: "Inter", sans-serif;
@@ -173,4 +190,14 @@ h6 {
 ::-webkit-scrollbar-thumb {
   background: var(--color-primary-300);
   border-radius: 3px;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.step-transition {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }

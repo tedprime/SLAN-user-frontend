@@ -94,8 +94,6 @@ export default function Hero() {
                 </p>
                 <p className="text-[0.65rem] sm:text-xs text-neutral-700 font-semibold mt-1 sm:mt-2 font-body leading-tight">
                   Target completion rate
-                  <br />
-                  across all cohorts
                 </p>
               </div>
             </div>
