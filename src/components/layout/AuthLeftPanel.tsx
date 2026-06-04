@@ -1,14 +1,16 @@
+import LoginImage from "../../assets/images/login.jpg";
+
 export default function AuthLeftPanel() {
   return (
     <div 
-      className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-center p-16 text-center items-center select-none"
+      className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-center p-16 text-center items-center select-none bg-cover bg-center bg-no-repeat"
       style={{
-        
-        background: "linear-gradient(135deg, var(--color-primary-700) 0%, var(--color-primary-900) 60%, var(--color-tertiary-500) 100%)"
+        // The linear-gradient comes first so it renders completely over the image asset
+        backgroundImage: `linear-gradient(135deg, rgba(0, 82, 0, 0.88) 0%, rgba(0, 35, 0, 0.94) 60%, rgba(15, 23, 42, 0.9) 100%), url(${LoginImage})`
       }}
     >
-      {/* Ambient background glow effects matching screen_3.jpg */}
-      <div className="absolute inset-0 pointer-events-none mix-blend-screen opacity-20">
+      {/* AMBIENT GLOW LIGHTING: Softly brightens your brand color mask */}
+      <div className="absolute inset-0 pointer-events-none mix-blend-screen opacity-30 z-20">
         <div 
           className="absolute top-[-10%] left-[-10%] w-[60%] h-[50%] rounded-full blur-[100px]" 
           style={{ backgroundColor: "var(--color-primary-300)" }}
@@ -19,31 +21,24 @@ export default function AuthLeftPanel() {
         />
       </div>
 
-      {/* Floating Device Image/Mockup Wrapper */}
-      <div 
-        className="w-full max-w-sm aspect-4/3 rounded-xl border p-4 mb-14 shadow-2xl backdrop-blur-xs flex items-center justify-center transition-transform duration-500 hover:scale-[1.01]"
-        style={{ 
-          backgroundColor: "rgba(0, 46, 0, 0.35)", // Primary-800 with transparency
-          borderColor: "rgba(255, 255, 255, 0.12)" 
-        }}
-      >
+      {/* FLOATING MOCKUP FRAME: Restored and lifted to z-30 to clear background rendering */}
+      <div className="w-full max-w-sm aspect-[4/3] rounded-xl border border-white/10 p-4 mb-14 shadow-2xl backdrop-blur-md flex items-center justify-center relative z-30 transition-transform duration-500 hover:scale-[1.01] bg-white/5">
         <div 
           className="w-full h-full rounded-lg border flex flex-col items-center justify-center p-4 relative overflow-hidden"
           style={{ 
-            backgroundColor: "rgba(0, 82, 0, 0.45)", // Primary-600 with transparency
-            borderColor: "rgba(255, 255, 255, 0.06)" 
+            backgroundColor: "rgba(255, 255, 255, 0.03)", 
+            borderColor: "rgba(255, 255, 255, 0.08)" 
           }}
         >
           {/* Internal simulated dashboard frame elements */}
-          <span className="material-symbols-outlined text-white/15 text-5xl mb-2">dashboard</span>
-          <div className="w-24 h-2 bg-white/10 rounded mb-1.5" />
+          <span className="material-symbols-outlined text-white/20 text-5xl mb-2">dashboard</span>
+          <div className="w-24 h-2 bg-white/15 rounded mb-1.5" />
           <div className="w-16 h-2 bg-white/10 rounded" />
         </div>
       </div>
 
-      {/* Text Copy Group */}
-      <div className="relative z-10 max-w-md">
-        {/* Crisp white title string */}
+      {/* TYPOGRAPHY GROUP: High contrast text placed comfortably over the image backdrop */}
+      <div className="relative z-30 max-w-md">
         <h1 
           className="text-4xl font-bold font-headline leading-tight tracking-tight mb-4"
           style={{ color: "var(--color-neutral-50)" }}
@@ -51,7 +46,7 @@ export default function AuthLeftPanel() {
           Empowering Nigeria's Future Leaders.
         </h1>
         
-        {/* Soft emerald description layer */}
+        {/* cSpell:disable-next-line */}
         <p 
           className="text-sm font-500 font-body leading-relaxed max-w-md mx-auto text-balance"
           style={{ color: "var(--color-primary-200)" }}
@@ -60,10 +55,10 @@ export default function AuthLeftPanel() {
         </p>
       </div>
 
-      {/* Muted structural shield graphic sitting in the lower right background */}
+      {/* BACKGROUND SHIELD SYMBOL: Placed elegantly in the lower atmospheric background */}
       <div 
-        className="absolute bottom-6 right-12 pointer-events-none select-none mix-blend-lightbox"
-        style={{ color: "var(--color-secondary-600)", opacity: 0.18 }}
+        className="absolute bottom-6 right-12 pointer-events-none select-none mix-blend-screen z-20"
+        style={{ color: "var(--color-secondary-500)", opacity: 0.12 }}
       >
         <span className="material-symbols-outlined text-[130px] font-100">
           shield_with_heart

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import AuthInput from "../ui/AuthInput";
 
 const NIGERIAN_STATES = [
@@ -39,8 +39,22 @@ export default function SignUpStepTwo({
   isGoogleRoute,
   onSubmit
 }: StepTwoProps) {
+  const [showPass, setShowPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [validationError, setValidationError] = useState("");
+
+  const handleFormSubmissionCheck = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isGoogleRoute && password !== confirmPassword) {
+      setValidationError("The credentials you provided do not match.");
+      return;
+    }
+    setValidationError("");
+    onSubmit(e);
+  };
+
   return (
-    <form onSubmit={onSubmit} className="space-y-5">
+    <form onSubmit={handleFormSubmissionCheck} className="space-y-5">
       <div className="space-y-4">
         <AuthInput
           label="Full Name"
@@ -64,49 +78,76 @@ export default function SignUpStepTwo({
           required
         />
 
-        {/* Password Management Node Group — Bypassed on Google OAuth paths */}
         {!isGoogleRoute && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label htmlFor="reg-pass" className="text-sm font-700 text-neutral-700 block font-body">
-                Password
-              </label>
-              <div className="relative flex items-center">
-                <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">
-                  lock
-                </span>
-                <input
-                  id="reg-pass"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-4 py-3"
-                />
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Main Password Input Field */}
+              <div className="space-y-1.5">
+                <label htmlFor="reg-pass" className="text-sm font-700 text-neutral-700 block font-body">
+                  Password
+                </label>
+                <div className="relative flex items-center">
+                  <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">
+                    lock
+                  </span>
+                  <input
+                    id="reg-pass"
+                    type={showPass ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-10 py-3"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(!showPass)}
+                    className="absolute right-3 flex items-center text-neutral-500 hover:text-neutral-700 select-none focus:outline-none"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">
+                      {showPass ? "visibility_off" : "visibility"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password Input Field */}
+              <div className="space-y-1.5">
+                <label htmlFor="reg-confirm-pass" className="text-sm font-700 text-neutral-700 block font-body">
+                  Confirm Password
+                </label>
+                <div className="relative flex items-center">
+                  <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">
+                    enhanced_encryption
+                  </span>
+                  <input
+                    id="reg-confirm-pass"
+                    type={showConfirmPass ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-10 py-3"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPass(!showConfirmPass)}
+                    className="absolute right-3 flex items-center text-neutral-500 hover:text-neutral-700 select-none focus:outline-none"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">
+                      {showConfirmPass ? "visibility_off" : "visibility"}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label htmlFor="reg-confirm-pass" className="text-sm font-700 text-neutral-700 block font-body">
-                Confirm Password
-              </label>
-              <div className="relative flex items-center">
-                <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">
-                  enhanced_encryption
-                </span>
-                <input
-                  id="reg-confirm-pass"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-4 py-3"
-                />
-              </div>
-            </div>
-          </div>
+            {validationError && (
+              <p className="text-xs font-600 text-red-500 font-body mt-1">
+                {validationError}
+              </p>
+            )}
+          </>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -119,7 +160,6 @@ export default function SignUpStepTwo({
               onChange={(e) => setCurrentRole(e.target.value)}
               className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
             >
-              <option>Teacher</option>
               <option>Principal</option>
               <option>Vice Principal</option>
               <option>Headteacher</option>

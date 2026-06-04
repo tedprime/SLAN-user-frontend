@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import AuthInput from "../ui/AuthInput";
 
 export default function LoginForm() {
-  const [authMode, setAuthMode] = useState<"password" | "otp">("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -14,45 +13,18 @@ export default function LoginForm() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Both manual credential routes direct to verification/OTP stream
+    // Redirects directly to the responsive OTP security check page
     window.history.pushState({}, "", "/verify-otp");
     window.dispatchEvent(new Event("popstate"));
   };
 
   const handleGoogleLogin = () => {
-    // Google OAuth bypasses manual verification streams directly to dashboard
     window.history.pushState({}, "", "/dashboard");
     window.dispatchEvent(new Event("popstate"));
   };
 
   return (
     <form onSubmit={handleFormSubmit} className="space-y-5">
-      {/* Toggle Tabs between Password and OTP Login */}
-      <div className="grid grid-cols-2 border-b border-neutral-200 mb-6">
-        <button
-          type="button"
-          onClick={() => setAuthMode("password")}
-          className={`py-2 text-sm font-700 font-body transition-all border-b-2 text-center focus:outline-none ${
-            authMode === "password"
-              ? "border-primary-500 text-primary-500"
-              : "border-transparent text-neutral-500 hover:text-neutral-700"
-          }`}
-        >
-          Password Login
-        </button>
-        <button
-          type="button"
-          onClick={() => setAuthMode("otp")}
-          className={`py-2 text-sm font-700 font-body transition-all border-b-2 text-center focus:outline-none ${
-            authMode === "otp"
-              ? "border-primary-500 text-primary-500"
-              : "border-transparent text-neutral-500 hover:text-neutral-700"
-          }`}
-        >
-          OTP-Only Access
-        </button>
-      </div>
-
       <AuthInput
         label="Email Address"
         id="login-email"
@@ -64,46 +36,43 @@ export default function LoginForm() {
         required
       />
 
-      {/* Conditional Password Fields Group */}
-      {authMode === "password" && (
-        <div className="space-y-1.5">
-          <div className="flex justify-between items-center">
-            <label 
-              htmlFor="login-password" 
-              className="text-sm font-700 text-neutral-700 block font-body"
-            >
-              Password
-            </label>
-            <a 
-              href="/forgot-password"
-              onClick={(e) => navigateTo("/forgot-password", e)}
-              className="text-xs font-600 font-body text-primary-500 hover:underline"
-            >
-              Forgot password?
-            </a>
-          </div>
-          <div className="relative flex items-center">
-            <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">
-              lock
-            </span>
-            <input
-              id="login-password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-4 py-3"
-            />
-          </div>
+      <div className="space-y-1.5">
+        <div className="flex justify-between items-center">
+          <label 
+            htmlFor="login-password" 
+            className="text-sm font-700 text-neutral-700 block font-body"
+          >
+            Password
+          </label>
+          <a 
+            href="/forgot-password"
+            onClick={(e) => navigateTo("/forgot-password", e)}
+            className="text-xs font-600 font-body text-primary-500 hover:underline"
+          >
+            Forgot password?
+          </a>
         </div>
-      )}
+        <div className="relative flex items-center">
+          <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">
+            lock
+          </span>
+          <input
+            id="login-password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-4 py-3"
+          />
+        </div>
+      </div>
 
       <button
         type="submit"
         className="w-full justify-center py-3 bg-primary-500 hover:bg-primary-600 text-white font-600 text-sm transition-colors rounded-sm flex items-center"
       >
-        {authMode === "password" ? "Sign In to Dashboard" : "Send Access OTP"}
+        Get Access OTP
       </button>
 
       <div className="relative flex py-2 items-center text-center">

@@ -1,49 +1,192 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import AuthNavbar from "../components/layout/AuthNavbar";
-import AuthFooter from "../components/layout/AuthFooter";
-import StepperBar from "../components/ui/StepperBar";
-import IdentifierStep from "../components/auth/IdentifierStep";
-import ResetMethodStep from "../components/auth/ResetMethodStep";
-import SuccessState from "../components/auth/SuccessState";
+import AuthInput from "../components/ui/AuthInput";
 
 export default function ForgotPasswordPage() {
-  const [step, setStep] = useState(1); // 1, 2, 3 (Success)
-  const [identifier, setIdentifier] = useState("");
-  const [recoveryMethod, setRecoveryMethod] = useState("");
+  const [recoveryStep, setRecoveryStep] = useState<1 | 2 | 3>(1);
+  const [emailAddress, setEmailAddress] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [matchError, setMatchError] = useState("");
 
-  const handleIdentifierSubmit = (id: string) => {
-    setIdentifier(id);
-    setStep(2);
+  const navigateTo = (path: string, e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    window.history.pushState({}, "", path);
+    window.dispatchEvent(new Event("popstate"));
   };
 
-  const handleMethodConfirm = (method: string) => {
-    setRecoveryMethod(method);
-    setStep(3);
+  const handleStepOneSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecoveryStep(2);
+  };
+
+  const handleStepThreeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmNewPassword) {
+      setMatchError("The passwords provided do not match.");
+      return;
+    }
+    setMatchError("");
+    // Finalization redirects clean back to core login form
+    navigateTo("/login");
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-neutral-50 relative justify-between">
+    <div className="min-h-screen w-full flex flex-col bg-surface justify-between">
       <AuthNavbar />
 
-      <div className="my-auto max-w-md w-full mx-auto px-6 py-32">
-        <div className="bg-white border border-neutral-200/80 rounded-2xl p-8 sm:p-10 shadow-sm">
-          {step <= 2 && <StepperBar currentStep={step} totalSteps={2} />}
-
-          {step === 1 && <IdentifierStep onNext={handleIdentifierSubmit} />}
-
-          {step === 2 && (
-            <ResetMethodStep
-              identifier={identifier}
-              onConfirm={handleMethodConfirm}
-              onBack={() => setStep(1)}
-            />
+      <main className="flex-1 flex items-center justify-center w-full max-w-md mx-auto px-4 py-12">
+        <div className="w-full bg-surface-card border border-neutral-200 rounded-sm p-8 shadow-sm">
+          
+          {recoveryStep === 1 && (
+            <>
+              <h2 className="text-2xl font-800 font-headline text-tertiary-500 text-center tracking-tight">
+                Reset Password
+              </h2>
+              <p className="text-xs sm:text-sm font-body text-neutral-600 text-center mt-2 mb-6">
+                Enter your registered electronic mail address to begin recovery options.
+              </p>
+              <form onSubmit={handleStepOneSubmit} className="space-y-4">
+                <AuthInput
+                  label="Email Address"
+                  id="recovery-email"
+                  type="email"
+                  placeholder="name@institution.edu.ng"
+                  iconName="mail"
+                  value={emailAddress}
+                  onChange={(e) => setEmailAddress(e.target.value)}
+                  required
+                />
+                <button
+                  type="submit"
+                  className="w-full justify-center py-3 bg-primary-500 hover:bg-primary-600 text-white font-600 text-sm transition-colors rounded-sm"
+                >
+                  Send Recovery Link
+                </button>
+              </form>
+            </>
           )}
 
-          {step === 3 && <SuccessState method={recoveryMethod} />}
-        </div>
-      </div>
+          {recoveryStep === 2 && (
+            <div className="text-center space-y-4">
+              <div className="w-12 h-12 bg-primary-50 text-primary-500 rounded-full flex items-center justify-center mx-auto">
+                <span className="material-symbols-outlined text-[24px]">mark_email_read</span>
+              </div>
+              <h2 className="text-xl font-800 font-headline text-tertiary-500 tracking-tight">
+                Check Your Inbox
+              </h2>
+              <p className="text-sm font-body text-neutral-600 max-w-xs mx-auto leading-relaxed">
+                A secure generation reference link was transmitted straight to <strong className="text-neutral-800">{emailAddress || "your inbox"}</strong>.
+              </p>
+              
+              {/* Simulated operational webhook action mimicking a link click event */}
+              <div className="pt-4 mt-2 border-t border-dashed border-neutral-200">
+                <button
+                  type="button"
+                  onClick={() => setRecoveryStep(3)}
+                  className="text-xs font-600 font-body text-primary-500 hover:text-primary-600 underline flex items-center justify-center gap-1 mx-auto"
+                >
+                  <span className="material-symbols-outlined text-[14px]">link</span>
+                  Simulate Email Link Click Action
+                </button>
+              </div>
+            </div>
+          )}
 
-      <AuthFooter />
+          {recoveryStep === 3 && (
+            <>
+              <h2 className="text-2xl font-800 font-headline text-tertiary-500 text-center tracking-tight mb-2">
+                Update Password
+              </h2>
+              <p className="text-xs sm:text-sm font-body text-neutral-600 text-center mb-6">
+                Please enter and verify your platform updates below.
+              </p>
+              
+              <form onSubmit={handleStepThreeSubmit} className="space-y-4">
+                {/* New Password Input Node */}
+                <div className="space-y-1.5">
+                  <label htmlFor="new-pass" className="text-sm font-700 text-neutral-700 block font-body">
+                    New Password
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">
+                      lock_reset
+                    </span>
+                    <input
+                      id="new-pass"
+                      type={showPass ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-10 py-3"
+                  />
+                    <button
+                      type="button"
+                      onClick={() => setShowPass(!showPass)}
+                      className="absolute right-3 flex items-center text-neutral-500 hover:text-neutral-700 focus:outline-none"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">
+                        {showPass ? "visibility_off" : "visibility"}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm New Password Input Node */}
+                <div className="space-y-1.5">
+                  <label htmlFor="confirm-new-pass" className="text-sm font-700 text-neutral-700 block font-body">
+                    Confirm New Password
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">
+                      enhanced_encryption
+                    </span>
+                    <input
+                      id="confirm-new-pass"
+                      type={showConfirmPass ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      required
+                      className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-10 py-3"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPass(!showConfirmPass)}
+                      className="absolute right-3 flex items-center text-neutral-500 hover:text-neutral-700 focus:outline-none"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">
+                        {showConfirmPass ? "visibility_off" : "visibility"}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {matchError && (
+                  <p className="text-xs font-600 text-red-500 font-body">
+                    {matchError}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  className="w-full justify-center py-3 bg-primary-500 hover:bg-primary-600 text-white font-600 text-sm transition-colors rounded-sm"
+                >
+                  Reset Password
+                </button>
+              </form>
+            </>
+          )}
+
+        </div>
+      </main>
+
+      <div className="w-full py-4 text-center text-xs font-body text-neutral-500 border-t border-neutral-200 bg-surface-card">
+        Need assistance? <a href="#support" className="text-primary-500 font-600 hover:underline">Contact Support</a>
+      </div>
     </div>
   );
 }
