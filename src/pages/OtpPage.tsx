@@ -4,7 +4,7 @@ import AuthFooter from "../components/layout/AuthFooter";
 import OtpInput from "../components/ui/OtpInput";
 import CountdownTimer from "../components/ui/CountdownTimer";
 import { useCountdown } from "../hooks/useCountdown";
-import Button from "../../src/components/ui/Button";
+import Button from "../components/ui/Button";
 
 export default function OtpPage() {
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
@@ -24,32 +24,43 @@ export default function OtpPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-neutral-50 relative justify-between">
+    <div className="min-h-screen w-full flex flex-col bg-neutral-50 justify-between">
       <AuthNavbar />
 
-      <div className="my-auto max-w-md w-full mx-auto px-6 py-32">
-        <div className="bg-white border border-neutral-200/80 rounded-2xl p-8 sm:p-10 shadow-sm text-center">
-          <div className="w-12 h-12 bg-primary-50 text-primary rounded-xl flex items-center justify-center mx-auto mb-4">
+      {/* Main Container: Responsive padding rules protect smaller vertical screen boundaries */}
+      <main className="flex-1 flex items-center justify-center w-full max-w-md mx-auto px-4 sm:px-6 py-8 sm:py-16 md:py-24">
+        <div className="w-full bg-white border border-neutral-200/80 rounded-xl sm:rounded-2xl p-5 xs:p-6 sm:p-10 shadow-sm text-center">
+          
+          {/* Decorative Icon Wrapper */}
+          <div className="w-12 h-12 bg-primary-50 text-primary-500 rounded-xl flex items-center justify-center mx-auto mb-4">
             <span className="material-symbols-outlined text-[24px]">phonelink_lock</span>
           </div>
-          <h2 className="text-2xl font-800 font-headline text-neutral-800 tracking-tight">Security Check</h2>
-          <p className="text-sm font-body text-neutral-500 mt-2 max-w-xs mx-auto">
+
+          <h2 className="text-xl sm:text-2xl font-800 font-headline text-neutral-800 tracking-tight">
+            Security Check
+          </h2>
+          <p className="text-xs sm:text-sm font-body text-neutral-500 mt-2 max-w-xs mx-auto leading-relaxed">
             We forwarded an operational 6-digit session key to your linked communication endpoints.
           </p>
 
-          <form onSubmit={handleSubmit}>
-            <OtpInput value={otp} onChange={setOtp} />
+          <form onSubmit={handleSubmit} className="mt-6 sm:mt-8 space-y-6">
+            {/* Standard inputs must scale internally via their own styles or flex wrapping */}
+            <div className="w-full overflow-x-auto py-1 flex justify-center">
+              <OtpInput value={otp} onChange={setOtp} />
+            </div>
 
             <Button
               type="submit"
               variant="primary"
-              className="w-full justify-center py-3 rounded-xl"
+              className="w-full justify-center py-3 rounded-sm flex items-center gap-2 text-sm font-600 transition-all"
               disabled={isLoading || otp.join("").length !== 6}
             >
               {isLoading ? (
                 <>
-                  <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
-                  Verifying Signatures...
+                  <span className="material-symbols-outlined animate-spin text-[18px]">
+                    progress_activity
+                  </span>
+                  <span>Verifying Signatures...</span>
                 </>
               ) : (
                 "Authorize Operational Session"
@@ -57,16 +68,18 @@ export default function OtpPage() {
             </Button>
           </form>
 
-          <CountdownTimer
-            formattedTime={formatTime()}
-            isCompleted={isCompleted}
-            onResend={() => {
-              resetCountdown(120);
-              alert("A fresh secure validation token has been successfully queued.");
-            }}
-          />
+          <div className="mt-6 pt-2">
+            <CountdownTimer
+              formattedTime={formatTime()}
+              isCompleted={isCompleted}
+              onResend={() => {
+                resetCountdown(120);
+                alert("A fresh secure validation token has been successfully queued.");
+              }}
+            />
+          </div>
         </div>
-      </div>
+      </main>
 
       <AuthFooter />
     </div>
