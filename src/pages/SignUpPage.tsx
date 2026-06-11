@@ -1,184 +1,301 @@
 import React, { useState } from "react";
-import AuthNavbar from "../components/layout/AuthNavbar";
-import SignUpStepOne from "../components/auth/SignUpStepOne";
-import SignUpStepTwo from "../components/auth/SignUpStepTwo";
+import AuthInput from "../components/ui/AuthInput";
+import { authService } from "../../src/services/authService";
 
-export default function SignUpPage() {
-  const currentYear = new Date().getFullYear();
-  const [step, setStep] = useState<1 | 2>(1);
+const NIGERIAN_STATES = [
+  "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno",
+  "Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT (Abuja)","Gombe",
+  "Imo","Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos",
+  "Nasarawa","Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto",
+  "Taraba","Yobe","Zamfara",
+];
 
-  // Form State Values
-  const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [currentRole, setCurrentRole] = useState("principal");
-  const [stateRegion, setStateRegion] = useState("Lagos");
-  const [schoolName, setSchoolName] = useState("");
-  const [schoolLocation, setSchoolLocation] = useState("");
-  const [schoolType, setSchoolType] = useState("");
+// Roles — only "teacher" is confirmed from Swagger examples.
+// Others are guesses; backend will tell us via console if wrong.
+const ROLES = [
+  { value: "teacher", label: "Teacher" },
+  { value: "principal", label: "Principal / Head Teacher" },
+  { value: "vice_principal", label: "Vice Principal" },
+  { value: "school_head", label: "School Head" },
+  { value: "proprietor", label: "School Proprietor" },
+  { value: "education_officer", label: "Education Officer" },
+];
 
-  const navigateTo = (path: string, e: React.MouseEvent) => {
+interface StepTwoProps {
+  email: string;
+  fullName: string;
+  setFullName: (val: string) => void;
+  phoneNumber: string;
+  setPhoneNumber: (val: string) => void;
+  password: string;
+  setPassword: (val: string) => void;
+  confirmPassword: string;
+  setConfirmPassword: (val: string) => void;
+  currentRole: string;
+  setCurrentRole: (val: string) => void;
+  stateRegion: string;
+  setStateRegion: (val: string) => void;
+  schoolLocation: string;
+  setSchoolLocation: (val: string) => void;
+  schoolType: string;
+  setSchoolType: (val: string) => void;
+  schoolName: string;
+  setSchoolName: (val: string) => void;
+  isGoogleRoute?: boolean;
+  onSuccess: () => void;
+}
+
+function formatPhone(raw: string): string {
+  // Strip everything except digits and leading +
+  const cleaned = raw.trim();
+  const digits = cleaned.replace(/\D/g, "");
+
+  // Already in +234XXXXXXXXXX form (13 digits starting with 234)
+  if (digits.startsWith("234") && digits.length === 13) return `+${digits}`;
+
+  // Local format: 0XXXXXXXXXX (11 digits starting with 0)
+  if (digits.startsWith("0") && digits.length === 11) return `+234${digits.slice(1)}`;
+
+  // Bare 10 digits starting with 7/8/9 (no leading 0 or country code)
+  if ((digits.startsWith("7") || digits.startsWith("8") || digits.startsWith("9")) && digits.length === 10)
+    return `+234${digits}`;
+
+  // Already has + prefix and looks right
+  if (cleaned.startsWith("+234") && digits.length === 13) return cleaned;
+
+  // Fallback — return as-is and let backend validate
+  return cleaned;
+}
+
+export default function SignUpStepTwo({
+  email, fullName, setFullName, phoneNumber, setPhoneNumber,
+  password, setPassword, confirmPassword, setConfirmPassword,
+  currentRole, setCurrentRole, stateRegion, setStateRegion,
+  schoolLocation, setSchoolLocation, schoolType, setSchoolType,
+  schoolName, setSchoolName, isGoogleRoute = false, onSuccess,
+}: StepTwoProps) {
+  const [showPass, setShowPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    window.history.pushState({}, "", path);
-    window.dispatchEvent(new Event("popstate"));
-  };
+    setError("");
 
-  const handleRegistrationSuccess = () => {
-    window.history.pushState(
-      {},
-      "",
-      `/verify-otp?flow=signup&email=${encodeURIComponent(email)}`,
-    );
-    window.dispatchEvent(new Event("popstate"));
+    if (!isGoogleRoute && password !== confirmPassword) {
+      setError("The passwords you entered do not match.");
+      return;
+    }
+
+    const formattedPhone = formatPhone(phoneNumber);
+    console.log("Submitting payload:", {
+      email, fullName, phone: formattedPhone,
+      role: currentRole, state: stateRegion, schoolName,
+    });
+
+    setIsLoading(true);
+    try {
+      await authService.register({
+        email,
+        fullName,
+        phone: formattedPhone,
+        password,
+        confirmPassword,
+        role: currentRole,
+        state: stateRegion,
+        schoolName,
+      });
+      onSuccess();
+    } catch (err) {
+      const e = err as {
+        statusCode?: number;
+        status?: number;
+        message?: string;
+        error?: string;
+        details?: { field?: string; message: string }[];
+      };
+      console.log("Register error:", JSON.stringify(e, null, 2));
+      if (e?.statusCode === 409 || e?.status === 409) {
+        setError("This email is already registered.");
+      } else if (e?.details?.length) {
+        setError(e.details.map(d => `${d.field}: ${d.message}`).join(" | "));
+      } else {
+        setError(e?.message || e?.error || "Registration failed. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-surface">
-      <AuthNavbar />
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="space-y-4">
+        <AuthInput
+          label="Full Name"
+          id="reg-fullname"
+          type="text"
+          placeholder="Enter your full name"
+          iconName="person"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          required
+        />
 
-      <div className="flex-1 w-full flex items-center justify-center px-4 sm:px-6 py-24">
-        <div className="max-w-xl w-full bg-surface-card border border-neutral-200 rounded-sm p-8 sm:p-10 shadow-sm transition-all">
-          {/* Header Layout Container */}
-          <div className="mb-8">
-            {step === 1 ? (
-              <div className="text-center w-full">
-                <h2 className="text-[32px] font-800 font-headline text-tertiary-500 tracking-tight leading-none">
-                  Join the Academy
-                </h2>
-                <p className="text-sm font-body text-neutral-600 mt-3 max-w-md mx-auto leading-relaxed">
-                  Empowering Nigeria's educational leaders through professional
-                  excellence.
-                </p>
-              </div>
-            ) : (
-              /* Step 2 displays only the standalone back button navigation action */
-              <div className="flex justify-start">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="w-8 h-8 shrink-0 rounded-full border border-neutral-300 bg-neutral-50 text-neutral-600 hover:text-primary-500 hover:border-primary-500 flex items-center justify-center transition-colors focus:outline-none"
-                  aria-label="Go back to step one"
-                >
-                  <span className="material-symbols-outlined text-[18px]">
-                    arrow_back
-                  </span>
+        <div className="space-y-1.5">
+          <AuthInput
+            label="Phone Number"
+            id="reg-phone"
+            type="tel"
+            placeholder="e.g. 08012345678 or +2348012345678"
+            iconName="smartphone"
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
+            required
+          />
+          {phoneNumber && (
+            <p className="text-[11px] text-neutral-400 font-body pl-1">
+              Will be sent as: <span className="text-primary-500 font-600">{formatPhone(phoneNumber)}</span>
+            </p>
+          )}
+        </div>
+
+        {!isGoogleRoute && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="reg-pass" className="text-sm font-700 text-neutral-700 block font-body">
+                Password
+              </label>
+              <div className="relative flex items-center">
+                <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">lock</span>
+                <input
+                  id="reg-pass"
+                  type={showPass ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-10 py-3"
+                />
+                <button type="button" onClick={() => setShowPass(!showPass)}
+                  className="absolute right-3 flex items-center text-neutral-500 hover:text-neutral-700 select-none focus:outline-none">
+                  <span className="material-symbols-outlined text-[20px]">{showPass ? "visibility_off" : "visibility"}</span>
                 </button>
               </div>
-            )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="reg-confirm-pass" className="text-sm font-700 text-neutral-700 block font-body">
+                Confirm Password
+              </label>
+              <div className="relative flex items-center">
+                <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">enhanced_encryption</span>
+                <input
+                  id="reg-confirm-pass"
+                  type={showConfirmPass ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-10 py-3"
+                />
+                <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)}
+                  className="absolute right-3 flex items-center text-neutral-500 hover:text-neutral-700 select-none focus:outline-none">
+                  <span className="material-symbols-outlined text-[20px]">{showConfirmPass ? "visibility_off" : "visibility"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <p className="text-xs font-600 text-red-500 font-body">{error}</p>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-700 text-neutral-700 block font-body">Current Role</label>
+            <select
+              value={currentRole}
+              onChange={(e) => setCurrentRole(e.target.value)}
+              className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
+            >
+              {ROLES.map(r => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
           </div>
 
-          {step === 1 ? (
-            <SignUpStepOne
-              email={email}
-              setEmail={setEmail}
-              onContinue={() => {
-                setStep(2);
-              }}
-            />
-          ) : (
-            <SignUpStepTwo
-              email={email} // ← add this
-              fullName={fullName}
-              setFullName={setFullName}
-              phoneNumber={phoneNumber}
-              setPhoneNumber={setPhoneNumber}
-              password={password}
-              setPassword={setPassword}
-              confirmPassword={confirmPassword}
-              setConfirmPassword={setConfirmPassword}
-              currentRole={currentRole}
-              setCurrentRole={setCurrentRole}
-              stateRegion={stateRegion}
-              setStateRegion={setStateRegion}
-              schoolLocation={schoolLocation}
-              setSchoolLocation={setSchoolLocation}
-              schoolType={schoolType}
-              setSchoolType={setSchoolType}
-              schoolName={schoolName}
-              setSchoolName={setSchoolName}
-              onSuccess={handleRegistrationSuccess} // ← renamed from onSubmit
-            />
-          )}
-
-          <div className="mt-8 pt-4 border-t border-neutral-200 text-center">
-            <p className="text-sm font-body text-neutral-700">
-              Already have an account?{" "}
-              <a
-                href="/login"
-                onClick={(e) => navigateTo("/login", e)}
-                className="text-primary-500 font-700 hover:underline ms-1"
-              >
-                Login here
-              </a>
-            </p>
+          <div className="space-y-1.5">
+            <label className="text-sm font-700 text-neutral-700 block font-body">State</label>
+            <select
+              value={stateRegion}
+              onChange={(e) => setStateRegion(e.target.value)}
+              className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
+            >
+              {NIGERIAN_STATES.map((state) => (
+                <option key={state} value={state}>{state}</option>
+              ))}
+            </select>
           </div>
         </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-700 text-neutral-700 block font-body">School Location</label>
+            <select
+              value={schoolLocation}
+              onChange={(e) => setSchoolLocation(e.target.value)}
+              className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
+            >
+              <option value="Urban">Urban</option>
+              <option value="Semi-Urban">Semi-Urban</option>
+              <option value="Rural">Rural</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-700 text-neutral-700 block font-body">School Type</label>
+            <select
+              value={schoolType}
+              onChange={(e) => setSchoolType(e.target.value)}
+              className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
+            >
+              <option value="Private">Private</option>
+              <option value="Public">Public</option>
+            </select>
+          </div>
+        </div>
+
+        <AuthInput
+          label="School Name"
+          id="reg-school"
+          type="text"
+          placeholder="Enter your school/institution name"
+          iconName="school"
+          value={schoolName}
+          onChange={(e) => setSchoolName(e.target.value)}
+          required
+        />
       </div>
 
-      <div className="w-full flex items-center justify-center gap-8 py-4 bg-surface-card border-y border-neutral-200 text-[11px] font-600 font-body text-neutral-500">
-        <span className="flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-[14px]">
-            verified
-          </span>{" "}
-          TRCN Acknowledged
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-[14px]">lock</span>{" "}
-          Secure Data
-        </span>
-      </div>
-
-      <footer className="w-full max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-xs font-body text-neutral-600 bg-surface">
-        <div className="space-y-2">
-          <h4 className="font-headline font-800 text-base text-tertiary-500">
-            SLAN Online
-          </h4>
-          <p className="text-neutral-500 leading-relaxed">
-            © {currentYear} School Leadership Academy Nigeria (SLAN). Accredited
-            by TRCN & ANCOPPS. Elevating education through leadership mastery.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 md:items-center">
-          <div className="text-left space-y-2">
-            <h5 className="font-700 text-tertiary-500 uppercase tracking-wider text-[11px]">
-              Resources
-            </h5>
-            <a
-              href="#privacy"
-              className="block hover:text-primary-500 transition-colors"
-            >
-              Privacy Policy
-            </a>
-            <a
-              href="#terms"
-              className="block hover:text-primary-500 transition-colors"
-            >
-              Terms of Service
-            </a>
-          </div>
-        </div>
-        <div className="flex flex-col gap-2 md:items-end">
-          <div className="text-left space-y-2 w-full max-w-40">
-            <h5 className="font-700 text-tertiary-500 uppercase tracking-wider text-[11px]">
-              Help & Support
-            </h5>
-            <a
-              href="#accreditation"
-              className="block hover:text-primary-500 transition-colors"
-            >
-              Acknowledgement
-            </a>
-            <a
-              href="#support"
-              className="block hover:text-primary-500 transition-colors"
-            >
-              Support Contact
-            </a>
-          </div>
-        </div>
-      </footer>
-    </div>
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="w-full justify-center mt-6 py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-600 text-sm inline-flex items-center gap-2 transition-colors rounded-sm"
+      >
+        {isLoading ? (
+          <>
+            <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+            Creating Account...
+          </>
+        ) : (
+          <>
+            Create Account
+            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </>
+        )}
+      </button>
+    </form>
   );
 }
