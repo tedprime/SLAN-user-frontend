@@ -25,10 +25,12 @@ export default function SignUpPage() {
     window.dispatchEvent(new Event("popstate"));
   };
 
-  const handleFinalSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Form registration submission automatically directs to the OTP entry flow
-    window.history.pushState({}, "", "/verify-otp");
+  const handleRegistrationSuccess = () => {
+    window.history.pushState(
+      {},
+      "",
+      `/verify-otp?flow=signup&email=${encodeURIComponent(email)}`,
+    );
     window.dispatchEvent(new Event("popstate"));
   };
 
@@ -56,7 +58,7 @@ export default function SignUpPage() {
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="w-8 h-8 flex-shrink-0 rounded-full border border-neutral-300 bg-neutral-50 text-neutral-600 hover:text-primary-500 hover:border-primary-500 flex items-center justify-center transition-colors focus:outline-none"
+                  className="w-8 h-8 shrink-0 rounded-full border border-neutral-300 bg-neutral-50 text-neutral-600 hover:text-primary-500 hover:border-primary-500 flex items-center justify-center transition-colors focus:outline-none"
                   aria-label="Go back to step one"
                 >
                   <span className="material-symbols-outlined text-[18px]">
@@ -77,6 +79,7 @@ export default function SignUpPage() {
             />
           ) : (
             <SignUpStepTwo
+              email={email} // ← add this
               fullName={fullName}
               setFullName={setFullName}
               phoneNumber={phoneNumber}
@@ -95,7 +98,7 @@ export default function SignUpPage() {
               setSchoolType={setSchoolType}
               schoolName={schoolName}
               setSchoolName={setSchoolName}
-              onSubmit={handleFinalSubmit}
+              onSuccess={handleRegistrationSuccess} // ← renamed from onSubmit
             />
           )}
 
@@ -157,7 +160,7 @@ export default function SignUpPage() {
           </div>
         </div>
         <div className="flex flex-col gap-2 md:items-end">
-          <div className="text-left space-y-2 w-full max-w-[160px]">
+          <div className="text-left space-y-2 w-full max-w-40">
             <h5 className="font-700 text-tertiary-500 uppercase tracking-wider text-[11px]">
               Help & Support
             </h5>

@@ -90,7 +90,7 @@ export default function SignUpStepOne({
 
       <div className="relative flex py-2 items-center text-center">
         <div className="flex-1 border-t border-neutral-200"></div>
-        <span className="flex-shrink mx-4 text-xs font-600 font-body text-neutral-500">or</span>
+        <span className="shrink mx-4 text-xs font-600 font-body text-neutral-500">or</span>
         <div className="flex-1 border-t border-neutral-200"></div>
       </div>
 
