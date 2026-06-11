@@ -16,7 +16,7 @@ export default function CTABanner() {
               Ready to lead with earned authority?
             </h3>
             <p className="font-body text-white/80 text-sm sm:text-base max-w-xl mx-auto lg:mx-0 leading-relaxed">
-              Enrol in the upcoming April 2026 Cohort and join 500
+              Enrol and join 500
               future-focused school leaders across Nigeria.
             </p>
           </div>
@@ -32,7 +32,7 @@ export default function CTABanner() {
               Enrol Now
             </Button>
             <span className="text-xs text-white/60 font-body text-center lg:text-right">
-              Flexible 3-month payment plan available
+              Flexible payment plan available
             </span>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const navItems: string[] = ["Programmes", "About", "Partners"];
+const navItems: string[] = ["Programmes", "About", "Partners", "Community"];
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState<boolean>(false);

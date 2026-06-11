@@ -21,7 +21,7 @@ export default function TrustBar() {
     <section className="bg-white py-12 sm:py-16 lg:py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <p className="text-center text-xs sm:text-sm font-label font-semibold uppercase tracking-[0.2em] text-neutral-900 mb-8 sm:mb-10">
-          Endorsed &amp; Trusted By
+          Acknowledged &amp; Trusted By
         </p>
 
         <div className="flex overflow-x-auto sm:overflow-x-visible sm:grid sm:grid-cols-4 items-start gap-8 sm:gap-12 lg:gap-16 max-w-5xl mx-auto pb-4 sm:pb-0 scrollbar-hide">

@@ -32,20 +32,21 @@ export default function Hero() {
               className="font-headline font-bold text-primary-500 leading-[1.1] sm:leading-tight"
               style={{ fontSize: "clamp(2rem, 5vw, var(--text-display-lg))" }}
             >
-              Empowering Nigeria's Future Leaders
+              Empowering Nigeria's Future School Leaders
             </h1>
 
             <p className="font-body text-neutral-600 text-base sm:text-lg leading-relaxed max-w-xl mx-auto lg:mx-0">
-              A structured, evidence-based leadership pathway for principals,
-              headteachers, and proprietors. Convert your appointment letter
-              into earned authority.
+              A structured, evidence-based leadership pathway-paced and Online
+              Certification Course for serving and aspiring principals,
+              headteachers, proprietors and Quality Assurance Education Officers
+              in Nigeria.
             </p>
 
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 pt-2 justify-center lg:justify-start">
               <Button
                 variant="primary"
                 size="lg"
-                href="#enroll"
+                href="/login"
                 className="w-full sm:w-auto justify-center"
               >
                 Start Enrollment →
@@ -68,7 +69,7 @@ export default function Hero() {
                 className="sm:w-[22px] sm:h-[22px]"
               />
               <span className="text-xs sm:text-sm font-body">
-                Accredited by TRCN &amp; ANCOPPS
+                Acknowledged by TRCN &amp; ANCOPPS
               </span>
             </div>
           </div>
@@ -85,15 +86,15 @@ export default function Hero() {
               />
 
               {/* Floating stat card */}
-              <div className="absolute -bottom-4 sm:-bottom-6 -left-3 sm:-left-6 bg-white rounded-lg sm:rounded-xl shadow-lg sm:shadow-xl p-3 sm:p-5 py-4 sm:py-7 px-4 sm:px-6 min-w-[7rem] sm:min-w-40 z-10">
+              <div className="absolute -bottom-4 sm:-bottom-6 -left-3 sm:-left-6 bg-white rounded-lg sm:rounded-xl shadow-lg sm:shadow-xl p-3 sm:p-5 py-3 sm:py-5 px-4 sm:px-6 min-w-[7rem] sm:min-w-40 z-10">
                 <p
-                  className="font-headline font-bold text-yellow-800 leading-none"
+                  className="font-headline font-bold text-yellow-800 leading-none text-center"
                   style={{ fontSize: "clamp(1.75rem, 4vw, 2.5rem)" }}
                 >
-                  65%
+                  3x
                 </p>
                 <p className="text-[0.65rem] sm:text-xs text-neutral-700 font-semibold mt-1 sm:mt-2 font-body leading-tight">
-                  Target completion rate
+                  Career advancement rate
                 </p>
               </div>
             </div>

@@ -1,7 +1,7 @@
 import Image1 from "../../assets/images/image-1.jpg";
 import Image2 from "../../assets/images/image-2.jpg";
 import FeatureCard from "../ui/FeatureCard";
-import { Gavel, Download, Globe } from "lucide-react";
+import { Gavel, Clock, Globe } from "lucide-react";
 
 const features = [
   {
@@ -14,12 +14,12 @@ const features = [
     variant: "light" as const,
   },
   {
-    id: "offline",
-    icon: <Download className="w-8 h-8 sm:w-9 sm:h-9 text-white" />,
-    title: "Offline Resilience",
+    id: "learn",
+    icon: <Clock className="w-8 h-8 sm:w-9 sm:h-9 text-white" />,
+    title: "Learn At Your Own Pace",
     description:
-      "Designed for low-bandwidth areas. Download lessons and study for up to 14 days without an active internet connection.",
-    badge: "Optimised for 240p video",
+      "No fixed schedules. Study during free periods, weekends, or holidays. Pick up exactly where you left off, on any device",
+    badge: "Study anytime, anywhere",
     variant: "dark" as const,
   },
   {

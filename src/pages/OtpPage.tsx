@@ -40,7 +40,7 @@ export default function OtpPage() {
             Security Check
           </h2>
           <p className="text-xs sm:text-sm font-body text-neutral-500 mt-2 max-w-xs mx-auto leading-relaxed">
-            We forwarded an operational 6-digit session key to your linked communication endpoints.
+            We sent a 6-digit code to your email
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 sm:mt-8 space-y-6">

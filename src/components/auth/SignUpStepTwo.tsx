@@ -2,11 +2,43 @@ import React, { useState } from "react";
 import AuthInput from "../ui/AuthInput";
 
 const NIGERIAN_STATES = [
-  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", 
-  "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT (Abuja)", "Gombe", 
-  "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", 
-  "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", 
-  "Taraba", "Yobe", "Zamfara"
+  "Abia",
+  "Adamawa",
+  "Akwa Ibom",
+  "Anambra",
+  "Bauchi",
+  "Bayelsa",
+  "Benue",
+  "Borno",
+  "Cross River",
+  "Delta",
+  "Ebonyi",
+  "Edo",
+  "Ekiti",
+  "Enugu",
+  "FCT (Abuja)",
+  "Gombe",
+  "Imo",
+  "Jigawa",
+  "Kaduna",
+  "Kano",
+  "Katsina",
+  "Kebbi",
+  "Kogi",
+  "Kwara",
+  "Lagos",
+  "Nasarawa",
+  "Niger",
+  "Ogun",
+  "Ondo",
+  "Osun",
+  "Oyo",
+  "Plateau",
+  "Rivers",
+  "Sokoto",
+  "Taraba",
+  "Yobe",
+  "Zamfara",
 ];
 
 interface StepTwoProps {
@@ -22,6 +54,10 @@ interface StepTwoProps {
   setCurrentRole: (val: string) => void;
   stateRegion: string;
   setStateRegion: (val: string) => void;
+  schoolLocation: string;
+  setSchoolLocation: (val: string) => void;
+  schoolType: string;
+  setSchoolType: (val: string) => void;
   schoolName: string;
   setSchoolName: (val: string) => void;
   isGoogleRoute: boolean;
@@ -29,15 +65,26 @@ interface StepTwoProps {
 }
 
 export default function SignUpStepTwo({
-  fullName, setFullName,
-  phoneNumber, setPhoneNumber,
-  password, setPassword,
-  confirmPassword, setConfirmPassword,
-  currentRole, setCurrentRole,
-  stateRegion, setStateRegion,
-  schoolName, setSchoolName,
+  fullName,
+  setFullName,
+  phoneNumber,
+  setPhoneNumber,
+  password,
+  setPassword,
+  confirmPassword,
+  setConfirmPassword,
+  currentRole,
+  setCurrentRole,
+  stateRegion,
+  setStateRegion,
+  schoolLocation,
+  setSchoolLocation,
+  schoolType,
+  setSchoolType,
+  schoolName,
+  setSchoolName,
   isGoogleRoute,
-  onSubmit
+  onSubmit,
 }: StepTwoProps) {
   const [showPass, setShowPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
@@ -83,7 +130,10 @@ export default function SignUpStepTwo({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Main Password Input Field */}
               <div className="space-y-1.5">
-                <label htmlFor="reg-pass" className="text-sm font-700 text-neutral-700 block font-body">
+                <label
+                  htmlFor="reg-pass"
+                  className="text-sm font-700 text-neutral-700 block font-body"
+                >
                   Password
                 </label>
                 <div className="relative flex items-center">
@@ -113,7 +163,10 @@ export default function SignUpStepTwo({
 
               {/* Confirm Password Input Field */}
               <div className="space-y-1.5">
-                <label htmlFor="reg-confirm-pass" className="text-sm font-700 text-neutral-700 block font-body">
+                <label
+                  htmlFor="reg-confirm-pass"
+                  className="text-sm font-700 text-neutral-700 block font-body"
+                >
                   Confirm Password
                 </label>
                 <div className="relative flex items-center">
@@ -160,11 +213,11 @@ export default function SignUpStepTwo({
               onChange={(e) => setCurrentRole(e.target.value)}
               className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
             >
-              <option>Principal</option>
-              <option>Vice Principal</option>
-              <option>Headteacher</option>
-              <option>Proprietor</option>
-              <option>Aspiring Head</option>
+              <option>Principal / Head Teacher</option>
+              <option>Vice / Assistant School Head</option>
+              <option>School Head Cadre</option>
+              <option>School Proprietor</option>
+              <option>Education Officer</option>
             </select>
           </div>
 
@@ -178,8 +231,42 @@ export default function SignUpStepTwo({
               className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
             >
               {NIGERIAN_STATES.map((state) => (
-                <option key={state} value={state}>{state}</option>
+                <option key={state} value={state}>
+                  {state}
+                </option>
               ))}
+            </select>
+          </div>
+        </div>
+
+        {/* School Location & School Type */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-700 text-neutral-700 block font-body">
+              School Location
+            </label>
+            <select
+              value={schoolLocation}
+              onChange={(e) => setSchoolLocation(e.target.value)}
+              className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
+            >
+              <option value="Urban">Urban</option>
+              <option value="Semi-Urban">Semi-Urban</option>
+              <option value="Rural">Rural</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-700 text-neutral-700 block font-body">
+              School Type
+            </label>
+            <select
+              value={schoolType}
+              onChange={(e) => setSchoolType(e.target.value)}
+              className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
+            >
+              <option value="Private">Private</option>
+              <option value="Public">Public</option>
             </select>
           </div>
         </div>
@@ -200,8 +287,10 @@ export default function SignUpStepTwo({
         type="submit"
         className="w-full justify-center mt-6 py-3 bg-primary-500 hover:bg-primary-600 text-white font-600 text-sm inline-flex items-center gap-2 transition-colors rounded-sm"
       >
-        Create Learner Account
-        <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+        Create Account
+        <span className="material-symbols-outlined text-[16px]">
+          arrow_forward
+        </span>
       </button>
     </form>
   );

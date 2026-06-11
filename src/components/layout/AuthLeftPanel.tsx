@@ -51,7 +51,7 @@ export default function AuthLeftPanel() {
           className="text-sm font-500 font-body leading-relaxed max-w-md mx-auto text-balance"
           style={{ color: "var(--color-primary-200)" }}
         >
-          Access TRCN & ANCOPPS accredited leadership modules designed for the next generation of academic excellence.
+          Access TRCN & ANCOPPS acknowledged leadership modules designed for the next generation of academic excellence.
         </p>
       </div>
 

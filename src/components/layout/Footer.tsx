@@ -10,7 +10,7 @@ const footerLinks: Record<string, string[]> = {
   Resources: [
     "Privacy Policy",
     "Terms of Service",
-    "Accreditation",
+    "Acknowledgment",
     "Support Contact",
   ],
 };
@@ -44,11 +44,11 @@ export default function Footer() {
           <div className="flex gap-3">
             {/* Globe icon */}
             <span className="w-8 h-8 rounded-full border border-none flex items-center justify-center hover:border-secondary-400 transition-colors cursor-pointer text-xs">
-              <Globe size={20}/>
+              <Globe size={20} />
             </span>
             {/* Docs icon */}
             <span className="w-8 h-8 rounded-full border border-none flex items-center justify-center hover:border-secondary-400 transition-colors cursor-pointer text-xs">
-              <Clipboard size={20}/>
+              <Clipboard size={20} />
             </span>
           </div>
         </div>
@@ -110,8 +110,9 @@ export default function Footer() {
       {/* Bottom bar */}
       <div className="border-t border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-5 text-xs text-neutral-800 text-center">
-          © {currentYear} School Leadership Academy Nigeria (SLAN). Accredited
-          by TRCN & ANCOPPS. Powered By TedPrime Academy.
+          © {currentYear} School Leadership Academy Nigeria (SLAN). Acknowledged
+          by TRCN & ANCOPPS. Powered By TASUED MGT in Partnership with TedPrime
+          Academy.
         </div>
       </div>
     </footer>
