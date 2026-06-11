@@ -1,27 +1,46 @@
 import React, { useState } from "react";
 import AuthInput from "../ui/AuthInput";
-import Toast from "../ui/Toast";
-import { useToast } from "../../hooks/useToast";
 import { authService } from "../../services/authService";
 
 const NIGERIAN_STATES = [
-  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
-  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu",
-  "FCT (Abuja)", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina",
-  "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo",
-  "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
+  "Abia",
+  "Adamawa",
+  "Akwa Ibom",
+  "Anambra",
+  "Bauchi",
+  "Bayelsa",
+  "Benue",
+  "Borno",
+  "Cross River",
+  "Delta",
+  "Ebonyi",
+  "Edo",
+  "Ekiti",
+  "Enugu",
+  "FCT (Abuja)",
+  "Gombe",
+  "Imo",
+  "Jigawa",
+  "Kaduna",
+  "Kano",
+  "Katsina",
+  "Kebbi",
+  "Kogi",
+  "Kwara",
+  "Lagos",
+  "Nasarawa",
+  "Niger",
+  "Ogun",
+  "Ondo",
+  "Osun",
+  "Oyo",
+  "Plateau",
+  "Rivers",
+  "Sokoto",
+  "Taraba",
+  "Yobe",
+  "Zamfara",
 ];
-
-const formatPhoneNumber = (phone: string): string => {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.startsWith("0") && digits.length === 11) {
-    return "+234" + digits.slice(1);
-  }
-  if (digits.startsWith("234") && digits.length === 13) {
-    return "+" + digits;
-  }
-  return phone;
-};
 
 interface StepTwoProps {
   email: string;
@@ -73,13 +92,14 @@ export default function SignUpStepTwo({
   const [showPass, setShowPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { toasts, addToast, removeToast } = useToast();
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
     if (!isGoogleRoute && password !== confirmPassword) {
-      addToast("The passwords you entered do not match.", "error");
+      setError("The passwords you entered do not match.");
       return;
     }
 
@@ -88,26 +108,24 @@ export default function SignUpStepTwo({
       await authService.register({
         email,
         fullName,
-        phone: formatPhoneNumber(phoneNumber),
+        phone: phoneNumber,
         password,
         confirmPassword,
         role: currentRole,
         state: stateRegion,
         schoolName,
       });
-      addToast("Account created! Check your email for the OTP.", "success");
-      setTimeout(() => onSuccess(), 1500);
+      onSuccess();
     } catch (err) {
       const e = err as {
         statusCode?: number;
         status?: number;
         message?: string;
-        details?: { field: string; message: string }[];
       };
-      if (e?.details && e.details.length > 0) {
-        e.details.forEach((d) => addToast(d.message, "error"));
+      if (e?.statusCode === 409 || e?.status === 409) {
+        setError("This email is already registered.");
       } else {
-        addToast(e?.message || "Registration failed. Please try again.", "error");
+        setError(e?.message || "Registration failed. Please try again.");
       }
     } finally {
       setIsLoading(false);
@@ -115,34 +133,33 @@ export default function SignUpStepTwo({
   };
 
   return (
-    <>
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="space-y-4">
-          <AuthInput
-            label="Full Name"
-            id="reg-fullname"
-            type="text"
-            placeholder="Enter your full name"
-            iconName="person"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            required
-          />
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="space-y-4">
+        <AuthInput
+          label="Full Name"
+          id="reg-fullname"
+          type="text"
+          placeholder="Enter your full name"
+          iconName="person"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          required
+        />
 
-          <AuthInput
-            label="Phone Number"
-            id="reg-phone"
-            type="tel"
-            placeholder="e.g. 08012345678"
-            iconName="smartphone"
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
-            required
-          />
+        <AuthInput
+          label="Phone Number"
+          id="reg-phone"
+          type="tel"
+          placeholder="e.g. 08012345678"
+          iconName="smartphone"
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
+          required
+        />
 
-          {!isGoogleRoute && (
+        {!isGoogleRoute && (
+          <>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Password */}
               <div className="space-y-1.5">
                 <label
                   htmlFor="reg-pass"
@@ -175,7 +192,6 @@ export default function SignUpStepTwo({
                 </div>
               </div>
 
-              {/* Confirm Password */}
               <div className="space-y-1.5">
                 <label
                   htmlFor="reg-confirm-pass"
@@ -208,111 +224,115 @@ export default function SignUpStepTwo({
                 </div>
               </div>
             </div>
-          )}
+          </>
+        )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-700 text-neutral-700 block font-body">
-                Current Role
-              </label>
-              <select
-                value={currentRole}
-                onChange={(e) => setCurrentRole(e.target.value)}
-                className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
-              >
-                <option value="principal">Principal / Head Teacher</option>
-                <option value="vice_principal">Vice / Assistant School Head</option>
-                <option value="school_head">School Head Cadre</option>
-                <option value="proprietor">School Proprietor</option>
-                <option value="education_officer">Education Officer</option>
-              </select>
-            </div>
+        {error && (
+          <p className="text-xs font-600 text-red-500 font-body">{error}</p>
+        )}
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-700 text-neutral-700 block font-body">
-                State
-              </label>
-              <select
-                value={stateRegion}
-                onChange={(e) => setStateRegion(e.target.value)}
-                className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
-              >
-                {NIGERIAN_STATES.map((state) => (
-                  <option key={state} value={state}>
-                    {state}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-700 text-neutral-700 block font-body">
+              Current Role
+            </label>
+            <select
+              value={currentRole}
+              onChange={(e) => setCurrentRole(e.target.value)}
+              className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
+            >
+              <option value="principal">Principal / Head Teacher</option>
+              <option value="vice_principal">
+                Vice / Assistant School Head
+              </option>
+              <option value="school_head">School Head Cadre</option>
+              <option value="proprietor">School Proprietor</option>
+              <option value="education_officer">Education Officer</option>
+            </select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-700 text-neutral-700 block font-body">
-                School Location
-              </label>
-              <select
-                value={schoolLocation}
-                onChange={(e) => setSchoolLocation(e.target.value)}
-                className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
-              >
-                <option value="Urban">Urban</option>
-                <option value="Semi-Urban">Semi-Urban</option>
-                <option value="Rural">Rural</option>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm font-700 text-neutral-700 block font-body">
-                School Type
-              </label>
-              <select
-                value={schoolType}
-                onChange={(e) => setSchoolType(e.target.value)}
-                className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
-              >
-                <option value="Private">Private</option>
-                <option value="Public">Public</option>
-              </select>
-            </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-700 text-neutral-700 block font-body">
+              State
+            </label>
+            <select
+              value={stateRegion}
+              onChange={(e) => setStateRegion(e.target.value)}
+              className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
+            >
+              {NIGERIAN_STATES.map((state) => (
+                <option key={state} value={state}>
+                  {state}
+                </option>
+              ))}
+            </select>
           </div>
-
-          <AuthInput
-            label="School Name"
-            id="reg-school"
-            type="text"
-            placeholder="Enter your school/institution name"
-            iconName="school"
-            value={schoolName}
-            onChange={(e) => setSchoolName(e.target.value)}
-            required
-          />
         </div>
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full justify-center mt-6 py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-600 text-sm inline-flex items-center gap-2 transition-colors rounded-sm"
-        >
-          {isLoading ? (
-            <>
-              <span className="material-symbols-outlined animate-spin text-[16px]">
-                progress_activity
-              </span>
-              Creating Account...
-            </>
-          ) : (
-            <>
-              Create Account
-              <span className="material-symbols-outlined text-[16px]">
-                arrow_forward
-              </span>
-            </>
-          )}
-        </button>
-      </form>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-700 text-neutral-700 block font-body">
+              School Location
+            </label>
+            <select
+              value={schoolLocation}
+              onChange={(e) => setSchoolLocation(e.target.value)}
+              className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
+            >
+              <option value="Urban">Urban</option>
+              <option value="Semi-Urban">Semi-Urban</option>
+              <option value="Rural">Rural</option>
+            </select>
+          </div>
 
-      <Toast toasts={toasts} onRemove={removeToast} />
-    </>
+          <div className="space-y-1.5">
+            <label className="text-sm font-700 text-neutral-700 block font-body">
+              School Type
+            </label>
+            <select
+              value={schoolType}
+              onChange={(e) => setSchoolType(e.target.value)}
+              className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
+            >
+              <option value="Private">Private</option>
+              <option value="Public">Public</option>
+            </select>
+          </div>
+        </div>
+
+        <AuthInput
+          label="School Name"
+          id="reg-school"
+          type="text"
+          placeholder="Enter your school/institution name"
+          iconName="school"
+          value={schoolName}
+          onChange={(e) => setSchoolName(e.target.value)}
+          required
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="w-full justify-center mt-6 py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-600 text-sm inline-flex items-center gap-2 transition-colors rounded-sm"
+      >
+        {isLoading ? (
+          <>
+            <span className="material-symbols-outlined animate-spin text-[16px]">
+              progress_activity
+            </span>
+            Creating Account...
+          </>
+        ) : (
+          <>
+            Create Account
+            <span className="material-symbols-outlined text-[16px]">
+              arrow_forward
+            </span>
+          </>
+        )}
+      </button>
+    </form>
   );
 }
