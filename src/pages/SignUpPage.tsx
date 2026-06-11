@@ -13,7 +13,7 @@ export default function SignUpPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [currentRole, setCurrentRole] = useState("Principal");
+  const [currentRole, setCurrentRole] = useState("principal");
   const [stateRegion, setStateRegion] = useState("Lagos");
   const [schoolName, setSchoolName] = useState("");
   const [schoolLocation, setSchoolLocation] = useState("");

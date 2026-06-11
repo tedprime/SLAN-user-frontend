@@ -3,11 +3,11 @@ import AuthInput from "../ui/AuthInput";
 import { authService } from "../../services/authService";
 
 const NIGERIAN_STATES = [
-  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
-  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu",
-  "FCT (Abuja)", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina",
-  "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo",
-  "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
+  "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno",
+  "Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT (Abuja)","Gombe",
+  "Imo","Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos",
+  "Nasarawa","Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto",
+  "Taraba","Yobe","Zamfara",
 ];
 
 interface StepTwoProps {
@@ -34,28 +34,21 @@ interface StepTwoProps {
   onSuccess: () => void;
 }
 
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("234")) return `+${digits}`;
+  if (digits.startsWith("0")) return `+234${digits.slice(1)}`;
+  if (digits.startsWith("7") || digits.startsWith("8") || digits.startsWith("9"))
+    return `+234${digits}`;
+  return raw;
+}
+
 export default function SignUpStepTwo({
-  email,
-  fullName,
-  setFullName,
-  phoneNumber,
-  setPhoneNumber,
-  password,
-  setPassword,
-  confirmPassword,
-  setConfirmPassword,
-  currentRole,
-  setCurrentRole,
-  stateRegion,
-  setStateRegion,
-  schoolLocation,
-  setSchoolLocation,
-  schoolType,
-  setSchoolType,
-  schoolName,
-  setSchoolName,
-  isGoogleRoute = false,
-  onSuccess,
+  email, fullName, setFullName, phoneNumber, setPhoneNumber,
+  password, setPassword, confirmPassword, setConfirmPassword,
+  currentRole, setCurrentRole, stateRegion, setStateRegion,
+  schoolLocation, setSchoolLocation, schoolType, setSchoolType,
+  schoolName, setSchoolName, isGoogleRoute = false, onSuccess,
 }: StepTwoProps) {
   const [showPass, setShowPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
@@ -76,7 +69,7 @@ export default function SignUpStepTwo({
       await authService.register({
         email,
         fullName,
-        phone: phoneNumber,
+        phone: formatPhone(phoneNumber),
         password,
         confirmPassword,
         role: currentRole,
@@ -85,11 +78,20 @@ export default function SignUpStepTwo({
       });
       onSuccess();
     } catch (err) {
-      const e = err as { statusCode?: number; status?: number; message?: string };
+      const e = err as {
+        statusCode?: number;
+        status?: number;
+        message?: string;
+        error?: string;
+        details?: { field?: string; message: string }[];
+      };
+      console.log("Register error:", JSON.stringify(e, null, 2));
       if (e?.statusCode === 409 || e?.status === 409) {
         setError("This email is already registered.");
+      } else if (e?.details?.length) {
+        setError(e.details.map(d => d.message).join(" "));
       } else {
-        setError(e?.message || "Registration failed. Please try again.");
+        setError(e?.message || e?.error || "Registration failed. Please try again.");
       }
     } finally {
       setIsLoading(false);
@@ -122,67 +124,51 @@ export default function SignUpStepTwo({
         />
 
         {!isGoogleRoute && (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label htmlFor="reg-pass" className="text-sm font-700 text-neutral-700 block font-body">
-                  Password
-                </label>
-                <div className="relative flex items-center">
-                  <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">
-                    lock
-                  </span>
-                  <input
-                    id="reg-pass"
-                    type={showPass ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-10 py-3"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3 flex items-center text-neutral-500 hover:text-neutral-700 select-none focus:outline-none"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">
-                      {showPass ? "visibility_off" : "visibility"}
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label htmlFor="reg-confirm-pass" className="text-sm font-700 text-neutral-700 block font-body">
-                  Confirm Password
-                </label>
-                <div className="relative flex items-center">
-                  <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">
-                    enhanced_encryption
-                  </span>
-                  <input
-                    id="reg-confirm-pass"
-                    type={showConfirmPass ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-10 py-3"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPass(!showConfirmPass)}
-                    className="absolute right-3 flex items-center text-neutral-500 hover:text-neutral-700 select-none focus:outline-none"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">
-                      {showConfirmPass ? "visibility_off" : "visibility"}
-                    </span>
-                  </button>
-                </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="reg-pass" className="text-sm font-700 text-neutral-700 block font-body">
+                Password
+              </label>
+              <div className="relative flex items-center">
+                <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">lock</span>
+                <input
+                  id="reg-pass"
+                  type={showPass ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-10 py-3"
+                />
+                <button type="button" onClick={() => setShowPass(!showPass)}
+                  className="absolute right-3 flex items-center text-neutral-500 hover:text-neutral-700 select-none focus:outline-none">
+                  <span className="material-symbols-outlined text-[20px]">{showPass ? "visibility_off" : "visibility"}</span>
+                </button>
               </div>
             </div>
-          </>
+
+            <div className="space-y-1.5">
+              <label htmlFor="reg-confirm-pass" className="text-sm font-700 text-neutral-700 block font-body">
+                Confirm Password
+              </label>
+              <div className="relative flex items-center">
+                <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">enhanced_encryption</span>
+                <input
+                  id="reg-confirm-pass"
+                  type={showConfirmPass ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-10 py-3"
+                />
+                <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)}
+                  className="absolute right-3 flex items-center text-neutral-500 hover:text-neutral-700 select-none focus:outline-none">
+                  <span className="material-symbols-outlined text-[20px]">{showConfirmPass ? "visibility_off" : "visibility"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {error && (
@@ -197,12 +183,12 @@ export default function SignUpStepTwo({
               onChange={(e) => setCurrentRole(e.target.value)}
               className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
             >
-
-<option value="principal">Principal / Head Teacher</option>
-<option value="vice_principal">Vice / Assistant School Head</option>
-<option value="school_head">School Head Cadre</option>
-<option value="proprietor">School Proprietor</option>
-<option value="education_officer">Education Officer</option>
+              <option value="principal">Principal / Head Teacher</option>
+              <option value="vice_principal">Vice / Assistant School Head</option>
+              <option value="school_head">School Head Cadre</option>
+              <option value="proprietor">School Proprietor</option>
+              <option value="education_officer">Education Officer</option>
+              <option value="teacher">Teacher</option>
             </select>
           </div>
 
@@ -266,9 +252,7 @@ export default function SignUpStepTwo({
       >
         {isLoading ? (
           <>
-            <span className="material-symbols-outlined animate-spin text-[16px]">
-              progress_activity
-            </span>
+            <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
             Creating Account...
           </>
         ) : (
