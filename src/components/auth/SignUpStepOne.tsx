@@ -1,22 +1,49 @@
-import React from "react";
+import React, { useState } from "react";
 import AuthInput from "../ui/AuthInput";
+import { authService } from "../../services/authService";
 
 interface StepOneProps {
   email: string;
   setEmail: (val: string) => void;
   onContinue: () => void;
-  onGoogleContinue: () => void;
 }
 
 export default function SignUpStepOne({
   email,
   setEmail,
   onContinue,
-  onGoogleContinue
 }: StepOneProps) {
-  const handleNextStep = (e: React.FormEvent) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleNextStep = async (e: React.FormEvent) => {
     e.preventDefault();
-    onContinue();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      await authService.checkEmail({ email });
+      onContinue();
+    } catch (err) {
+  const e = err as { statusCode?: number; status?: number; message?: string };
+  if (e?.statusCode === 409 || e?.status === 409) {
+    setError("This email is already registered. Try logging in instead.");
+  } else {
+    setError(e?.message || "Something went wrong. Please try again.");
+  }
+}
+    finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleContinue = async () => {
+    try {
+      const { url } = await authService.getGoogleSignupUrl();
+      window.location.href = url;
+    } catch {
+      setError("Could not initiate Google sign up. Please try again.");
+    }
   };
 
   return (
@@ -28,16 +55,37 @@ export default function SignUpStepOne({
         placeholder="example@email.com"
         iconName="mail"
         value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={(e) => {
+          setEmail(e.target.value);
+          if (error) setError("");
+        }}
         required
       />
 
+      {error && (
+        <p className="text-xs font-600 text-red-500 font-body -mt-2">
+          {error}
+        </p>
+      )}
+
       <button
         type="submit"
-        className="w-full justify-center py-3 bg-primary-500 hover:bg-primary-600 text-white font-600 text-sm inline-flex items-center gap-2 transition-colors rounded-sm"
+        disabled={isLoading}
+        className="w-full justify-center py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-600 text-sm inline-flex items-center gap-2 transition-colors rounded-sm"
       >
-        Continue Registration
-        <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+        {isLoading ? (
+          <>
+            <span className="material-symbols-outlined animate-spin text-[16px]">
+              progress_activity
+            </span>
+            Checking...
+          </>
+        ) : (
+          <>
+            Continue Registration
+            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </>
+        )}
       </button>
 
       <div className="relative flex py-2 items-center text-center">
@@ -48,7 +96,7 @@ export default function SignUpStepOne({
 
       <button
         type="button"
-        onClick={onGoogleContinue}
+        onClick={handleGoogleContinue}
         className="w-full py-3 px-4 border border-neutral-300 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 text-sm font-600 font-body transition-colors flex items-center justify-center gap-3 focus:outline-none rounded-sm"
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24">

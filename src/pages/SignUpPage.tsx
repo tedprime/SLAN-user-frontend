@@ -6,7 +6,6 @@ import SignUpStepTwo from "../components/auth/SignUpStepTwo";
 export default function SignUpPage() {
   const currentYear = new Date().getFullYear();
   const [step, setStep] = useState<1 | 2>(1);
-  const [isGoogleRoute, setIsGoogleRoute] = useState<boolean>(false);
 
   // Form State Values
   const [email, setEmail] = useState("");
@@ -73,12 +72,6 @@ export default function SignUpPage() {
               email={email}
               setEmail={setEmail}
               onContinue={() => {
-                setIsGoogleRoute(false);
-                setStep(2);
-              }}
-              onGoogleContinue={() => {
-                setEmail("google.user@gmail.com");
-                setIsGoogleRoute(true);
                 setStep(2);
               }}
             />
@@ -102,7 +95,6 @@ export default function SignUpPage() {
               setSchoolType={setSchoolType}
               schoolName={schoolName}
               setSchoolName={setSchoolName}
-              isGoogleRoute={isGoogleRoute}
               onSubmit={handleFinalSubmit}
             />
           )}

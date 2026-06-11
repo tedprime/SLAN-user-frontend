@@ -60,8 +60,9 @@ interface StepTwoProps {
   setSchoolType: (val: string) => void;
   schoolName: string;
   setSchoolName: (val: string) => void;
-  isGoogleRoute: boolean;
+  isGoogleRoute?: boolean;
   onSubmit: (e: React.FormEvent) => void;
+  
 }
 
 export default function SignUpStepTwo({
@@ -83,7 +84,7 @@ export default function SignUpStepTwo({
   setSchoolType,
   schoolName,
   setSchoolName,
-  isGoogleRoute,
+  isGoogleRoute = false,
   onSubmit,
 }: StepTwoProps) {
   const [showPass, setShowPass] = useState(false);
