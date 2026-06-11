@@ -3,43 +3,11 @@ import AuthInput from "../ui/AuthInput";
 import { authService } from "../../services/authService";
 
 const NIGERIAN_STATES = [
-  "Abia",
-  "Adamawa",
-  "Akwa Ibom",
-  "Anambra",
-  "Bauchi",
-  "Bayelsa",
-  "Benue",
-  "Borno",
-  "Cross River",
-  "Delta",
-  "Ebonyi",
-  "Edo",
-  "Ekiti",
-  "Enugu",
-  "FCT (Abuja)",
-  "Gombe",
-  "Imo",
-  "Jigawa",
-  "Kaduna",
-  "Kano",
-  "Katsina",
-  "Kebbi",
-  "Kogi",
-  "Kwara",
-  "Lagos",
-  "Nasarawa",
-  "Niger",
-  "Ogun",
-  "Ondo",
-  "Osun",
-  "Oyo",
-  "Plateau",
-  "Rivers",
-  "Sokoto",
-  "Taraba",
-  "Yobe",
-  "Zamfara",
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
+  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu",
+  "FCT (Abuja)", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina",
+  "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo",
+  "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
 ];
 
 interface StepTwoProps {
@@ -117,11 +85,7 @@ export default function SignUpStepTwo({
       });
       onSuccess();
     } catch (err) {
-      const e = err as {
-        statusCode?: number;
-        status?: number;
-        message?: string;
-      };
+      const e = err as { statusCode?: number; status?: number; message?: string };
       if (e?.statusCode === 409 || e?.status === 409) {
         setError("This email is already registered.");
       } else {
@@ -161,10 +125,7 @@ export default function SignUpStepTwo({
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label
-                  htmlFor="reg-pass"
-                  className="text-sm font-700 text-neutral-700 block font-body"
-                >
+                <label htmlFor="reg-pass" className="text-sm font-700 text-neutral-700 block font-body">
                   Password
                 </label>
                 <div className="relative flex items-center">
@@ -193,10 +154,7 @@ export default function SignUpStepTwo({
               </div>
 
               <div className="space-y-1.5">
-                <label
-                  htmlFor="reg-confirm-pass"
-                  className="text-sm font-700 text-neutral-700 block font-body"
-                >
+                <label htmlFor="reg-confirm-pass" className="text-sm font-700 text-neutral-700 block font-body">
                   Confirm Password
                 </label>
                 <div className="relative flex items-center">
@@ -233,37 +191,30 @@ export default function SignUpStepTwo({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-700 text-neutral-700 block font-body">
-              Current Role
-            </label>
+            <label className="text-sm font-700 text-neutral-700 block font-body">Current Role</label>
             <select
               value={currentRole}
               onChange={(e) => setCurrentRole(e.target.value)}
               className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
             >
-              <option value="principal">Principal / Head Teacher</option>
-              <option value="vice_principal">
-                Vice / Assistant School Head
-              </option>
-              <option value="school_head">School Head Cadre</option>
-              <option value="proprietor">School Proprietor</option>
-              <option value="education_officer">Education Officer</option>
+
+<option value="principal">Principal / Head Teacher</option>
+<option value="vice_principal">Vice / Assistant School Head</option>
+<option value="school_head">School Head Cadre</option>
+<option value="proprietor">School Proprietor</option>
+<option value="education_officer">Education Officer</option>
             </select>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-700 text-neutral-700 block font-body">
-              State
-            </label>
+            <label className="text-sm font-700 text-neutral-700 block font-body">State</label>
             <select
               value={stateRegion}
               onChange={(e) => setStateRegion(e.target.value)}
               className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
             >
               {NIGERIAN_STATES.map((state) => (
-                <option key={state} value={state}>
-                  {state}
-                </option>
+                <option key={state} value={state}>{state}</option>
               ))}
             </select>
           </div>
@@ -271,9 +222,7 @@ export default function SignUpStepTwo({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-700 text-neutral-700 block font-body">
-              School Location
-            </label>
+            <label className="text-sm font-700 text-neutral-700 block font-body">School Location</label>
             <select
               value={schoolLocation}
               onChange={(e) => setSchoolLocation(e.target.value)}
@@ -286,9 +235,7 @@ export default function SignUpStepTwo({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-700 text-neutral-700 block font-body">
-              School Type
-            </label>
+            <label className="text-sm font-700 text-neutral-700 block font-body">School Type</label>
             <select
               value={schoolType}
               onChange={(e) => setSchoolType(e.target.value)}
@@ -327,9 +274,7 @@ export default function SignUpStepTwo({
         ) : (
           <>
             Create Account
-            <span className="material-symbols-outlined text-[16px]">
-              arrow_forward
-            </span>
+            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
           </>
         )}
       </button>
