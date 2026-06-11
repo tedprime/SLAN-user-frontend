@@ -1,3 +1,5 @@
+import { getAccessToken } from "./tokenService";
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -18,8 +20,9 @@ export async function apiRequest<T>(
     "Content-Type": "application/json",
   };
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+  const resolvedToken = token ?? getAccessToken();
+  if (resolvedToken) {
+    headers["Authorization"] = `Bearer ${resolvedToken}`;
   }
 
   const response = await fetch(`${BASE_URL}${endpoint}`, {
@@ -31,13 +34,9 @@ export async function apiRequest<T>(
   const data = await response.json();
 
   if (!response.ok) {
-    throw data; // backend error bubbles up to caller
+    console.error("API Error:", data);
+    throw data;
   }
-if (!response.ok) {
-  const errorData = await response.json();
-  console.error("API Error:", errorData); // ← add this line
-  throw errorData;
-}
+
   return data as T;
 }
-

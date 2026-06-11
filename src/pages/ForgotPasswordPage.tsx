@@ -1,15 +1,23 @@
-import React, { useState } from "react";
+import React, { useState} from "react";
 import AuthNavbar from "../components/layout/AuthNavbar";
 import AuthInput from "../components/ui/AuthInput";
-
+import { authService } from "../services/authService";
 export default function ForgotPasswordPage() {
-  const [recoveryStep, setRecoveryStep] = useState<1 | 2 | 3>(1);
+  const urlToken = new URLSearchParams(window.location.search).get("token");
+
+  const [recoveryStep, setRecoveryStep] = useState<1 | 2 | 3>(
+    urlToken ? 3 : 1
+  );
   const [emailAddress, setEmailAddress] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [matchError, setMatchError] = useState("");
+  const [resetToken] = useState(urlToken ?? "");
+
 
   const navigateTo = (path: string, e?: React.MouseEvent) => {
     if (e) e.preventDefault();
@@ -17,20 +25,59 @@ export default function ForgotPasswordPage() {
     window.dispatchEvent(new Event("popstate"));
   };
 
-  const handleStepOneSubmit = (e: React.FormEvent) => {
+  // Read ?token= from URL on mount — present when user arrives via the reset email link
+
+
+  const handleStepOneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setRecoveryStep(2);
+    setError("");
+    setIsLoading(true);
+
+    try {
+      await authService.forgotPassword({ email: emailAddress });
+      setRecoveryStep(2);
+    } catch (err) {
+      const e = err as { statusCode?: number; status?: number; message?: string };
+      const status = e?.statusCode ?? e?.status;
+      if (status === 404) {
+        setError("No account found with that email address.");
+      } else {
+        setError(e?.message || "Something went wrong. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleStepThreeSubmit = (e: React.FormEvent) => {
+  const handleStepThreeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setMatchError("");
+    setError("");
+
     if (newPassword !== confirmNewPassword) {
       setMatchError("The passwords provided do not match.");
       return;
     }
-    setMatchError("");
-    // Finalization redirects clean back to core login form
-    navigateTo("/login");
+
+    setIsLoading(true);
+    try {
+      await authService.resetPassword({
+        token: resetToken,
+        newPassword,
+        confirmPassword: confirmNewPassword,
+      });
+      navigateTo("/login");
+    } catch (err) {
+      const e = err as { statusCode?: number; status?: number; message?: string };
+      const status = e?.statusCode ?? e?.status;
+      if (status === 400) {
+        setError("This reset link is invalid or has expired. Please request a new one.");
+      } else {
+        setError(e?.message || "Password reset failed. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -39,7 +86,7 @@ export default function ForgotPasswordPage() {
 
       <main className="flex-1 flex items-center justify-center w-full max-w-md mx-auto px-4 py-12">
         <div className="w-full bg-surface-card border border-neutral-200 rounded-sm p-8 shadow-sm">
-          
+
           {recoveryStep === 1 && (
             <>
               <h2 className="text-2xl font-800 font-headline text-tertiary-500 text-center tracking-tight">
@@ -56,14 +103,32 @@ export default function ForgotPasswordPage() {
                   placeholder="name@institution.edu.ng"
                   iconName="mail"
                   value={emailAddress}
-                  onChange={(e) => setEmailAddress(e.target.value)}
+                  onChange={(e) => {
+                    setEmailAddress(e.target.value);
+                    if (error) setError("");
+                  }}
                   required
                 />
+
+                {error && (
+                  <p className="text-xs font-600 text-red-500 font-body">{error}</p>
+                )}
+
                 <button
                   type="submit"
-                  className="w-full justify-center py-3 bg-primary-500 hover:bg-primary-600 text-white font-600 text-sm transition-colors rounded-sm"
+                  disabled={isLoading}
+                  className="w-full justify-center py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-600 text-sm inline-flex items-center gap-2 transition-colors rounded-sm"
                 >
-                  Send Recovery Link
+                  {isLoading ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin text-[16px]">
+                        progress_activity
+                      </span>
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Recovery Link"
+                  )}
                 </button>
               </form>
             </>
@@ -78,20 +143,9 @@ export default function ForgotPasswordPage() {
                 Check Your Inbox
               </h2>
               <p className="text-sm font-body text-neutral-600 max-w-xs mx-auto leading-relaxed">
-                A secure generation reference link was transmitted straight to <strong className="text-neutral-800">{emailAddress || "your inbox"}</strong>.
+                A secure generation reference link was transmitted straight to{" "}
+                <strong className="text-neutral-800">{emailAddress || "your inbox"}</strong>.
               </p>
-              
-              {/* Simulated operational webhook action mimicking a link click event */}
-              <div className="pt-4 mt-2 border-t border-dashed border-neutral-200">
-                <button
-                  type="button"
-                  onClick={() => setRecoveryStep(3)}
-                  className="text-xs font-600 font-body text-primary-500 hover:text-primary-600 underline flex items-center justify-center gap-1 mx-auto"
-                >
-                  <span className="material-symbols-outlined text-[14px]">link</span>
-                  Simulate Email Link Click Action
-                </button>
-              </div>
             </div>
           )}
 
@@ -103,9 +157,8 @@ export default function ForgotPasswordPage() {
               <p className="text-xs sm:text-sm font-body text-neutral-600 text-center mb-6">
                 Please enter and verify your platform updates below.
               </p>
-              
+
               <form onSubmit={handleStepThreeSubmit} className="space-y-4">
-                {/* New Password Input Node */}
                 <div className="space-y-1.5">
                   <label htmlFor="new-pass" className="text-sm font-700 text-neutral-700 block font-body">
                     New Password
@@ -122,7 +175,7 @@ export default function ForgotPasswordPage() {
                       onChange={(e) => setNewPassword(e.target.value)}
                       required
                       className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-10 py-3"
-                  />
+                    />
                     <button
                       type="button"
                       onClick={() => setShowPass(!showPass)}
@@ -135,7 +188,6 @@ export default function ForgotPasswordPage() {
                   </div>
                 </div>
 
-                {/* Confirm New Password Input Node */}
                 <div className="space-y-1.5">
                   <label htmlFor="confirm-new-pass" className="text-sm font-700 text-neutral-700 block font-body">
                     Confirm New Password
@@ -165,17 +217,27 @@ export default function ForgotPasswordPage() {
                   </div>
                 </div>
 
-                {matchError && (
+                {(matchError || error) && (
                   <p className="text-xs font-600 text-red-500 font-body">
-                    {matchError}
+                    {matchError || error}
                   </p>
                 )}
 
                 <button
                   type="submit"
-                  className="w-full justify-center py-3 bg-primary-500 hover:bg-primary-600 text-white font-600 text-sm transition-colors rounded-sm"
+                  disabled={isLoading}
+                  className="w-full justify-center py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-600 text-sm inline-flex items-center gap-2 transition-colors rounded-sm"
                 >
-                  Reset Password
+                  {isLoading ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin text-[16px]">
+                        progress_activity
+                      </span>
+                      Resetting...
+                    </>
+                  ) : (
+                    "Reset Password"
+                  )}
                 </button>
               </form>
             </>
@@ -185,7 +247,10 @@ export default function ForgotPasswordPage() {
       </main>
 
       <div className="w-full py-4 text-center text-xs font-body text-neutral-500 border-t border-neutral-200 bg-surface-card">
-        Need assistance? <a href="#support" className="text-primary-500 font-600 hover:underline">Contact Support</a>
+        Need assistance?{" "}
+        <a href="#support" className="text-primary-500 font-600 hover:underline">
+          Contact Support
+        </a>
       </div>
     </div>
   );

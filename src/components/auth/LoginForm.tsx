@@ -1,26 +1,49 @@
 import React, { useState } from "react";
 import AuthInput from "../ui/AuthInput";
+import { authService } from "../../services/authService";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const navigateTo = (path: string, e: React.MouseEvent) => {
-    e.preventDefault();
+  const navigateTo = (path: string, e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
     window.history.pushState({}, "", path);
     window.dispatchEvent(new Event("popstate"));
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Redirects directly to the responsive OTP security check page
-    window.history.pushState({}, "", "/verify-otp");
-    window.dispatchEvent(new Event("popstate"));
+    setError("");
+    setIsLoading(true);
+
+    try {
+      await authService.login({ email, password });
+      navigateTo(`/verify-otp?flow=login&email=${encodeURIComponent(email)}`);
+    } catch (err) {
+      const e = err as { statusCode?: number; status?: number; message?: string };
+      const status = e?.statusCode ?? e?.status;
+      if (status === 401) {
+        setError("Invalid email or password. Please try again.");
+      } else if (status === 403) {
+        setError("Your email address has not been verified. Please check your inbox.");
+      } else {
+        setError(e?.message || "Something went wrong. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleGoogleLogin = () => {
-    window.history.pushState({}, "", "/dashboard");
-    window.dispatchEvent(new Event("popstate"));
+  const handleGoogleLogin = async () => {
+    try {
+      const { url } = await authService.getGoogleLoginUrl();
+      window.location.href = url;
+    } catch {
+      setError("Could not initiate Google sign in. Please try again.");
+    }
   };
 
   return (
@@ -32,19 +55,22 @@ export default function LoginForm() {
         placeholder="example@email.com"
         iconName="mail"
         value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={(e) => {
+          setEmail(e.target.value);
+          if (error) setError("");
+        }}
         required
       />
 
       <div className="space-y-1.5">
         <div className="flex justify-between items-center">
-          <label 
-            htmlFor="login-password" 
+          <label
+            htmlFor="login-password"
             className="text-sm font-700 text-neutral-700 block font-body"
           >
             Password
           </label>
-          <a 
+          <a
             href="/forgot-password"
             onClick={(e) => navigateTo("/forgot-password", e)}
             className="text-xs font-600 font-body text-primary-500 hover:underline"
@@ -61,23 +87,40 @@ export default function LoginForm() {
             type="password"
             placeholder="••••••••"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (error) setError("");
+            }}
             required
             className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-4 py-3"
           />
         </div>
       </div>
 
+      {error && (
+        <p className="text-xs font-600 text-red-500 font-body -mt-2">{error}</p>
+      )}
+
       <button
         type="submit"
-        className="w-full justify-center py-3 bg-primary-500 hover:bg-primary-600 text-white font-600 text-sm transition-colors rounded-sm flex items-center"
+        disabled={isLoading}
+        className="w-full justify-center py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-600 text-sm transition-colors rounded-sm flex items-center gap-2"
       >
-        Get Access OTP
+        {isLoading ? (
+          <>
+            <span className="material-symbols-outlined animate-spin text-[18px]">
+              progress_activity
+            </span>
+            Sending OTP...
+          </>
+        ) : (
+          "Get Access OTP"
+        )}
       </button>
 
       <div className="relative flex py-2 items-center text-center">
         <div className="flex-1 border-t border-neutral-200"></div>
-        <span className="flex-shrink mx-4 text-xs font-600 font-body text-neutral-500">or</span>
+        <span className="shrink mx-4 text-xs font-600 font-body text-neutral-500">or</span>
         <div className="flex-1 border-t border-neutral-200"></div>
       </div>
 
@@ -98,8 +141,8 @@ export default function LoginForm() {
       <div className="pt-2 text-center">
         <p className="text-sm font-body text-neutral-700">
           New to the platform?{" "}
-          <a 
-            href="/signup" 
+          <a
+            href="/signup"
             onClick={(e) => navigateTo("/signup", e)}
             className="text-primary-500 font-700 hover:underline ms-1"
           >
