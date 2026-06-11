@@ -7,7 +7,6 @@ import SevenTracks from "./components/sections/SevenTracks";
 import CTABanner from "./components/sections/CTABanner";
 import TrustBar from "./components/sections/TrustBar";
 
-// Import newly compiled flow views
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import OtpPage from "./pages/OtpPage";
@@ -20,12 +19,10 @@ export default function App() {
     const handleLocationChange = () => {
       setCurrentPath(window.location.pathname);
     };
-
     window.addEventListener("popstate", handleLocationChange);
     return () => window.removeEventListener("popstate", handleLocationChange);
   }, []);
 
-  // Simple clean client routing matching project setup
   switch (currentPath) {
     case "/login":
       return <LoginPage />;
@@ -34,6 +31,9 @@ export default function App() {
     case "/verify-otp":
       return <OtpPage />;
     case "/forgot-password":
+      return <ForgotPasswordPage />;
+    // ↓ Handle the reset link your backend emails out
+    case "/reset-password":
       return <ForgotPasswordPage />;
     default:
       return (

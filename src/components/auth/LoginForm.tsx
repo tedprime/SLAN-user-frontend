@@ -7,6 +7,7 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPass, setShowPass] = useState(false);
 
   const navigateTo = (path: string, e?: React.MouseEvent) => {
     if (e) e.preventDefault();
@@ -79,22 +80,31 @@ export default function LoginForm() {
           </a>
         </div>
         <div className="relative flex items-center">
-          <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">
-            lock
-          </span>
-          <input
-            id="login-password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              if (error) setError("");
-            }}
-            required
-            className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-4 py-3"
-          />
-        </div>
+  <span className="material-symbols-outlined absolute left-4 text-neutral-500 text-[20px] pointer-events-none select-none">
+    lock
+  </span>
+  <input
+    id="login-password"
+    type={showPass ? "text" : "password"}
+    placeholder="••••••••"
+    value={password}
+    onChange={(e) => {
+      setPassword(e.target.value);
+      if (error) setError("");
+    }}
+    required
+    className="w-full bg-neutral-100 border border-neutral-300 text-neutral-800 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm font-500 font-body transition-all outline-none rounded-sm pl-11 pr-10 py-3"
+  />
+  <button
+    type="button"
+    onClick={() => setShowPass(!showPass)}
+    className="absolute right-3 flex items-center text-neutral-500 hover:text-neutral-700 focus:outline-none"
+  >
+    <span className="material-symbols-outlined text-[20px]">
+      {showPass ? "visibility_off" : "visibility"}
+    </span>
+  </button>
+</div>
       </div>
 
       {error && (
