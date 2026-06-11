@@ -33,6 +33,11 @@ export async function apiRequest<T>(
   if (!response.ok) {
     throw data; // backend error bubbles up to caller
   }
-
+if (!response.ok) {
+  const errorData = await response.json();
+  console.error("API Error:", errorData); // ← add this line
+  throw errorData;
+}
   return data as T;
 }
+
