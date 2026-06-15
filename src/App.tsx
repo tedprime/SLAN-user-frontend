@@ -7,7 +7,6 @@ import SevenTracks from "./components/sections/SevenTracks";
 import CTABanner from "./components/sections/CTABanner";
 import TrustBar from "./components/sections/TrustBar";
 import CourseDetailOverlay from "./components/ui/CourseDetailOverlay";
-
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import OtpPage from "./pages/OtpPage";
@@ -15,41 +14,27 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import UserDashboard from "./pages/dashboard/UserDashboard";
 
 export default function App() {
-  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const [currentPath,  setCurrentPath]  = useState(window.location.pathname);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
 
   useEffect(() => {
-    const handleLocationChange = () => {
-      setCurrentPath(window.location.pathname);
-    };
-    window.addEventListener("popstate", handleLocationChange);
-    return () => window.removeEventListener("popstate", handleLocationChange);
+    const handler = () => setCurrentPath(window.location.pathname);
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
   }, []);
 
-  // Prevent body scroll when overlay is open
   useEffect(() => {
-    if (isOverlayOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    document.body.style.overflow = isOverlayOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [isOverlayOpen]);
 
-  
   switch (currentPath) {
-    case "/login":
-      return <LoginPage />;
-    case "/signup":
-      return <SignUpPage />;
-    case "/verify-otp":
-      return <OtpPage />;
-    case "/forgot-password":
-      return <ForgotPasswordPage />;
-    case "/reset-password":
-      return <ForgotPasswordPage />;
-    case "/dashboard":
-      return <UserDashboard />;
+    case "/login":           return <LoginPage />;
+    case "/signup":          return <SignUpPage />;
+    case "/verify-otp":      return <OtpPage />;
+    case "/forgot-password": return <ForgotPasswordPage />;
+    case "/reset-password":  return <ForgotPasswordPage />;
+    case "/dashboard":       return <UserDashboard />;
     default:
       return (
         <div className="min-h-screen flex flex-col">

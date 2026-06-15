@@ -1,12 +1,14 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, CircleCheck } from "lucide-react";
-import Badge from "./Badge";
-import Button from "./Button";
+import Badge from "../../components/ui/Badge";
+import Button from "../../components/ui/Button";
 
 interface CourseDetailOverlayProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Called when the user clicks Enroll inside this overlay */
+  onEnroll?: () => void;
 }
 
 const learningPoints = [
@@ -21,22 +23,28 @@ const learningPoints = [
 export default function CourseDetailOverlay({
   isOpen,
   onClose,
+  onEnroll,
 }: CourseDetailOverlayProps) {
-  // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-
     if (isOpen) document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
+  const handleEnroll = () => {
+    onEnroll?.();
+    onClose();
+    // Redirect to login if no enrollment handler provided (landing page usage)
+    if (!onEnroll) window.location.href = "/login";
+  };
+
   return createPortal(
     <div
-      className="fixed flex items-center justify-center p-6 sm:p-6"
+      className="fixed flex items-center justify-center p-6"
       style={{
         backgroundColor: "rgba(0, 0, 0, 0.5)",
         zIndex: 999999,
@@ -61,9 +69,7 @@ export default function CourseDetailOverlay({
         {/* Header */}
         <div
           className="px-5 pt-4 pb-3 flex items-start justify-between gap-4 shrink-0"
-          style={{
-            borderBottom: "0.5px solid var(--color-border-tertiary, #e5e7eb)",
-          }}
+          style={{ borderBottom: "0.5px solid var(--color-border-tertiary, #e5e7eb)" }}
         >
           <div>
             <div className="flex flex-wrap gap-1 mb-2">
@@ -89,7 +95,6 @@ export default function CourseDetailOverlay({
 
         {/* Body */}
         <div className="px-5 py-3 flex flex-col gap-3">
-          {/* What you'll learn */}
           <div>
             <p className="text-sm font-semibold font-body mb-1.5 text-tertiary-500">
               What you'll learn
@@ -100,18 +105,13 @@ export default function CourseDetailOverlay({
                   key={point}
                   className="flex items-start gap-1.5 text-[11px] font-body text-neutral-600"
                 >
-                  <CircleCheck
-                    size={12}
-                    color="#3B6D11"
-                    className="shrink-0 mt-0.5"
-                  />
+                  <CircleCheck size={12} color="#3B6D11" className="shrink-0 mt-0.5" />
                   {point}
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Audience */}
           <div>
             <p className="text-sm text-tertiary-500 font-semibold font-body mb-1.5">
               Who should enroll
@@ -137,24 +137,19 @@ export default function CourseDetailOverlay({
         {/* Footer CTA */}
         <div
           className="px-5 py-3 shrink-0"
-          style={{
-            borderTop: "0.5px solid var(--color-border-tertiary, #e5e7eb)",
-          }}
+          style={{ borderTop: "0.5px solid var(--color-border-tertiary, #e5e7eb)" }}
         >
           <Button
             variant="primary"
             size="md"
             className="w-full rounded justify-center"
-            onClick={() => {
-              onClose();
-              window.location.href = "/login";
-            }}
+            onClick={handleEnroll}
           >
-            Login
+            Enroll
           </Button>
         </div>
       </div>
     </div>,
-    document.body,
+    document.body
   );
-}
+} 
