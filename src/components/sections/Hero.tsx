@@ -3,7 +3,11 @@ import Button from "../ui/Button";
 import Badge from "../ui/Badge";
 import { ShieldCheck } from "lucide-react";
 
-export default function Hero() {
+interface HeroProps {
+  onOpenOverlay: () => void;
+}
+
+export default function Hero({ onOpenOverlay }: HeroProps) {
   return (
     <section className="relative bg-neutral-100 overflow-hidden min-h-[85vh] sm:min-h-[90vh] flex items-center">
       {/* Dot grid background */}
@@ -15,7 +19,7 @@ export default function Hero() {
         }}
       />
 
-      {/* Abstract background skew shape - hidden on mobile, visible on desktop */}
+      {/* Abstract background skew shape */}
       <div className="hidden lg:block absolute top-0 right-0 w-1/3 h-full bg-primary-500/5 -skew-x-12 transform translate-x-20" />
 
       <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
@@ -46,10 +50,10 @@ export default function Hero() {
               <Button
                 variant="primary"
                 size="lg"
-                href="/login"
+                onClick={onOpenOverlay}
                 className="w-full sm:w-auto justify-center"
               >
-                Start Enrollment →
+                Login
               </Button>
               <Button
                 variant="outlined"
@@ -77,7 +81,6 @@ export default function Hero() {
           {/* Right – Image + floating cards */}
           <div className="relative flex justify-center lg:justify-end order-1 lg:order-2">
             <div className="relative w-full max-w-md sm:max-w-lg bg-white p-1.5 sm:p-2 rounded-xl sm:rounded-2xl">
-              {/* Hero image */}
               <img
                 src={HeroImage}
                 alt="Nigerian educators collaborating"

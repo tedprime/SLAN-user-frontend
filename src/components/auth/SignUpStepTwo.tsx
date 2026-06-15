@@ -188,7 +188,6 @@ export default function SignUpStepTwo({
               <option value="school_head">School Head Cadre</option>
               <option value="proprietor">School Proprietor</option>
               <option value="education_officer">Education Officer</option>
-              <option value="teacher">Teacher</option>
             </select>
           </div>
 

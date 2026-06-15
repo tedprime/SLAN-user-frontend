@@ -9,7 +9,7 @@ const features = [
     icon: <Gavel className="w-8 h-8 sm:w-9 sm:h-9 text-primary-500" />,
     title: "Nigeria-Specific by Design",
     description:
-      "Every module is written against Nigerian policy, Nigerian law, and Nigerian school realities. We address UBEC, TRCN, WAEC, and state ministry requirements directly.",
+      "Every module is written in accordance Nigerian policy, Nigerian law, and Nigerian school realities. We address UBEC, TRCN, WAEC, and state ministry requirements directly.",
     tags: ["Lagos & Abuja Policy", "SUBEB Standards", "TRCN CPD Points"],
     variant: "light" as const,
   },

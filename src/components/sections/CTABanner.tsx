@@ -1,6 +1,10 @@
 import Button from "../ui/Button";
 
-export default function CTABanner() {
+interface CTABannerProps {
+  onOpenOverlay: () => void;
+}
+
+export default function CTABanner({ onOpenOverlay }: CTABannerProps) {
   return (
     <section className="py-8 sm:py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -16,8 +20,7 @@ export default function CTABanner() {
               Ready to lead with earned authority?
             </h3>
             <p className="font-body text-white/80 text-sm sm:text-base max-w-xl mx-auto lg:mx-0 leading-relaxed">
-              Enrol and join 500
-              future-focused school leaders across Nigeria.
+              Enrol and join 500 future-focused school leaders across Nigeria.
             </p>
           </div>
 
@@ -26,7 +29,7 @@ export default function CTABanner() {
             <Button
               variant="secondary"
               size="lg"
-              href="#enroll"
+              onClick={onOpenOverlay}
               className="w-full sm:w-auto sm:min-w-50 justify-center"
             >
               Enrol Now
