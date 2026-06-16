@@ -27,55 +27,55 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
   const initials = getInitials(displayName);
 
   return (
-    <aside
-      style={{ backgroundColor: "#268d26", width: "180px" }}
+    <div
+      style={{ backgroundColor: "#f5f5f5", width: "288px" }}
       className="min-h-screen h-full flex flex-col shrink-0 z-20"
     >
       {/* Brand */}
       <div
-        className="px-5 pt-6 pb-5 shrink-0"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.12)" }}
+        className="px-6 pt-6 pb-5 shrink-0"
+        style={{ borderBottom: "1px solid #e0e0e0" }}
       >
-        <h1 className="font-bold text-base tracking-tight" style={{ color: "#ffffff" }}>
+        <h1 className="font-bold text-base tracking-tight" style={{ color: "#006400" }}>
           Dashboard
         </h1>
         <p
           className="text-[10px] uppercase tracking-widest mt-0.5"
-          style={{ color: "rgba(255,255,255,0.45)" }}
+          style={{ color: "#006400", opacity: 0.5 }}
         >
           Admin Panel
         </p>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-2 py-3 overflow-y-auto space-y-0.5">
+      <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5">
         {coreNav.map((item) => {
           const isActive = activeNav === item.id;
           return (
             <button
               key={item.id}
               onClick={() => onNavChange(item.id)}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 text-left"
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 text-left"
               style={{
-                backgroundColor: isActive ? "rgba(255,255,255,0.15)" : "transparent",
-                color: isActive ? "#d4af37" : "rgba(255,255,255,0.65)",
-                borderLeft: isActive ? "2px solid #d4af37" : "2px solid transparent",
-                paddingLeft: isActive ? "10px" : "12px",
+                backgroundColor: isActive ? "rgba(0,100,0,0.1)" : "transparent",
+                color: isActive ? "#006400" : "rgba(0,100,0,0.55)",
+                borderLeft: isActive ? "2px solid #006400" : "2px solid transparent",
+                paddingLeft: isActive ? "14px" : "16px",
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.08)";
-                  (e.currentTarget as HTMLButtonElement).style.color = "#ffffff";
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.06)";
+                  (e.currentTarget as HTMLButtonElement).style.color = "#006400";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isActive) {
                   (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-                  (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.65)";
+                  (e.currentTarget as HTMLButtonElement).style.color = "rgba(0,100,0,0.55)";
                 }
               }}
             >
-              <span style={{ color: isActive ? "#d4af37" : "rgba(255,255,255,0.5)" }}>
+              <span style={{ color: isActive ? "#006400" : "rgba(0,100,0,0.4)" }}>
                 {item.icon}
               </span>
               {item.label}
@@ -86,48 +86,45 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
 
       {/* User + Logout Footer */}
       <div
-        className="px-3 py-4 shrink-0"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.12)" }}
+        className="px-4 py-4 shrink-0"
+        style={{ borderTop: "1px solid #e0e0e0" }}
       >
-        {/* Initials avatar */}
-        <div className="flex items-center gap-2.5 mb-3 px-1">
+        <div className="flex items-center gap-3 mb-3 px-1">
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center font-bold shrink-0"
             style={{
               backgroundColor: "#d4af37",
               color: "#7a5f00",
               fontSize: "11px",
-              letterSpacing: "0.3px",
             }}
           >
             {initials}
           </div>
           <div className="overflow-hidden">
             <p
-              className="text-[12px] font-semibold truncate leading-tight"
-              style={{ color: "#ffffff" }}
+              className="text-[13px] font-semibold truncate leading-tight"
+              style={{ color: "#006400" }}
             >
               {displayName}
             </p>
             <p
-              className="text-[10px] truncate mt-0.5 leading-tight"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+              className="text-[10px] truncate mt-0.5"
+              style={{ color: "rgba(0,100,0,0.5)" }}
             >
               {displayEmail}
             </p>
           </div>
         </div>
 
-        {/* Logout */}
         <button
-          className="w-full flex items-center gap-2 py-1.5 px-2 text-[11px] font-medium rounded-lg transition-all duration-200"
-          style={{ color: "rgba(255,255,255,0.45)" }}
+          className="w-full flex items-center gap-2 py-1.5 px-2 text-[12px] font-medium rounded-lg transition-all duration-200"
+          style={{ color: "rgba(0,100,0,0.5)" }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.color = "#ffffff";
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.08)";
+            (e.currentTarget as HTMLButtonElement).style.color = "#006400";
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.06)";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.45)";
+            (e.currentTarget as HTMLButtonElement).style.color = "rgba(0,100,0,0.5)";
             (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
           }}
         >
@@ -135,6 +132,6 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
           Logout
         </button>
       </div>
-    </aside>
+    </div>
   );
 }
