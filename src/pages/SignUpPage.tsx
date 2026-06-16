@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { BadgeCheck, Lock, ArrowLeft } from "lucide-react";
 import AuthNavbar from "../components/layout/AuthNavbar";
 import SignUpStepOne from "../components/auth/SignUpStepOne";
 import SignUpStepTwo from "../components/auth/SignUpStepTwo";
@@ -61,9 +62,7 @@ export default function SignUpPage() {
                   className="w-8 h-8 shrink-0 rounded-full border border-neutral-300 bg-neutral-50 text-neutral-600 hover:text-primary-500 hover:border-primary-500 flex items-center justify-center transition-colors focus:outline-none"
                   aria-label="Go back to step one"
                 >
-                  <span className="material-symbols-outlined text-[18px]">
-                    arrow_back
-                  </span>
+                  <ArrowLeft size={18} />
                 </button>
               </div>
             )}
@@ -119,15 +118,11 @@ export default function SignUpPage() {
 
       <div className="w-full flex items-center justify-center gap-8 py-4 bg-surface-card border-y border-neutral-200 text-[11px] font-600 font-body text-neutral-500">
         <span className="flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-[14px]">
-            verified
-          </span>{" "}
-          TRCN Acknowledged
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-[14px]">lock</span>{" "}
-          Secure Data
-        </span>
+  <BadgeCheck size={14} className="text-neutral-500" /> TRCN Acknowledged
+</span>
+<span className="flex items-center gap-1.5">
+  <Lock size={14} className="text-neutral-500" /> Secure Data
+</span>
       </div>
 
       <footer className="w-full max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-xs font-body text-neutral-600 bg-surface">
