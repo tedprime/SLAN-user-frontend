@@ -49,7 +49,7 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
             <button
               key={item.id}
               onClick={() => onNavChange(item.id)}
-              className="w-full flex items-center gap-3 py-3 text-[11px] font-bold uppercase tracking-wider transition-all duration-150 text-left"
+              className="w-full flex items-center gap-3 py-3 text-sm font-bold uppercase tracking-wider transition-all duration-150 text-left"
               style={{
                 backgroundColor: isActive ? "rgba(0,100,0,0.07)" : "transparent",
                 color: isActive ? "#006400" : "rgba(0,100,0,0.45)",
