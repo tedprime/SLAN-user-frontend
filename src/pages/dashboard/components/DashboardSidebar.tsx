@@ -49,9 +49,8 @@ export default function DashboardSidebar({
     >
       {/* Brand + toggle */}
       <div
-        className="h-16 flex items-center shrink-0 px-4"
+        className="h-16 flex items-center shrink-0 px-4 mb-2"
         style={{
-          borderBottom: "1px solid #e0e0e0",
           justifyContent: isOpen ? "space-between" : "center",
         }}
       >
