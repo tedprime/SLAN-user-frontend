@@ -42,6 +42,8 @@ export default function OtpPage() {
           ? await authService.verifySignupOtp(payload)
           : await authService.verifyLoginOtp(payload);
 
+          console.log("tokens response:", tokens);
+
       setTokens(tokens);
 setUser(tokens.user);
 navigateTo("/dashboard");

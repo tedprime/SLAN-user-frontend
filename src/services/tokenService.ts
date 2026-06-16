@@ -22,8 +22,13 @@ export function setUser(user: AuthTokenResponse["user"]): void {
 }
 
 export function getUser(): AuthTokenResponse["user"] | null {
-  const raw = localStorage.getItem(USER_KEY);
-  return raw ? JSON.parse(raw) : null;
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    if (!raw || raw === "undefined") return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 export function clearTokens(): void {
