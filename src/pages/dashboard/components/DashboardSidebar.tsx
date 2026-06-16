@@ -26,12 +26,12 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
 
   return (
     <aside
-      className="w-[260px] min-h-screen h-full flex flex-col shrink-0 z-20"
-      style={{ backgroundColor: "#268d26" }}
+      className="w-72 min-h-screen h-full flex flex-col shrink-0 z-20 shadow-lg bg-neutral-100"
+     
     >
       {/* Brand */}
-      <div className="px-6 pt-8 pb-6 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
-        <h1 className="font-bold text-xl tracking-tight" style={{ color: "#ffffff" }}>
+      <div className="h-16 px-6 pt-8 pb-6 shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
+        <h1 className="font-bold text-xl tracking-tight text-primary-500" >
           Dashboard
         </h1>
         <p className="text-[11px] uppercase tracking-widest mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
