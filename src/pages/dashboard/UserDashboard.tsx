@@ -76,11 +76,10 @@ export default function UserDashboard() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-neutral-50">
       {/* ── Sidebar ── */}
-      <DashboardSidebar
-        activeNav={activeNav}
-        onNavChange={setActiveNav}
-        enrolledTracks={enrolledTracks}
-      />
+    <DashboardSidebar
+  activeNav={activeNav}
+  onNavChange={setActiveNav}
+/>
 
       {/* ── Main content ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">

@@ -6,7 +6,8 @@ import CountdownTimer from "../components/ui/CountdownTimer";
 import { useCountdown } from "../hooks/useCountdown";
 import Button from "../components/ui/Button";
 import { authService } from "../services/authService";
-import { setTokens } from "../services/tokenService";
+import { setTokens, setUser } from "../services/tokenService"; 
+
 
 function getQueryParam(key: string): string {
   return new URLSearchParams(window.location.search).get(key) ?? "";
@@ -42,7 +43,8 @@ export default function OtpPage() {
           : await authService.verifyLoginOtp(payload);
 
       setTokens(tokens);
-      navigateTo("/dashboard");
+setUser(tokens.user);
+navigateTo("/dashboard");
     } catch (err) {
       const e = err as { statusCode?: number; status?: number; message?: string };
       const status = e?.statusCode ?? e?.status;

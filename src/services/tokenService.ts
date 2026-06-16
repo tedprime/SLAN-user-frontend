@@ -2,6 +2,7 @@ import type { AuthTokenResponse } from "./types/auth.types";
 
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
+const USER_KEY = "user";
 
 export function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
@@ -16,7 +17,17 @@ export function setTokens(tokens: Pick<AuthTokenResponse, "accessToken" | "refre
   localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
 }
 
+export function setUser(user: AuthTokenResponse["user"]): void {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+export function getUser(): AuthTokenResponse["user"] | null {
+  const raw = localStorage.getItem(USER_KEY);
+  return raw ? JSON.parse(raw) : null;
+}
+
 export function clearTokens(): void {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
 }
