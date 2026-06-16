@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { LayoutDashboard, BookOpen, LogOut, Menu, X } from "lucide-react";
 import { getUser } from "../../../services/tokenService";
+import { authService } from "../../../services/authService";
+import { getRefreshToken, clearTokens } from "../../../services/tokenService";
 
 interface DashboardSidebarProps {
   activeNav: string;
@@ -21,7 +23,10 @@ function getInitials(fullName: string): string {
     .slice(0, 2);
 }
 
-export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSidebarProps) {
+export default function DashboardSidebar({
+  activeNav,
+  onNavChange,
+}: DashboardSidebarProps) {
   const [isOpen, setIsOpen] = useState(true);
   const user = getUser();
   const displayName = user?.fullName ?? "User";
@@ -59,16 +64,19 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
           onClick={() => setIsOpen(!isOpen)}
           className="p-1.5 rounded-md transition-colors duration-200 shrink-0"
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.06)";
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+              "rgba(0,100,0,0.06)";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+              "transparent";
           }}
         >
-          {isOpen
-            ? <X size={20} style={{ color: "#006400" }} />
-            : <Menu size={20} style={{ color: "#006400" }} />
-          }
+          {isOpen ? (
+            <X size={20} style={{ color: "#006400" }} />
+          ) : (
+            <Menu size={20} style={{ color: "#006400" }} />
+          )}
         </button>
       </div>
 
@@ -83,9 +91,13 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
               title={!isOpen ? item.label : undefined}
               className="w-full flex items-center py-3.5 text-[15px] font-semibold capitalize tracking-wide transition-all duration-150 text-left mb-1"
               style={{
-                backgroundColor: isActive ? "rgba(0,100,0,0.07)" : "transparent",
+                backgroundColor: isActive
+                  ? "rgba(0,100,0,0.07)"
+                  : "transparent",
                 color: isActive ? "#006400" : "rgba(0,100,0,0.45)",
-                borderLeft: isActive ? "3px solid #101b37" : "3px solid transparent",
+                borderLeft: isActive
+                  ? "3px solid #101b37"
+                  : "3px solid transparent",
                 paddingLeft: isOpen ? (isActive ? "21px" : "24px") : "0px",
                 paddingRight: isOpen ? "24px" : "0px",
                 justifyContent: isOpen ? "flex-start" : "center",
@@ -94,14 +106,18 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.04)";
-                  (e.currentTarget as HTMLButtonElement).style.color = "#006400";
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                    "rgba(0,100,0,0.04)";
+                  (e.currentTarget as HTMLButtonElement).style.color =
+                    "#006400";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isActive) {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-                  (e.currentTarget as HTMLButtonElement).style.color = "rgba(0,100,0,0.45)";
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                    "transparent";
+                  (e.currentTarget as HTMLButtonElement).style.color =
+                    "rgba(0,100,0,0.45)";
                 }
               }}
             >
@@ -144,10 +160,16 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
         </div>
         {isOpen && (
           <div className="overflow-hidden">
-            <p className="text-[13px] font-bold truncate leading-tight" style={{ color: "#006400" }}>
+            <p
+              className="text-[13px] font-bold truncate leading-tight"
+              style={{ color: "#006400" }}
+            >
               {displayName}
             </p>
-            <p className="text-[11px] truncate mt-0.5" style={{ color: "rgba(0,100,0,0.5)" }}>
+            <p
+              className="text-[11px] truncate mt-0.5"
+              style={{ color: "rgba(0,100,0,0.5)" }}
+            >
               {displayEmail}
             </p>
           </div>
@@ -169,16 +191,26 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
             paddingLeft: isOpen ? "16px" : "0px",
             paddingRight: isOpen ? "16px" : "0px",
           }}
-          onClick={() => {
+          // update the logout button onClick:
+          onClick={async () => {
+            try {
+              const refreshToken = getRefreshToken();
+              if (refreshToken) await authService.logout({ refreshToken });
+            } catch {
+              // logout failed — clear tokens anyway
+            }
+            clearTokens();
             window.history.pushState({}, "", "/login");
             window.dispatchEvent(new Event("popstate"));
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#e8eaf0";
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+              "#e8eaf0";
             (e.currentTarget as HTMLButtonElement).style.color = "#101b37";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+              "transparent";
             (e.currentTarget as HTMLButtonElement).style.color = "#101b37";
           }}
         >

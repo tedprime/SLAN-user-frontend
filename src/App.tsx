@@ -12,9 +12,10 @@ import SignUpPage from "./pages/SignUpPage";
 import OtpPage from "./pages/OtpPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import UserDashboard from "./pages/dashboard/UserDashboard";
+import GoogleCallbackPage from "./pages/GoogleCallbackPage";
 
 export default function App() {
-  const [currentPath,  setCurrentPath]  = useState(window.location.pathname);
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
 
   useEffect(() => {
@@ -29,12 +30,13 @@ export default function App() {
   }, [isOverlayOpen]);
 
   switch (currentPath) {
-    case "/login":           return <LoginPage />;
-    case "/signup":          return <SignUpPage />;
-    case "/verify-otp":      return <OtpPage />;
-    case "/forgot-password": return <ForgotPasswordPage />;
-    case "/reset-password":  return <ForgotPasswordPage />;
-    case "/dashboard":       return <UserDashboard />;
+    case "/login":                return <LoginPage />;
+    case "/signup":               return <SignUpPage />;
+    case "/verify-otp":           return <OtpPage />;
+    case "/forgot-password":      return <ForgotPasswordPage />;
+    case "/reset-password":       return <ForgotPasswordPage />;
+    case "/dashboard":            return <UserDashboard />;
+    case "/auth/google/callback": return <GoogleCallbackPage />;
     default:
       return (
         <div className="min-h-screen flex flex-col">
