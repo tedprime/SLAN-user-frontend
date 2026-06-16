@@ -11,7 +11,7 @@ interface DashboardSidebarProps {
 
 const coreNav = [
   { id: "overview", label: "Overview", icon: <LayoutDashboard size={20} /> },
-  { id: "courses", label: "All Courses", icon: <BookOpen size={20} /> },
+  { id: "courses", label: "Course", icon: <BookOpen size={20} /> },
 ];
 
 export default function DashboardSidebar({
