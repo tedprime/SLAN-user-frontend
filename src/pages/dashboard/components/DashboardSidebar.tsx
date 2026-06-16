@@ -55,7 +55,7 @@ export default function DashboardSidebar({
         }}
       >
         {isOpen && (
-          <span className="font-headline font-800 text-2xl ml-8 tracking-tight text-primary-500 whitespace-nowrap">
+          <span className="font-headline font-800 ml-8 text-xl tracking-tight text-primary-500">
             SLAN <span className="text-tertiary-500">Online</span>
           </span>
         )}
