@@ -200,8 +200,7 @@ export default function DashboardSidebar({
               // logout failed — clear tokens anyway
             }
             clearTokens();
-            window.history.pushState({}, "", "/login");
-            window.dispatchEvent(new Event("popstate"));
+            window.location.href = "/login";
           }}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLButtonElement).style.backgroundColor =
