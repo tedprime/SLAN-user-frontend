@@ -1,6 +1,10 @@
 import {
-  LayoutDashboard, BookOpen, LogOut,
-  ChevronRight, CheckCircle2, PlayCircle,
+  LayoutDashboard,
+  BookOpen,
+  LogOut,
+  ChevronRight,
+  CheckCircle2,
+  PlayCircle,
 } from "lucide-react";
 import type { Track } from "../index";
 
@@ -8,27 +12,45 @@ interface DashboardSidebarProps {
   activeNav: string;
   onNavChange: (id: string) => void;
   enrolledTracks: Track[];
+  user?: {
+    name: string;
+    email: string;
+    initials: string;
+    role: string;
+  };
 }
 
 const coreNav = [
   { id: "overview", label: "Overview", icon: <LayoutDashboard size={18} /> },
-  { id: "courses",  label: "All Courses", icon: <BookOpen size={18} /> },
+  { id: "courses", label: "All Courses", icon: <BookOpen size={18} /> },
 ];
 
 function StatusDot({ status }: { status: Track["status"] }) {
   if (status === "completed")
     return <CheckCircle2 size={12} className="text-secondary-300 shrink-0" />;
   if (status === "in-progress")
-    return <PlayCircle size={12} className="text-secondary-300 shrink-0 animate-pulse" />;
+    return (
+      <PlayCircle
+        size={12}
+        className="text-secondary-300 shrink-0 animate-pulse"
+      />
+    );
   return <ChevronRight size={12} className="text-white/30 shrink-0" />;
 }
 
 export default function DashboardSidebar({
-  activeNav, onNavChange, enrolledTracks,
+  activeNav,
+  onNavChange,
+  enrolledTracks,
+  user = {
+    name: "Olumide O.",
+    email: "olumide@slan.edu.ng",
+    initials: "OO",
+    role: "School Principal",
+  },
 }: DashboardSidebarProps) {
   return (
-    <aside className="w-[260px] h-full flex flex-col bg-primary-500 shrink-0 z-20">
-
+    <aside className="w-[260px] min-h-screen h-full flex flex-col bg-primary-500 shrink-0 z-20">
       {/* Brand */}
       <div className="px-6 pt-8 pb-6 shrink-0">
         <h1 className="font-headline font-bold text-xl text-white tracking-tight">
@@ -53,7 +75,9 @@ export default function DashboardSidebar({
                   : "text-white/60 hover:bg-white/10 hover:text-white"
               }`}
             >
-              <span className={isActive ? "text-white" : "text-white/50"}>{item.icon}</span>
+              <span className={isActive ? "text-white" : "text-white/50"}>
+                {item.icon}
+              </span>
               {item.label}
             </button>
           );
@@ -78,7 +102,9 @@ export default function DashboardSidebar({
                       : "text-white/55 hover:bg-white/10 hover:text-white"
                   }`}
                 >
-                  <span className={`shrink-0 transition-colors ${isActive ? "text-white" : "text-white/40 group-hover:text-white/70"}`}>
+                  <span
+                    className={`shrink-0 transition-colors ${isActive ? "text-white" : "text-white/40 group-hover:text-white/70"}`}
+                  >
                     {track.icon}
                   </span>
                   <span className="flex-1 text-xs font-700 font-label leading-snug truncate">
@@ -92,19 +118,27 @@ export default function DashboardSidebar({
         )}
       </nav>
 
-      {/* Profile + Logout */}
+      {/* User + Logout Footer */}
       <div className="px-4 py-5 border-t border-white/10 shrink-0">
-        <div className="flex items-center gap-3 mb-3">
+        {/* User info row */}
+        <div className="flex items-center gap-3 mb-4">
           <div className="w-9 h-9 rounded-full bg-secondary-300 flex items-center justify-center font-bold text-sm text-secondary-800 shrink-0 font-headline">
-            OO
+            {user.initials}
           </div>
           <div className="overflow-hidden">
-            <p className="text-sm font-700 font-label text-white truncate">Olumide O.</p>
-            <p className="text-[11px] font-body text-white/45 truncate">School Principal</p>
+            <p className="text-sm font-700 font-label text-white truncate leading-tight">
+              {user.name}
+            </p>
+            <p className="text-[11px] font-body text-white/45 truncate">
+              {user.email}
+            </p>
           </div>
         </div>
-        <button className="w-full flex items-center justify-center gap-2 py-2 text-xs font-700 font-label text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200">
-          <LogOut size={14} /> Logout
+
+        {/* Logout */}
+        <button className="w-full flex items-center gap-2 py-2 px-3 text-xs font-700 font-label text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200">
+          <LogOut size={14} />
+          Logout
         </button>
       </div>
     </aside>
