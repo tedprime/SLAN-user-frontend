@@ -32,20 +32,17 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
       className="min-h-screen h-full flex flex-col shrink-0 z-20"
     >
       {/* Brand */}
-      <div className="px-6 pt-7 pb-6 shrink-0">
-        <h1 className="font-bold text-xl tracking-tight" style={{ color: "#006400" }}>
-          SLAN Online
-        </h1>
-        <p
-          className="text-[10px] uppercase tracking-widest mt-1 font-semibold"
-          style={{ color: "rgba(0,100,0,0.4)" }}
-        >
-          School Leadership Academy
-        </p>
+      <div
+        className="px-6 h-16 flex items-center shrink-0"
+        style={{ borderBottom: "1px solid #e0e0e0" }}
+      >
+        <span className="font-headline font-800 text-xl tracking-tight text-primary-500">
+          SLAN <span className="text-tertiary-500">Online</span>
+        </span>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto">
+      <nav className="flex-1 overflow-y-auto pt-2">
         {coreNav.map((item) => {
           const isActive = activeNav === item.id;
           return (
@@ -87,11 +84,18 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
       >
         <div className="flex items-center gap-3 mb-3">
           <div
-            className="w-9 h-9 rounded-full flex items-center justify-center font-bold shrink-0"
             style={{
               backgroundColor: "#d4af37",
               color: "#7a5f00",
               fontSize: "12px",
+              fontWeight: "700",
+              width: "36px",
+              height: "36px",
+              minWidth: "36px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             {initials}
