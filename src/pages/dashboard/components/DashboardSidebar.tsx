@@ -29,7 +29,7 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
   return (
     <div
       style={{ backgroundColor: "#f5f5f5", width: "288px", borderRight: "1px solid #e0e0e0" }}
-      className="min-h-screen h-full flex flex-col shrink-0 z-20"
+      className="h-screen flex flex-col shrink-0 z-20"
     >
       {/* Brand */}
       <div
@@ -41,7 +41,7 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
         </span>
       </div>
 
-      {/* Nav */}
+      {/* Nav — scrollable */}
       <nav className="flex-1 overflow-y-auto pt-2">
         {coreNav.map((item) => {
           const isActive = activeNav === item.id;
@@ -49,7 +49,7 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
             <button
               key={item.id}
               onClick={() => onNavChange(item.id)}
-              className="w-full flex items-center gap-3 py-3.5 text-[15px] font-semibold capitalize tracking-wider transition-all duration-150 text-left mb-1"
+              className="w-full flex items-center gap-3 py-3.5 text-[15px] font-semibold capitalize tracking-wide transition-all duration-150 text-left mb-1"
               style={{
                 backgroundColor: isActive ? "rgba(0,100,0,0.07)" : "transparent",
                 color: isActive ? "#006400" : "rgba(0,100,0,0.45)",
@@ -77,14 +77,16 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
         })}
       </nav>
 
-      {/* User + Logout Footer */}
+      {/* User info — fixed above logout */}
       <div
-        className="px-5 py-5 shrink-0"
+        className="px-5 py-4 shrink-0"
         style={{ borderTop: "1px solid #e0e0e0" }}
       >
-        <div className="flex items-center gap-3 mb-3">
-          <div className="bg-tertiary-light text-tertiary-500"
+        <div className="flex items-center gap-3">
+          <div
             style={{
+              backgroundColor: "#1e2e55",
+              color: "#c0c6d8",
               fontSize: "12px",
               fontWeight: "700",
               width: "36px",
@@ -101,33 +103,34 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
           <div className="overflow-hidden">
             <p
               className="text-[13px] font-bold truncate leading-tight"
-              style={{ color: "#006400" }}
+              style={{ color: "#101b37" }}
             >
               {displayName}
             </p>
             <p
               className="text-[11px] truncate mt-0.5"
-              style={{ color: "rgba(0,100,0,0.5)" }}
+              style={{ color: "#546492" }}
             >
               {displayEmail}
             </p>
           </div>
         </div>
+      </div>
 
+      {/* Logout — always at bottom, never scrolls */}
+      <div
+        className="p-2 shrink-0 bg-neutral-100"
+        style={{ borderTop: "1px solid #e0e0e0" }}
+      >
         <button
-          className="w-full flex items-center gap-2 py-1.5 px-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all duration-150"
-          style={{ color: "rgba(0,100,0,0.4)" }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.color = "#006400";
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.05)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.color = "rgba(0,100,0,0.4)";
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+          className="flex items-center w-full py-2 px-4 text-red-600 hover:bg-red-100 rounded-md transition-colors duration-200"
+          onClick={() => {
+            window.history.pushState({}, "", "/login");
+            window.dispatchEvent(new Event("popstate"));
           }}
         >
-          <LogOut size={13} />
-          Logout
+          <LogOut size={20} className="mr-3" />
+          <span className="text-sm font-medium">Logout</span>
         </button>
       </div>
     </div>
