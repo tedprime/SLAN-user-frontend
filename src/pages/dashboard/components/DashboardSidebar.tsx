@@ -53,7 +53,7 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
               style={{
                 backgroundColor: isActive ? "rgba(0,100,0,0.07)" : "transparent",
                 color: isActive ? "#006400" : "rgba(0,100,0,0.45)",
-                borderLeft: isActive ? "3px solid #006400" : "3px solid transparent",
+                borderLeft: isActive ? "3px solid #101b37" : "3px solid transparent",
                 paddingLeft: isActive ? "21px" : "24px",
                 paddingRight: "24px",
               }}
@@ -83,10 +83,8 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
         style={{ borderTop: "1px solid #e0e0e0" }}
       >
         <div className="flex items-center gap-3 mb-3">
-          <div
+          <div className="bg-tertiary-light text-tertiary-500"
             style={{
-              backgroundColor: "#d4af37",
-              color: "#7a5f00",
               fontSize: "12px",
               fontWeight: "700",
               width: "36px",
