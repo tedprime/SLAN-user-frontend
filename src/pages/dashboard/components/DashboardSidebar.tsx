@@ -28,8 +28,14 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
 
   return (
     <div
-      style={{ backgroundColor: "#f5f5f5", width: "288px", borderRight: "1px solid #e0e0e0" }}
-      className="h-screen flex flex-col shrink-0 z-20"
+      style={{
+        backgroundColor: "#f5f5f5",
+        width: "288px",
+        borderRight: "1px solid #e0e0e0",
+        minHeight: "100vh",
+        height: "100%",
+      }}
+      className="flex flex-col shrink-0 z-20"
     >
       {/* Brand */}
       <div
@@ -77,7 +83,7 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
         })}
       </nav>
 
-      {/* User info — fixed above logout */}
+      {/* User info */}
       <div
         className="px-5 py-4 shrink-0"
         style={{ borderTop: "1px solid #e0e0e0" }}
@@ -103,13 +109,13 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
           <div className="overflow-hidden">
             <p
               className="text-[13px] font-bold truncate leading-tight"
-              style={{ color: "#101b37" }}
+              style={{ color: "#006400" }}
             >
               {displayName}
             </p>
             <p
               className="text-[11px] truncate mt-0.5"
-              style={{ color: "#546492" }}
+              style={{ color: "rgba(0,100,0,0.5)" }}
             >
               {displayEmail}
             </p>
@@ -117,10 +123,10 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
         </div>
       </div>
 
-      {/* Logout — always at bottom, never scrolls */}
+      {/* Logout */}
       <div
-        className="p-2 shrink-0 bg-neutral-100"
-        style={{ borderTop: "1px solid #e0e0e0" }}
+        className="p-2 shrink-0"
+        style={{ borderTop: "1px solid #e0e0e0", backgroundColor: "#f5f5f5" }}
       >
         <button
           className="flex items-center w-full py-2 px-4 text-red-600 hover:bg-red-100 rounded-md transition-colors duration-200"
