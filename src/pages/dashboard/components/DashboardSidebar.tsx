@@ -1,12 +1,12 @@
-import { useState } from "react";
 import { LayoutDashboard, BookOpen, LogOut, Menu, X } from "lucide-react";
-import { getUser } from "../../../services/tokenService";
 import { authService } from "../../../services/authService";
 import { getRefreshToken, clearTokens } from "../../../services/tokenService";
 
 interface DashboardSidebarProps {
   activeNav: string;
   onNavChange: (id: string) => void;
+  isOpen: boolean;
+  onToggle: () => void;
 }
 
 const coreNav = [
@@ -14,73 +14,75 @@ const coreNav = [
   { id: "courses", label: "All Courses", icon: <BookOpen size={20} /> },
 ];
 
-function getInitials(fullName: string): string {
-  return fullName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
 export default function DashboardSidebar({
   activeNav,
   onNavChange,
+  isOpen,
+  onToggle,
 }: DashboardSidebarProps) {
-  const [isOpen, setIsOpen] = useState(true);
-  const user = getUser();
-  const displayName = user?.fullName ?? "User";
-  const displayEmail = user?.email ?? "";
-  const initials = getInitials(displayName);
-
   return (
     <div
       style={{
         backgroundColor: "#f5f5f5",
         width: isOpen ? "288px" : "64px",
         borderRight: "1px solid #e0e0e0",
-        minHeight: "100vh",
-        height: "100%",
+        height: "100vh",
         overflow: "hidden",
         transition: "width 0.25s ease",
         flexShrink: 0,
+        display: "flex",
+        flexDirection: "column",
+        zIndex: 20,
       }}
-      className="flex flex-col z-20"
     >
-      {/* Brand + toggle */}
+      {/* Brand + toggle — same height as header (64px) */}
       <div
-        className="h-16 flex items-center shrink-0 px-4 mb-2"
         style={{
+          height: "64px",
+          borderBottom: "1px solid #e0e0e0",
+          display: "flex",
+          alignItems: "center",
           justifyContent: isOpen ? "space-between" : "center",
+          paddingLeft: isOpen ? "20px" : "0",
+          paddingRight: isOpen ? "12px" : "0",
+          flexShrink: 0,
         }}
       >
         {isOpen && (
-          <span className="font-headline font-800 ml-8 text-xl tracking-tight text-primary-500">
+          <span className="font-headline font-800 text-xl tracking-tight text-primary-500 whitespace-nowrap">
             SLAN <span className="text-tertiary-500">Online</span>
           </span>
         )}
         <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="p-1.5 rounded-md transition-colors duration-200 shrink-0"
+          onClick={onToggle}
+          style={{
+            padding: "6px",
+            borderRadius: "6px",
+            transition: "background-color 0.2s",
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "transparent",
+            border: "none",
+            cursor: "pointer",
+          }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-              "rgba(0,100,0,0.06)";
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.06)";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-              "transparent";
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
           }}
         >
-          {isOpen ? (
-            <X size={20} style={{ color: "#006400" }} />
-          ) : (
-            <Menu size={20} style={{ color: "#006400" }} />
-          )}
+          {isOpen
+            ? <X size={20} style={{ color: "#006400" }} />
+            : <Menu size={20} style={{ color: "#006400" }} />
+          }
         </button>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto pt-2">
+      <nav style={{ flex: 1, overflowY: "auto", paddingTop: "8px" }}>
         {coreNav.map((item) => {
           const isActive = activeNav === item.id;
           return (
@@ -88,35 +90,38 @@ export default function DashboardSidebar({
               key={item.id}
               onClick={() => onNavChange(item.id)}
               title={!isOpen ? item.label : undefined}
-              className="w-full flex items-center py-3.5 text-[15px] font-semibold capitalize tracking-wide transition-all duration-150 text-left mb-1"
+              className="w-full flex items-center text-left mb-1"
               style={{
-                backgroundColor: isActive
-                  ? "rgba(0,100,0,0.07)"
-                  : "transparent",
+                padding: "14px 0",
+                fontSize: "15px",
+                fontWeight: 600,
+                textTransform: "capitalize",
+                letterSpacing: "0.02em",
+                transition: "all 0.15s",
+                backgroundColor: isActive ? "rgba(0,100,0,0.07)" : "transparent",
                 color: isActive ? "#006400" : "rgba(0,100,0,0.45)",
-                borderLeft: isActive
-                  ? "3px solid #101b37"
-                  : "3px solid transparent",
+                borderLeft: isActive ? "3px solid #101b37" : "3px solid transparent",
                 paddingLeft: isOpen ? (isActive ? "21px" : "24px") : "0px",
                 paddingRight: isOpen ? "24px" : "0px",
                 justifyContent: isOpen ? "flex-start" : "center",
                 gap: isOpen ? "12px" : "0px",
                 whiteSpace: "nowrap",
+                border: "none",
+                cursor: "pointer",
+                borderLeftWidth: "3px",
+                borderLeftStyle: "solid",
+                borderLeftColor: isActive ? "#101b37" : "transparent",
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                    "rgba(0,100,0,0.04)";
-                  (e.currentTarget as HTMLButtonElement).style.color =
-                    "#006400";
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.04)";
+                  (e.currentTarget as HTMLButtonElement).style.color = "#006400";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isActive) {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-                    "transparent";
-                  (e.currentTarget as HTMLButtonElement).style.color =
-                    "rgba(0,100,0,0.45)";
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+                  (e.currentTarget as HTMLButtonElement).style.color = "rgba(0,100,0,0.45)";
                 }
               }}
             >
@@ -127,70 +132,35 @@ export default function DashboardSidebar({
         })}
       </nav>
 
-      {/* User info */}
+      {/* Logout — pinned to bottom */}
       <div
-        className="shrink-0"
         style={{
+          padding: "8px",
+          flexShrink: 0,
           borderTop: "1px solid #e0e0e0",
-          padding: isOpen ? "16px 20px" : "12px 0",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: isOpen ? "flex-start" : "center",
-          gap: "12px",
+          backgroundColor: "#f5f5f5",
         }}
-      >
-        <div
-          style={{
-            backgroundColor: "#1e2e55",
-            color: "#c0c6d8",
-            fontSize: "12px",
-            fontWeight: "700",
-            width: "36px",
-            height: "36px",
-            minWidth: "36px",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          {initials}
-        </div>
-        {isOpen && (
-          <div className="overflow-hidden">
-            <p
-              className="text-[13px] font-bold truncate leading-tight"
-              style={{ color: "#006400" }}
-            >
-              {displayName}
-            </p>
-            <p
-              className="text-[11px] truncate mt-0.5"
-              style={{ color: "rgba(0,100,0,0.5)" }}
-            >
-              {displayEmail}
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Logout */}
-      <div
-        className="p-2 shrink-0"
-        style={{ borderTop: "1px solid #e0e0e0", backgroundColor: "#f5f5f5" }}
       >
         <button
           title={!isOpen ? "Logout" : undefined}
-          className="flex items-center w-full py-2 rounded-md transition-colors duration-200 text-sm font-medium"
           style={{
+            display: "flex",
+            alignItems: "center",
+            width: "100%",
+            padding: "8px 0",
+            borderRadius: "6px",
+            transition: "all 0.2s",
+            fontSize: "14px",
+            fontWeight: 500,
             color: "#101b37",
             gap: "12px",
             justifyContent: isOpen ? "flex-start" : "center",
             paddingLeft: isOpen ? "16px" : "0px",
             paddingRight: isOpen ? "16px" : "0px",
+            border: "none",
+            backgroundColor: "transparent",
+            cursor: "pointer",
           }}
-          // update the logout button onClick:
           onClick={async () => {
             try {
               const refreshToken = getRefreshToken();
@@ -202,14 +172,10 @@ export default function DashboardSidebar({
             window.location.href = "/login";
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-              "#e8eaf0";
-            (e.currentTarget as HTMLButtonElement).style.color = "#101b37";
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#e8eaf0";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-              "transparent";
-            (e.currentTarget as HTMLButtonElement).style.color = "#101b37";
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
           }}
         >
           <LogOut size={20} style={{ flexShrink: 0 }} />

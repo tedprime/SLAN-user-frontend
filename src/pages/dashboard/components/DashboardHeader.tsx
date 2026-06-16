@@ -1,9 +1,5 @@
 import { Bell, Search } from "lucide-react";
-
-const PAGE_LABELS: Record<string, string> = {
-  overview: "Overview",
-  courses: "All Courses",
-};
+import { getUser } from "../../../services/tokenService";
 
 interface DashboardHeaderProps {
   activeNav: string;
@@ -11,38 +7,121 @@ interface DashboardHeaderProps {
   onSearchChange: (val: string) => void;
 }
 
+function getInitials(fullName: string): string {
+  return fullName
+    .split(" ")
+    .slice(0, 2)
+    .map((n) => n[0].toUpperCase())
+    .join("");
+}
+
 export default function DashboardHeader({
-  activeNav, searchVal, onSearchChange,
+  searchVal,
+  onSearchChange,
 }: DashboardHeaderProps) {
-  const label = activeNav.startsWith("track-")
-    ? `Track ${activeNav.replace("track-", "")}`
-    : PAGE_LABELS[activeNav] ?? activeNav;
+  const user = getUser();
+  const initials = user?.fullName ? getInitials(user.fullName) : "U";
 
   return (
-    <header className="h-16 bg-white border-b border-neutral-200 px-8 flex items-center justify-between shrink-0 z-10">
-      <div className="flex items-center gap-4">
-        <h2 className="font-headline font-bold text-base text-neutral-800">{label}</h2>
-        <div className="h-4 w-px bg-neutral-200" />
-        <span className="text-xs font-label font-700 text-neutral-400 uppercase tracking-wider">
-          2026 Cohort
-        </span>
-      </div>
+    <header
+      className="shrink-0 bg-white flex items-center justify-between px-6 z-10"
+      style={{
+        height: "64px",
+        borderBottom: "1px solid #e0e0e0",
+      }}
+    >
 
-      <div className="flex items-center gap-3">
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+      {/* Center: search */}
+      <div className="flex-1 flex justify-center px-8 max-w-xl mx-auto w-full">
+        <div className="relative w-full">
+          <Search
+            size={13}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ color: "#b0b0b0" }}
+          />
           <input
             type="text"
-            placeholder="Search courses..."
+            placeholder="Search tracks, modules, units..."
             value={searchVal}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-9 pr-4 py-2 bg-neutral-100 border-none rounded-lg text-xs font-body text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-300 w-52 transition-all"
+            className="w-full text-xs font-body transition-all outline-none"
+            style={{
+              backgroundColor: "#f5f5f5",
+              border: "1px solid #e8e8e8",
+              borderRadius: "9999px",
+              paddingLeft: "36px",
+              paddingRight: "16px",
+              paddingTop: "8px",
+              paddingBottom: "8px",
+              color: "#444444",
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.border = "1px solid #006400";
+              e.currentTarget.style.backgroundColor = "#ffffff";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.border = "1px solid #e8e8e8";
+              e.currentTarget.style.backgroundColor = "#f5f5f5";
+            }}
           />
         </div>
-        <button className="relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-neutral-100 transition-colors text-neutral-500">
-          <Bell size={16} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-secondary-500 rounded-full" />
+      </div>
+
+      {/* Right: bell + initials avatar */}
+      <div className="flex items-center gap-2 shrink-0">
+        {/* Bell */}
+        <button
+          className="relative flex items-center justify-center rounded-lg transition-colors duration-150"
+          style={{
+            width: "36px",
+            height: "36px",
+            color: "#888888",
+            backgroundColor: "transparent",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f5f5f5";
+            (e.currentTarget as HTMLButtonElement).style.color = "#006400";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+            (e.currentTarget as HTMLButtonElement).style.color = "#888888";
+          }}
+        >
+          <Bell size={18} />
+          <span
+            className="absolute"
+            style={{
+              top: "8px",
+              right: "8px",
+              width: "7px",
+              height: "7px",
+              backgroundColor: "#d4af37",
+              borderRadius: "50%",
+              border: "1.5px solid white",
+            }}
+          />
         </button>
+
+        {/* Initials avatar */}
+        <div
+          style={{
+            width: "40px",
+            height: "40px",
+            minWidth: "36px",
+            borderRadius: "50%",
+            backgroundColor: "#1e2e55",
+            color: "#c0c6d8",
+            fontSize: "12px",
+            fontWeight: "700",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            letterSpacing: "0.3px",
+          }}
+        >
+          {initials}
+        </div>
       </div>
     </header>
   );

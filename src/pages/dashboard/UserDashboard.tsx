@@ -1,17 +1,40 @@
 import { useState } from "react";
 import DashboardSidebar from "./components/DashboardSidebar";
+import DashboardHeader from "./components/DashboardHeader";
 
 export default function UserDashboard() {
   const [activeNav, setActiveNav] = useState("overview");
+  const [searchVal, setSearchVal] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-neutral-50">
+    <div
+      style={{
+        display: "flex",
+        height: "100vh",
+        width: "100vw",
+        overflow: "hidden",
+        backgroundColor: "#fafafa",
+      }}
+    >
       <DashboardSidebar
         activeNav={activeNav}
         onNavChange={setActiveNav}
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen((prev) => !prev)}
       />
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* blank for now */}
+
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
+        <DashboardHeader
+  activeNav={activeNav}
+  searchVal={searchVal}
+  onSearchChange={setSearchVal}
+/>
+
+        {/* Main content area */}
+        <main style={{ flex: 1, overflowY: "auto", padding: "32px" }}>
+          {/* overview content goes here */}
+        </main>
       </div>
     </div>
   );
