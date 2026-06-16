@@ -130,7 +130,7 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
       >
         <button
   className="flex items-center w-full py-2 px-4 rounded-md transition-colors duration-200 text-sm font-medium"
-  style={{ color: "#dc2626" }}
+  style={{ color: "#101b37" }}
   onClick={() => {
     window.history.pushState({}, "", "/login");
     window.dispatchEvent(new Event("popstate"));
@@ -141,10 +141,10 @@ export default function DashboardSidebar({ activeNav, onNavChange }: DashboardSi
   }}
   onMouseLeave={(e) => {
     (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-    (e.currentTarget as HTMLButtonElement).style.color = "#dc2626";
+    (e.currentTarget as HTMLButtonElement).style.color = "#101b37";
   }}
 >
-  <LogOut size={20} className="mr-3" />
+  <LogOut size={20} className="mr-5" />
   <span>Logout</span>
 </button>
       </div>
