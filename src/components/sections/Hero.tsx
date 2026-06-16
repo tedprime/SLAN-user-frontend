@@ -53,7 +53,7 @@ export default function Hero({ onOpenOverlay }: HeroProps) {
                 onClick={onOpenOverlay}
                 className="w-full sm:w-auto justify-center"
               >
-                Login
+                Enrol
               </Button>
               <Button
                 variant="outlined"
