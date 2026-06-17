@@ -12,6 +12,8 @@ export interface RegisterPayload {
   role: string;
   state: string;
   schoolName: string;
+  schoolLocation: string; // 👈 Added
+  schoolType: string;     // 👈 Added
 }
 
 export interface VerifySignupOtpPayload {
@@ -42,6 +44,8 @@ export interface CompleteGoogleSignupPayload {
   role: string;
   state: string;
   schoolName: string;
+  schoolLocation: string; // 👈 Added here too so Google signup doesn't break
+  schoolType: string;     // 👈 Added here too so Google signup doesn't break
 }
 
 // ── Password ─────────────────────────────────────────────

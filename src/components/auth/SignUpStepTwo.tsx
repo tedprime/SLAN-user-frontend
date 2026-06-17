@@ -59,6 +59,7 @@ export default function SignUpStepTwo({
         email, fullName, phone: formatPhone(phoneNumber),
         password, confirmPassword, role: currentRole,
         state: stateRegion, schoolName,
+        schoolLocation, schoolType,
       });
       onSuccess();
     } catch (err) {
@@ -115,11 +116,12 @@ export default function SignUpStepTwo({
             <label className="text-sm font-700 text-neutral-700 block font-body">Current Role</label>
             <select value={currentRole} onChange={(e) => setCurrentRole(e.target.value)}
               className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all">
-              <option value="principal">Principal / Head Teacher</option>
-              <option value="vice_principal">Vice / Assistant School Head</option>
-              <option value="school_head">School Head Cadre</option>
+              <option value="teacher">Teacher</option>
+              <option value="principal">Principal</option>
+              <option value="vice_principal">Vice Principal</option>
+              <option value="head_teacher">Head Teacher</option>
               <option value="proprietor">School Proprietor</option>
-              <option value="education_officer">Education Officer</option>
+              <option value="aspiring_head">Aspiring School Head</option>
             </select>
           </div>
           <div className="space-y-1.5">
@@ -136,17 +138,17 @@ export default function SignUpStepTwo({
             <label className="text-sm font-700 text-neutral-700 block font-body">School Location</label>
             <select value={schoolLocation} onChange={(e) => setSchoolLocation(e.target.value)}
               className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all">
-              <option value="Urban">Urban</option>
-              <option value="Semi-Urban">Semi-Urban</option>
-              <option value="Rural">Rural</option>
+              <option value="urban">Urban</option>
+              <option value="semi_urban">Semi-Urban</option>
+              <option value="rural">Rural</option>
             </select>
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-700 text-neutral-700 block font-body">School Type</label>
             <select value={schoolType} onChange={(e) => setSchoolType(e.target.value)}
               className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all">
-              <option value="Private">Private</option>
-              <option value="Public">Public</option>
+              <option value="private">Private</option>
+              <option value="public">Public</option>
             </select>
           </div>
         </div>
