@@ -40,6 +40,8 @@ export default function OtpPage() {
         flow === "signup"
           ? await authService.verifySignupOtp(payload)
           : await authService.verifyLoginOtp(payload);
+
+          console.log("OTP verify response:", tokens);
       setTokens(tokens);
       if (tokens.user) setUser(tokens.user);
       console.log("Token saved:", tokens.accessToken);
