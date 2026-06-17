@@ -187,7 +187,7 @@ export default function GoogleCompletePage() {
       const result = await authService.completeGoogleSignup({
         tempToken,
         fullName,
-        phone: phoneNumber,
+        phone: formatPhone(phoneNumber),
         role: currentRole,
         state: stateRegion,
         schoolName,
@@ -205,6 +205,14 @@ export default function GoogleCompletePage() {
       setIsSubmitting(false);
     }
   };
+
+  function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("234")) return `+${digits}`;
+  if (digits.startsWith("0")) return `+234${digits.slice(1)}`;
+  if (digits.startsWith("7") || digits.startsWith("8") || digits.startsWith("9")) return `+234${digits}`;
+  return raw;
+}
 
   // ── Render: loading ─────────────────────────────────────────────────────
   if (status === "loading") {
