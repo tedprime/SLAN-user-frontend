@@ -7,7 +7,7 @@ import CountdownTimer from "../components/ui/CountdownTimer";
 import { useCountdown } from "../hooks/useCountdown";
 import Button from "../components/ui/Button";
 import { authService } from "../services/authService";
-import { setTokens, setUser, getAccessToken } from "../services/tokenService";
+import { setTokens, setUser } from "../services/tokenService";
 import { enrollmentService } from "../services/enrollmentservice";
 
 function getQueryParam(key: string): string {
@@ -36,16 +36,13 @@ export default function OtpPage() {
     setIsLoading(true);
     try {
       const payload = { email, otp: pin };
-      const tokens =
+      const result =
         flow === "signup"
           ? await authService.verifySignupOtp(payload)
           : await authService.verifyLoginOtp(payload);
-
-          console.log("OTP verify response:", tokens);
+      const tokens = result.data;
       setTokens(tokens);
       if (tokens.user) setUser(tokens.user);
-      console.log("Token saved:", tokens.accessToken);
-console.log("Token read back:", getAccessToken());
 
       // If they were redirected here from clicking Enrol while logged out,
       // resume that enrollment now and send them straight to the Courses tab.
@@ -154,6 +151,5 @@ console.log("Token read back:", getAccessToken());
       </main>
       <AuthFooter />
     </div>
-    
   );
 }

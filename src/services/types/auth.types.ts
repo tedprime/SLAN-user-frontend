@@ -66,12 +66,15 @@ export interface RefreshTokenPayload {
 
 // ── Shared Response ──────────────────────────────────────
 export interface AuthTokenResponse {
-  accessToken: string;
-  refreshToken: string;
-  user: {
-    id: string;
-    fullName: string;
-    email: string;
-    role: string;
+  success: boolean;
+  data: {
+    accessToken: string;
+    refreshToken: string;
+    user: {
+      id: string;
+      fullName: string;
+      email: string;
+      role: string;
+    };
   };
 }
