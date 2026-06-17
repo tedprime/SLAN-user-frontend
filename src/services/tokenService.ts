@@ -4,6 +4,10 @@ const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 const USER_KEY = "user";
 
+export function setAccessToken(accessToken: string): void {
+  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+}
+
 export function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
 }
@@ -36,3 +40,4 @@ export function clearTokens(): void {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 }
+

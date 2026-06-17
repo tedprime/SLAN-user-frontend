@@ -1,4 +1,4 @@
-import { getAccessToken } from "./tokenService";
+import { getAccessToken, getRefreshToken, setAccessToken, clearTokens } from "./tokenService";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -8,13 +8,46 @@ interface RequestOptions {
   method?: Method;
   body?: unknown;
   token?: string;
+  /** Internal — marks a call as already-retried, so we never refresh twice for one request. */
+  _isRetry?: boolean;
+}
+
+// Shared across concurrent requests so two 401s at once don't trigger two refresh calls.
+let refreshInFlight: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return null;
+
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      try {
+        const response = await fetch(`${BASE_URL}/auth/token/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        const newAccessToken = data?.accessToken ?? data?.data?.accessToken;
+        if (!newAccessToken) return null;
+        setAccessToken(newAccessToken);
+        return newAccessToken;
+      } catch {
+        return null;
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
+  }
+  return refreshInFlight;
 }
 
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const { method = "GET", body, token } = options;
+  const { method = "GET", body, token, _isRetry = false } = options;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -34,9 +67,20 @@ export async function apiRequest<T>(
   const data = await response.json();
 
   if (!response.ok) {
+    // One silent refresh-and-retry per request. Never for the refresh
+    // endpoint itself, never twice, and never for requests that had no
+    // token to begin with (those 401s aren't a stale-token problem).
+    if (response.status === 401 && !_isRetry && resolvedToken && endpoint !== "/auth/token/refresh") {
+      const newAccessToken = await refreshAccessToken();
+      if (newAccessToken) {
+        return apiRequest<T>(endpoint, { ...options, token: newAccessToken, _isRetry: true });
+      }
+      // Refresh token is also dead — this really is a logged-out session.
+      clearTokens();
+      window.location.href = "/login";
+    }
+
     console.error("API Error:", data);
-    // Attach the HTTP status so callers can branch on specific codes
-    // (e.g. enrollmentService treats 404 as "not enrolled" rather than an error).
     throw {
       ...(typeof data === "object" && data !== null ? data : {}),
       status: response.status,
