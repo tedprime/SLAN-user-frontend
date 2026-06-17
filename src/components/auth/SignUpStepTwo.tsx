@@ -46,6 +46,23 @@ export default function SignUpStepTwo({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Helper mappings to guarantee payload compatibility with backend validators
+  const backendLocationMap: Record<string, string> = {
+    urban: "Urban",
+    semi_urban: "Semi-Urban",
+    rural: "Rural",
+    Urban: "Urban",
+    "Semi-Urban": "Semi-Urban",
+    Rural: "Rural"
+  };
+
+  const backendTypeMap: Record<string, string> = {
+    private: "Private",
+    public: "Public",
+    Private: "Private",
+    Public: "Public"
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -56,10 +73,16 @@ export default function SignUpStepTwo({
     setIsLoading(true);
     try {
       await authService.register({
-        email, fullName, phone: formatPhone(phoneNumber),
-        password, confirmPassword, role: currentRole,
-        state: stateRegion, schoolName,
-        schoolLocation, schoolType,
+        email, 
+        fullName, 
+        phone: formatPhone(phoneNumber),
+        password, 
+        confirmPassword, 
+        role: currentRole,
+        state: stateRegion, 
+        schoolName,
+        schoolLocation: backendLocationMap[schoolLocation] || "Urban",
+        schoolType: backendTypeMap[schoolType] || "Private",
       });
       onSuccess();
     } catch (err) {
@@ -138,17 +161,17 @@ export default function SignUpStepTwo({
             <label className="text-sm font-700 text-neutral-700 block font-body">School Location</label>
             <select value={schoolLocation} onChange={(e) => setSchoolLocation(e.target.value)}
               className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all">
-              <option value="urban">Urban</option>
-              <option value="semi_urban">Semi-Urban</option>
-              <option value="rural">Rural</option>
+              <option value="Urban">Urban</option>
+              <option value="Semi-Urban">Semi-Urban</option>
+              <option value="Rural">Rural</option>
             </select>
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-700 text-neutral-700 block font-body">School Type</label>
             <select value={schoolType} onChange={(e) => setSchoolType(e.target.value)}
               className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all">
-              <option value="private">Private</option>
-              <option value="public">Public</option>
+              <option value="Private">Private</option>
+              <option value="Public">Public</option>
             </select>
           </div>
         </div>
