@@ -117,20 +117,15 @@ export default function SignUpStepTwo({
 
   // Helper mappings to guarantee payload compatibility with backend validators
   const backendLocationMap: Record<string, string> = {
-    urban: "Urban",
-    semi_urban: "Semi-Urban",
-    rural: "Rural",
-    Urban: "Urban",
-    "Semi-Urban": "Semi-Urban",
-    Rural: "Rural",
-  };
+  Urban: "urban",
+  "Semi-Urban": "semi_urban",
+  Rural: "rural",
+};
 
-  const backendTypeMap: Record<string, string> = {
-    private: "Private",
-    public: "Public",
-    Private: "Private",
-    Public: "Public",
-  };
+const backendTypeMap: Record<string, string> = {
+  Private: "private",
+  Public: "public",
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,17 +137,17 @@ export default function SignUpStepTwo({
     setIsLoading(true);
     try {
       await authService.register({
-        email,
-        fullName,
-        phone: formatPhone(phoneNumber),
-        password,
-        confirmPassword,
-        role: currentRole,
-        state: stateRegion,
-        schoolName,
-        schoolLocation: backendLocationMap[schoolLocation] || "Urban",
-        schoolType: backendTypeMap[schoolType] || "Private",
-      });
+  email,
+  fullName,
+  phone: formatPhone(phoneNumber),
+  password,
+  confirmPassword,
+  role: currentRole,
+  state: stateRegion,
+  schoolName,
+  schoolLocation: backendLocationMap[schoolLocation] ?? "urban",
+  schoolType: backendTypeMap[schoolType] ?? "private",
+});
       onSuccess();
     } catch (err) {
       const e = err as {
