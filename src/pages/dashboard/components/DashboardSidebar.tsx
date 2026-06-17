@@ -7,19 +7,23 @@ interface DashboardSidebarProps {
   onNavChange: (id: string) => void;
   isOpen: boolean;
   onToggle: () => void;
+  isEnrolled: boolean;
 }
-
-const coreNav = [
-  { id: "overview", label: "Overview", icon: <LayoutDashboard size={20} /> },
-  { id: "courses", label: "Course", icon: <BookOpen size={20} /> },
-];
 
 export default function DashboardSidebar({
   activeNav,
   onNavChange,
   isOpen,
   onToggle,
+  isEnrolled,
 }: DashboardSidebarProps) {
+  const coreNav = [
+    { id: "overview", label: "Overview", icon: <LayoutDashboard size={20} /> },
+    ...(isEnrolled
+      ? [{ id: "courses", label: "Course", icon: <BookOpen size={20} /> }]
+      : []),
+  ];
+
   return (
     <div
       style={{

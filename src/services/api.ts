@@ -35,7 +35,12 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     console.error("API Error:", data);
-    throw data;
+    // Attach the HTTP status so callers can branch on specific codes
+    // (e.g. enrollmentService treats 404 as "not enrolled" rather than an error).
+    throw {
+      ...(typeof data === "object" && data !== null ? data : {}),
+      status: response.status,
+    };
   }
 
   return data as T;

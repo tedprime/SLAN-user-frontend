@@ -3,11 +3,18 @@ import { createPortal } from "react-dom";
 import { X, CircleCheck } from "lucide-react";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
+import { getAccessToken } from "../../services/tokenService";
+import { enrollmentService } from "../../services/enrollmentservice";
+
+// TODO: replace with the real trackId for this course.
+const TRACK_ID = 1;
+
+const POST_LOGIN_INTENT_KEY = "postLoginIntent";
 
 interface CourseDetailOverlayProps {
   isOpen: boolean;
   onClose: () => void;
-  /** Called when the user clicks Enroll inside this overlay */
+  /** Called after enrollment is confirmed (newly enrolled, or already enrolled). */
   onEnroll?: () => void;
 }
 
@@ -35,11 +42,32 @@ export default function CourseDetailOverlay({
 
   if (!isOpen) return null;
 
-  const handleEnroll = () => {
-    onEnroll?.();
-    onClose();
-    // Redirect to login if no enrollment handler provided (landing page usage)
-    if (!onEnroll) window.location.href = "/login";
+  const handleEnroll = async () => {
+    // Not logged in — remember what they were trying to do, then send them to login.
+    // The OTP success handler should check this key and resume the enrollment
+    // (see the snippet provided separately, since that file wasn't available here).
+    if (!getAccessToken()) {
+      sessionStorage.setItem(
+        POST_LOGIN_INTENT_KEY,
+        JSON.stringify({ intent: "enroll", trackId: TRACK_ID })
+      );
+      window.location.href = "/login";
+      return;
+    }
+
+    try {
+      // Check first so we don't try to re-enroll someone who already is.
+      const existing = await enrollmentService.getEnrollment(TRACK_ID);
+      if (!existing) {
+        await enrollmentService.enroll(TRACK_ID);
+      }
+      onEnroll?.();
+      onClose();
+      window.location.href = "/dashboard?nav=courses";
+    } catch (err) {
+      // TODO: surface this to the user via your toast/error UI instead of just logging.
+      console.error("Enrollment failed:", err);
+    }
   };
 
   return createPortal(
@@ -152,4 +180,4 @@ export default function CourseDetailOverlay({
     </div>,
     document.body
   );
-} 
+}
