@@ -173,7 +173,7 @@ export default function CourseDetailOverlay({
             className="w-full rounded justify-center"
             onClick={handleEnroll}
           >
-            Enrol
+            Enroll
           </Button>
         </div>
       </div>

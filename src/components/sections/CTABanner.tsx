@@ -32,7 +32,7 @@ export default function CTABanner({ onOpenOverlay }: CTABannerProps) {
               onClick={onOpenOverlay}
               className="w-full sm:w-auto sm:min-w-50 justify-center"
             >
-              Enrol Now
+              Enroll Now
             </Button>
             <span className="text-xs text-white/60 font-body text-center lg:text-right">
               Flexible payment plan available
