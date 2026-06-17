@@ -58,18 +58,28 @@ export const authService = {
       body: payload,
     }),
 
-  // ── Google ───────────────────────────────────────────────
-  getGoogleSignupUrl: () =>
-    apiRequest<{ url: string }>("/auth/google/signup"),
+ // ── Google ───────────────────────────────────────────────
+getGoogleSignupUrl: async () => {
+  const res = await apiRequest<{ success: boolean; data: { url: string } }>(
+    "/auth/google/signup"
+  );
+  return res.data; // { url }
+},
 
-  getGoogleLoginUrl: () =>
-    apiRequest<{ url: string }>("/auth/google/login"),
+getGoogleLoginUrl: async () => {
+  const res = await apiRequest<{ success: boolean; data: { url: string } }>(
+    "/auth/google/login"
+  );
+  return res.data; // { url }
+},
 
-  completeGoogleSignup: (payload: CompleteGoogleSignupPayload) =>
-    apiRequest<AuthTokenResponse>("/auth/signup/google/complete", {
-      method: "POST",
-      body: payload,
-    }),
+completeGoogleSignup: (payload: CompleteGoogleSignupPayload) =>
+  // this one comes back flat — { accessToken, refreshToken, user } —
+  // no `data` wrapper, unlike the two URL endpoints above
+  apiRequest<AuthTokenResponse["data"]>("/auth/signup/google/complete", {
+    method: "POST",
+    body: payload,
+  }),
 
   // ── Password ─────────────────────────────────────────────
   forgotPassword: (payload: ForgotPasswordPayload) =>

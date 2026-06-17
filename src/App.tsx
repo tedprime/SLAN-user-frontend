@@ -12,7 +12,7 @@ import SignUpPage from "./pages/SignUpPage";
 import OtpPage from "./pages/OtpPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import UserDashboard from "./pages/dashboard/UserDashboard";
-import GoogleCallbackPage from "./pages/GoogleCallbackPage";
+import GoogleCompletePage from "./pages/GoogleCompletePage";
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -36,7 +36,7 @@ export default function App() {
     case "/forgot-password":      return <ForgotPasswordPage />;
     case "/reset-password":       return <ForgotPasswordPage />;
     case "/dashboard":            return <UserDashboard />;
-    case "/auth/google/callback": return <GoogleCallbackPage />;
+    case "/auth/google/complete": return <GoogleCompletePage />;
     default:
       return (
         <div className="min-h-screen flex flex-col">

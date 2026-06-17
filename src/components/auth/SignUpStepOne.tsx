@@ -44,14 +44,17 @@ export default function SignUpStepOne({ email, setEmail, onContinue }: StepOnePr
     }
   };
 
-  const handleGoogleContinue = async () => {
+  // Your integrated Google signup handler
+  const handleGoogleSignup = async () => {
+    setError("");
     setIsGoogleLoading(true);
     try {
       const { url } = await authService.getGoogleSignupUrl();
       window.location.replace(url);
-    } catch {
+    } catch (err) {
+      console.error("Failed to get Google signup URL:", err);
       setError("Could not initiate Google sign up. Please try again.");
-      setIsGoogleLoading(false);
+      setIsGoogleLoading(false); // Reset loading state so the button becomes clickable again
     }
   };
 
@@ -89,7 +92,7 @@ export default function SignUpStepOne({ email, setEmail, onContinue }: StepOnePr
 
       <button
         type="button"
-        onClick={handleGoogleContinue}
+        onClick={handleGoogleSignup}
         disabled={isGoogleLoading}
         className="w-full py-3 px-4 border border-neutral-300 bg-neutral-50 hover:bg-neutral-100 disabled:opacity-60 disabled:cursor-not-allowed text-neutral-700 text-sm font-600 font-body transition-colors flex items-center justify-center gap-3 focus:outline-none rounded-sm"
       >

@@ -50,14 +50,17 @@ export default function LoginForm() {
     }
   };
 
+  // Integrated logic with visual loaders and UI feedback intact
   const handleGoogleLogin = async () => {
+    setError("");
     setIsGoogleLoading(true);
     try {
       const { url } = await authService.getGoogleLoginUrl();
       window.location.replace(url);
-    } catch {
+    } catch (err) {
+      console.error("Failed to get Google login URL:", err);
       setError("Could not initiate Google sign in. Please try again.");
-      setIsGoogleLoading(false);
+      setIsGoogleLoading(false); // Resets loading state so users can retry if it fails
     }
   };
 
