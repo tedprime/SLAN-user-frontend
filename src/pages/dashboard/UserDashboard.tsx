@@ -4,10 +4,7 @@ import DashboardHeader from "./components/DashboardHeader";
 import { enrollmentService } from "../../services/enrollmentservice";
 
 export default function UserDashboard() {
-  const initialNav =
-    new URLSearchParams(window.location.search).get("nav") || "overview";
-
-  const [activeNav, setActiveNav] = useState(initialNav);
+  const [activeNav, setActiveNav] = useState("overview");
   const [searchVal, setSearchVal] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isEnrolled, setIsEnrolled] = useState(false);
@@ -16,14 +13,35 @@ export default function UserDashboard() {
   useEffect(() => {
     enrollmentService
       .getMyEnrollments()
-      .then((list) => setIsEnrolled(list.length > 0))
+      .then((list) => {
+        const enrolled = list.length > 0;
+        setIsEnrolled(enrolled);
+
+        // Check for a post-enroll intent stored by CourseDetailOverlay
+        const storedNav = sessionStorage.getItem("dashboardNav");
+        if (storedNav) {
+          sessionStorage.removeItem("dashboardNav");
+          if (storedNav === "courses" && enrolled) {
+            setActiveNav("courses");
+            return;
+          }
+        }
+
+        // Check URL param (e.g. from OtpPage postLoginIntent redirect)
+        const urlNav = new URLSearchParams(window.location.search).get("nav");
+        if (urlNav === "courses" && enrolled) {
+          setActiveNav("courses");
+          return;
+        }
+
+        // Default
+        const fallback = urlNav || "overview";
+        setActiveNav(fallback);
+      })
       .catch(() => setIsEnrolled(false))
       .finally(() => setEnrollmentChecked(true));
   }, []);
 
-  // Derived, not stored: if we ended up on "courses" but the enrollment
-  // check says we shouldn't be there, treat "overview" as active for this
-  // render. No second effect/state needed for what's a pure derivation.
   const effectiveNav =
     enrollmentChecked && activeNav === "courses" && !isEnrolled
       ? "overview"
@@ -62,7 +80,6 @@ export default function UserDashboard() {
           onSearchChange={setSearchVal}
         />
 
-        {/* Main content area */}
         <main style={{ flex: 1, overflowY: "auto", padding: "32px" }}>
           {/* overview content goes here */}
           {/* once course content exists, gate it the same way: only render if isEnrolled */}

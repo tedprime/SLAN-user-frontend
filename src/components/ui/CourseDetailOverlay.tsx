@@ -61,9 +61,10 @@ export default function CourseDetailOverlay({
       if (!existing) {
         await enrollmentService.enroll(TRACK_ID);
       }
-      onEnroll?.();
-      onClose();
-      window.location.href = "/dashboard?nav=courses";
+      sessionStorage.setItem("dashboardNav", "courses");
+onEnroll?.();
+onClose();
+window.location.href = "/dashboard";
     } catch (err) {
       // TODO: surface this to the user via your toast/error UI instead of just logging.
       console.error("Enrollment failed:", err);

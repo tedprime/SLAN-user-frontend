@@ -17,8 +17,8 @@ export default function SignUpPage() {
   const [currentRole, setCurrentRole] = useState("principal");
   const [stateRegion, setStateRegion] = useState("Lagos");
   const [schoolName, setSchoolName] = useState("");
-  const [schoolLocation, setSchoolLocation] = useState("");
-  const [schoolType, setSchoolType] = useState("");
+  const [schoolLocation, setSchoolLocation] = useState("Urban");
+  const [schoolType, setSchoolType] = useState("Private");
 
   const navigateTo = (path: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -118,11 +118,12 @@ export default function SignUpPage() {
 
       <div className="w-full flex items-center justify-center gap-8 py-4 bg-surface-card border-y border-neutral-200 text-[11px] font-600 font-body text-neutral-500">
         <span className="flex items-center gap-1.5">
-  <BadgeCheck size={14} className="text-neutral-500" /> TRCN Acknowledged
-</span>
-<span className="flex items-center gap-1.5">
-  <Lock size={14} className="text-neutral-500" /> Secure Data
-</span>
+          <BadgeCheck size={14} className="text-neutral-500" /> TRCN
+          Acknowledged
+        </span>
+        <span className="flex items-center gap-1.5">
+          <Lock size={14} className="text-neutral-500" /> Secure Data
+        </span>
       </div>
 
       <footer className="w-full max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-xs font-body text-neutral-600 bg-surface">
