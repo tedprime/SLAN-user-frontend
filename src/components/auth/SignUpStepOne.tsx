@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Loader2, ArrowRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Loader2, ArrowRight, X, AlertCircle } from "lucide-react";
 import AuthInput from "../ui/AuthInput";
 import { authService } from "../../services/authService";
 
@@ -14,6 +14,70 @@ function GoogleIcon() {
   );
 }
 
+// ── Inline Toast ────────────────────────────────────────────────────────────
+function Toast({
+  message,
+  onClose,
+}: {
+  message: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 5000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: "24px",
+        right: "24px",
+        zIndex: 9999,
+        maxWidth: "380px",
+        width: "calc(100vw - 48px)",
+        backgroundColor: "#fff",
+        border: "1px solid #fca5a5",
+        borderLeft: "4px solid #ef4444",
+        borderRadius: "6px",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+        display: "flex",
+        alignItems: "flex-start",
+        gap: "12px",
+        padding: "14px 16px",
+        animation: "slideInRight 0.25s ease",
+      }}
+    >
+      <AlertCircle size={18} style={{ color: "#ef4444", flexShrink: 0, marginTop: "1px" }} />
+      <p style={{ fontSize: "13px", color: "#374151", lineHeight: "1.5", flex: 1, margin: 0 }}>
+        {message}
+      </p>
+      <button
+        onClick={onClose}
+        style={{
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+          color: "#9ca3af",
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <X size={16} />
+      </button>
+      <style>{`
+        @keyframes slideInRight {
+          from { opacity: 0; transform: translateX(20px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
 interface StepOneProps {
   email: string;
   setEmail: (val: string) => void;
@@ -21,9 +85,16 @@ interface StepOneProps {
 }
 
 export default function SignUpStepOne({ email, setEmail, onContinue }: StepOneProps) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading,       setIsLoading]       = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error,           setError]           = useState("");
+  const [toastMsg,        setToastMsg]        = useState("");
+  const [showToast,       setShowToast]       = useState(false);
+
+  const showToastMessage = (msg: string) => {
+    setToastMsg(msg);
+    setShowToast(true);
+  };
 
   const handleNextStep = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +115,6 @@ export default function SignUpStepOne({ email, setEmail, onContinue }: StepOnePr
     }
   };
 
-  // Your integrated Google signup handler
   const handleGoogleSignup = async () => {
     setError("");
     setIsGoogleLoading(true);
@@ -52,53 +122,71 @@ export default function SignUpStepOne({ email, setEmail, onContinue }: StepOnePr
       const { url } = await authService.getGoogleSignupUrl();
       window.location.replace(url);
     } catch (err) {
-      console.error("Failed to get Google signup URL:", err);
-      setError("Could not initiate Google sign up. Please try again.");
-      setIsGoogleLoading(false); // Reset loading state so the button becomes clickable again
+      const e = err as { statusCode?: number; status?: number; message?: string };
+      // If the API itself (not the OAuth callback) rejects with a conflict
+      if (e?.statusCode === 409 || e?.status === 409) {
+        showToastMessage(
+          "An account with this Google account already exists. Please log in instead."
+        );
+      } else {
+        showToastMessage(
+          e?.message || "Could not initiate Google sign up. Please try again."
+        );
+      }
+      setIsGoogleLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleNextStep} className="space-y-5">
-      <AuthInput
-        label="Email Address"
-        id="reg-email"
-        type="email"
-        placeholder="example@email.com"
-        iconName="mail"
-        value={email}
-        onChange={(e) => { setEmail(e.target.value); if (error) setError(""); }}
-        required
-      />
+    <>
+      {showToast && (
+        <Toast message={toastMsg} onClose={() => setShowToast(false)} />
+      )}
 
-      {error && <p className="text-xs font-600 text-red-500 font-body -mt-2">{error}</p>}
+      <form onSubmit={handleNextStep} className="space-y-5">
+        <AuthInput
+          label="Email Address"
+          id="reg-email"
+          type="email"
+          placeholder="example@email.com"
+          iconName="mail"
+          value={email}
+          onChange={(e) => { setEmail(e.target.value); if (error) setError(""); }}
+          required
+        />
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full justify-center py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-600 text-sm inline-flex items-center gap-2 transition-colors rounded-sm"
-      >
-        {isLoading
-          ? <><Loader2 size={16} className="animate-spin" /> Checking...</>
-          : <> Continue Registration <ArrowRight size={16} /></>
-        }
-      </button>
+        {error && (
+          <p className="text-xs font-600 text-red-500 font-body -mt-2">{error}</p>
+        )}
 
-      <div className="relative flex py-2 items-center">
-        <div className="flex-1 border-t border-neutral-200" />
-        <span className="mx-4 text-xs font-600 font-body text-neutral-500">or</span>
-        <div className="flex-1 border-t border-neutral-200" />
-      </div>
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full justify-center py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-600 text-sm inline-flex items-center gap-2 transition-colors rounded-sm"
+        >
+          {isLoading ? (
+            <><Loader2 size={16} className="animate-spin" /> Checking...</>
+          ) : (
+            <>Continue Registration <ArrowRight size={16} /></>
+          )}
+        </button>
 
-      <button
-        type="button"
-        onClick={handleGoogleSignup}
-        disabled={isGoogleLoading}
-        className="w-full py-3 px-4 border border-neutral-300 bg-neutral-50 hover:bg-neutral-100 disabled:opacity-60 disabled:cursor-not-allowed text-neutral-700 text-sm font-600 font-body transition-colors flex items-center justify-center gap-3 focus:outline-none rounded-sm"
-      >
-        {isGoogleLoading ? <Loader2 size={16} className="animate-spin" /> : <GoogleIcon />}
-        {isGoogleLoading ? "Redirecting..." : "Continue with Google"}
-      </button>
-    </form>
+        <div className="relative flex py-2 items-center">
+          <div className="flex-1 border-t border-neutral-200" />
+          <span className="mx-4 text-xs font-600 font-body text-neutral-500">or</span>
+          <div className="flex-1 border-t border-neutral-200" />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleSignup}
+          disabled={isGoogleLoading}
+          className="w-full py-3 px-4 border border-neutral-300 bg-neutral-50 hover:bg-neutral-100 disabled:opacity-60 disabled:cursor-not-allowed text-neutral-700 text-sm font-600 font-body transition-colors flex items-center justify-center gap-3 focus:outline-none rounded-sm"
+        >
+          {isGoogleLoading ? <Loader2 size={16} className="animate-spin" /> : <GoogleIcon />}
+          {isGoogleLoading ? "Redirecting..." : "Continue with Google"}
+        </button>
+      </form>
+    </>
   );
 }
