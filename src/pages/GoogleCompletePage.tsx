@@ -136,7 +136,7 @@ export default function GoogleCompletePage() {
 
   // ── State ───────────────────────────────────────────────────────────────
   const [status]     = useState<Status>(initialStatus);
-  const [toastMsg, setToastMsg]   = useState(initialToastMsg);
+  const [toastMsg]   = useState(initialToastMsg);
   const [showToast, setShowToast] = useState(initialStatus === "toast_then_redirect");
   const [email]      = useState(initialEmail);
   const [fullName,  setFullName]  = useState(initialFullName);
