@@ -117,15 +117,15 @@ export default function SignUpStepTwo({
 
   // Helper mappings to guarantee payload compatibility with backend validators
   const backendLocationMap: Record<string, string> = {
-  Urban: "urban",
-  "Semi-Urban": "semi_urban",
-  Rural: "rural",
-};
+    Urban: "urban",
+    "Semi-Urban": "semi_urban",
+    Rural: "rural",
+  };
 
-const backendTypeMap: Record<string, string> = {
-  Private: "private",
-  Public: "public",
-};
+  const backendTypeMap: Record<string, string> = {
+    Private: "private",
+    Public: "public",
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,20 +134,25 @@ const backendTypeMap: Record<string, string> = {
       setError("The passwords you entered do not match.");
       return;
     }
+    const digits = phoneNumber.replace(/\D/g, "");
+    if (digits.length < 10) {
+      setError("Please enter a valid Nigerian phone number.");
+      return;
+    }
     setIsLoading(true);
     try {
       await authService.register({
-  email,
-  fullName,
-  phone: formatPhone(phoneNumber),
-  password,
-  confirmPassword,
-  role: currentRole,
-  state: stateRegion,
-  schoolName,
-  schoolLocation: backendLocationMap[schoolLocation] ?? "urban",
-  schoolType: backendTypeMap[schoolType] ?? "private",
-});
+        email,
+        fullName,
+        phone: formatPhone(phoneNumber),
+        password,
+        confirmPassword,
+        role: currentRole,
+        state: stateRegion,
+        schoolName,
+        schoolLocation: backendLocationMap[schoolLocation] ?? "urban",
+        schoolType: backendTypeMap[schoolType] ?? "private",
+      });
       onSuccess();
     } catch (err) {
       const e = err as {
@@ -194,6 +199,7 @@ const backendTypeMap: Record<string, string> = {
           value={phoneNumber}
           onChange={(e) => setPhoneNumber(e.target.value)}
           required
+          autoComplete="off"
         />
 
         {!isGoogleRoute && (
