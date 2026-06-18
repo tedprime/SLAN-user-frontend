@@ -42,7 +42,20 @@ export default function OtpPage() {
           : await authService.verifyLoginOtp(payload);
       const tokens = result.data;
       setTokens(tokens);
-      if (tokens.user) setUser(tokens.user);
+
+      // ── FIX: Ensure user is normalized and stored ──────────────────────
+      if (tokens.user) {
+        // Backend may return 'name' instead of 'fullName' — handle both shapes
+        const rawUser = tokens.user as unknown as Record<string, unknown>;
+        const fullName = (rawUser.fullName ?? rawUser.name ?? "User") as string;
+        const normalizedUser = {
+          id: (rawUser.id ?? "") as string,
+          fullName,
+          email: (rawUser.email ?? email) as string,
+          role: (rawUser.role ?? "teacher") as string,
+        };
+        setUser(normalizedUser);
+      }
 
       // If they were redirected here from clicking Enrol while logged out,
       // resume that enrollment now and send them straight to the Courses tab.
@@ -56,8 +69,6 @@ export default function OtpPage() {
             const existing = await enrollmentService.getEnrollment(trackId);
             if (!existing) await enrollmentService.enroll(trackId);
           } catch (enrollErr) {
-            // Don't block login on this — they'll just land on a dashboard
-            // without the enrollment having gone through; worth a toast later.
             console.error("Enrollment failed after login:", enrollErr);
           }
           navigateTo("/dashboard?nav=courses");

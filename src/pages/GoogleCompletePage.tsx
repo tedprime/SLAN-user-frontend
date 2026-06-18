@@ -13,6 +13,16 @@ interface GoogleTempTokenPayload {
   phone?: string;
 }
 
+// Normalized user shape — backend might return `name` instead of `fullName`
+interface GoogleUserResponse {
+  id: string;
+  fullName?: string;
+  name?: string;
+  email?: string;
+  role?: string;
+  [key: string]: unknown;
+}
+
 // ── Inline Toast Component ──────────────────────────────────────────────────
 function Toast({
   message,
@@ -103,20 +113,32 @@ export default function GoogleCompletePage() {
   let initialToastMsg = "";
 
   if (errorParam) {
-    // Backend reported an error (e.g. "account already exists") — show toast,
-    // then redirect to the appropriate page instead of rendering an error screen.
     initialToastMsg = errorParam.includes("already exists")
       ? "An account with this Google account already exists. Please log in instead."
       : decodeURIComponent(errorParam);
     initialStatus = "toast_then_redirect";
   } else if (accessToken && refreshToken) {
     // Fully authenticated (Google login success) — store and go to dashboard
-    setTokens({ accessToken, refreshToken });
+    // ── FIX #2: Normalize user shape and ensure setUser is called ──────
+    let parsedUser: GoogleUserResponse | null = null;
     if (userRaw) {
       try {
-        setUser(JSON.parse(decodeURIComponent(userRaw)));
+        parsedUser = JSON.parse(decodeURIComponent(userRaw));
       } catch { /* ignore */ }
     }
+
+    const normalizedUser = parsedUser
+      ? {
+          id: parsedUser.id ?? "",
+          fullName: (parsedUser.fullName ?? parsedUser.name) || "User",
+          email: parsedUser.email ?? "",
+          role: parsedUser.role ?? "teacher",
+        }
+      : null;
+
+    setTokens({ accessToken, refreshToken });
+    if (normalizedUser) setUser(normalizedUser);
+
     navigateTo("/dashboard");
   } else if (incomingTempToken) {
     try {
@@ -157,7 +179,6 @@ export default function GoogleCompletePage() {
     if (status !== "toast_then_redirect") return;
     const t = setTimeout(() => {
       setShowToast(false);
-      // If it's an "already exists" error, go to login; otherwise signup
       const dest = toastMsg.includes("log in instead") ? "/login" : "/signup";
       navigateTo(dest);
     }, 5000);
@@ -194,8 +215,27 @@ export default function GoogleCompletePage() {
         schoolLocation: backendLocationMap[schoolLocation] ?? "urban",
         schoolType: backendTypeMap[schoolType] ?? "private",
       });
+
+      // ── FIX #1: Defensive normalization of the response ──────────────
+      // The backend might return the user with `name` instead of `fullName`
+      const rawUser = (result as unknown as { user?: GoogleUserResponse }).user;
+      const normalizedUser = rawUser
+        ? {
+            id: rawUser.id ?? "",
+            fullName: (rawUser.fullName ?? rawUser.name ?? fullName) || "User",
+            email: rawUser.email ?? email,
+            role: rawUser.role ?? currentRole,
+          }
+        : {
+            id: "",
+            fullName: fullName || "User",
+            email,
+            role: currentRole,
+          };
+
       setTokens(result);
-      setUser(result.user);
+      setUser(normalizedUser);
+
       // Google signup complete — go straight to dashboard, no OTP needed
       navigateTo("/dashboard");
     } catch (err) {
@@ -207,12 +247,12 @@ export default function GoogleCompletePage() {
   };
 
   function formatPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  if (digits.startsWith("234")) return `+${digits}`;
-  if (digits.startsWith("0")) return `+234${digits.slice(1)}`;
-  if (digits.startsWith("7") || digits.startsWith("8") || digits.startsWith("9")) return `+234${digits}`;
-  return raw;
-}
+    const digits = raw.replace(/\D/g, "");
+    if (digits.startsWith("234")) return `+${digits}`;
+    if (digits.startsWith("0")) return `+234${digits.slice(1)}`;
+    if (digits.startsWith("7") || digits.startsWith("8") || digits.startsWith("9")) return `+234${digits}`;
+    return raw;
+  }
 
   // ── Render: loading ─────────────────────────────────────────────────────
   if (status === "loading") {

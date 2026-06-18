@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Bell, Search } from "lucide-react";
 import { getUser } from "../../../services/tokenService";
 
@@ -8,8 +9,10 @@ interface DashboardHeaderProps {
 }
 
 function getInitials(fullName: string): string {
+  if (!fullName || typeof fullName !== "string") return "U";
   return fullName
     .split(" ")
+    .filter((n) => n.length > 0)
     .slice(0, 2)
     .map((n) => n[0].toUpperCase())
     .join("");
@@ -19,7 +22,29 @@ export default function DashboardHeader({
   searchVal,
   onSearchChange,
 }: DashboardHeaderProps) {
-  const user = getUser();
+  // ── FIX: Reactive user state so initials update when auth state changes ──
+  const [user, setUserState] = useState(getUser());
+
+  useEffect(() => {
+    // Re-read user from cookies on mount and when storage changes
+    const handleStorageChange = () => setUserState(getUser());
+    window.addEventListener("storage", handleStorageChange);
+
+    // Also poll for cookie changes (since cookies don't trigger storage events reliably)
+    const interval = setInterval(() => {
+      const current = getUser();
+      setUserState((prev) => {
+        if (JSON.stringify(prev) !== JSON.stringify(current)) return current;
+        return prev;
+      });
+    }, 1000);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
+
   const initials = user?.fullName ? getInitials(user.fullName) : "U";
 
   return (
@@ -30,7 +55,6 @@ export default function DashboardHeader({
         borderBottom: "1px solid #e0e0e0",
       }}
     >
-
       {/* Center: search */}
       <div className="flex-1 flex justify-center px-8 max-w-xl mx-auto w-full">
         <div className="relative w-full">
@@ -104,6 +128,7 @@ export default function DashboardHeader({
 
         {/* Initials avatar */}
         <div
+          title={user?.fullName || "User"}
           style={{
             width: "40px",
             height: "40px",
