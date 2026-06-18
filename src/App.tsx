@@ -13,10 +13,40 @@ import OtpPage from "./pages/OtpPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import UserDashboard from "./pages/dashboard/UserDashboard";
 import GoogleCompletePage from "./pages/GoogleCompletePage";
+import { setTokens, setUser } from "./services/tokenService";
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+
+  // ── FIX: Handle auth tokens in URL query params ──
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const accessToken = url.searchParams.get("accessToken");
+    const refreshToken = url.searchParams.get("refreshToken");
+    const userParam = url.searchParams.get("user");
+
+    if (accessToken && refreshToken) {
+      // Store tokens
+      setTokens({ accessToken, refreshToken });
+      
+      // Store user if present
+      if (userParam) {
+        try {
+          const user = JSON.parse(decodeURIComponent(userParam));
+          setUser(user);
+        } catch {
+          // invalid user JSON, ignore
+        }
+      }
+
+      // Clean URL (remove query params) without reloading
+      url.searchParams.delete("accessToken");
+      url.searchParams.delete("refreshToken");
+      url.searchParams.delete("user");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, []);
 
   useEffect(() => {
     const handler = () => setCurrentPath(window.location.pathname);
