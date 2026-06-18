@@ -1,53 +1,8 @@
-// ── Modules ─────────────────────────────────────────────
-export interface Unit {
-  id: number;
-  title: string;
-  slug: string;
-  content?: string;
-  duration?: number; // in minutes
-  order: number;
-  status: string;
-}
-
-export interface Module {
-  id: number;
-  title: string;
-  slug: string;
-  description: string;
-  order: number;
-  status: string;
-  units: Unit[];
-  completed?: boolean;
-  locked?: boolean;
-}
-
-// ── Tracks ──────────────────────────────────────────────
-// Shape returned when tracks come nested inside a course (GET /courses).
+// ── Track summary (nested in GET /courses, or flat in GET /courses/{id}/tracks) ──
+// With a Bearer token: progressPercent and completedUnits are personalised.
+// Without a token: both are 0.
 export interface CourseTrack {
   id: number;
-  title: string;
-  slug: string;
-  isFree: boolean;
-  status: string;
-  description: string;
-  shortDescription: string;
-  estimatedHours?: number;
-  modules: Module[]; // <-- ADDED
-}
-
-// Shape returned when fetching tracks directly (GET /tracks) — includes
-// nested modules. Not required for the sidebar dropdown, but kept here
-// since the same backend resource will likely be needed again soon.
-export interface TrackModule {
-  id: number;
-  title: string;
-  slug: string;
-  status: string;
-}
-
-export interface Track {
-  id: number;
-  courseId: number;
   title: string;
   slug: string;
   description: string;
@@ -55,20 +10,49 @@ export interface Track {
   thumbnail: string | null;
   isFree: boolean;
   status: string;
-  createdBy?: number;
-  createdAt?: string;
-  updatedAt?: string;
-  modules: TrackModule[];
+  moduleCount: number;
+  unitCount: number;
+  totalEstimatedMinutes: number;
+  completedUnits: number;
+  progressPercent: number;
 }
 
-// ── Courses ─────────────────────────────────────────────
+// ── Module summary (GET /tracks/{idOrSlug}/modules) ──────────────────────────
+export interface ModuleSummary {
+  id: number;
+  title: string;
+  slug: string;
+  description: string;
+  estimatedReadMinutes: number;
+  unitCount: number;
+  totalEstimatedMinutes: number;
+}
+
+// ── Unit summary (GET /modules/{idOrSlug}/units) ──────────────────────────────
+export interface UnitSummary {
+  id: number;
+  title: string;
+  slug: string;
+  description: string;
+  estimatedReadMinutes: number;
+  videoUrl: string | null;
+  pdfUrl: string | null;
+  status: string;
+}
+
+// ── Full unit content (GET /units/{slug}) — requires Bearer token ─────────────
+export interface UnitContent extends UnitSummary {
+  content?: string; // rich content body
+}
+
+// ── Course (GET /courses) ─────────────────────────────────────────────────────
 export interface Course {
   id: number;
   title: string;
   slug: string;
   description: string;
   shortDescription: string;
-  thumbnail: string;
+  thumbnail: string | null;
   status: string;
   createdBy: number;
   createdAt: string;
@@ -76,13 +60,23 @@ export interface Course {
   tracks: CourseTrack[];
 }
 
-// ── Envelope shapes (matches the rest of the API) ──────────
+// ── Envelope shapes ───────────────────────────────────────────────────────────
 export interface CoursesResponse {
   success: boolean;
   data: Course[];
 }
 
-export interface TracksResponse {
+export interface TrackModulesResponse {
+  track: { id: number; title: string; slug: string };
+  modules: ModuleSummary[];
+}
+
+export interface ModuleUnitsResponse {
+  module: { id: number; title: string; slug: string };
+  units: UnitSummary[];
+}
+
+export interface UnitContentResponse {
   success: boolean;
-  data: Track[];
+  data: UnitContent;
 }

@@ -1,11 +1,18 @@
 import { apiRequest } from "./api";
-import type { Course, CoursesResponse, Track, TracksResponse } from "./types/course.types";
+import type {
+  Course,
+  CoursesResponse,
+  TrackModulesResponse,
+  ModuleUnitsResponse,
+  UnitContent,
+  UnitContentResponse,
+} from "./types/course.types";
 
 export const courseService = {
   /**
-   * Published courses, each with its tracks nested inline
-   * (id, title, slug, isFree, status) — exactly what the
-   * dashboard sidebar dropdown needs, no extra round trip.
+   * GET /courses
+   * Published courses, each with track summaries (including progressPercent
+   * and completedUnits when a Bearer token is present).
    */
   getCourses: async (): Promise<Course[]> => {
     const res = await apiRequest<CoursesResponse>("/courses");
@@ -13,12 +20,29 @@ export const courseService = {
   },
 
   /**
-   * Published tracks with their modules nested inline. Not used by the
-   * sidebar today, but the backend already exposes it and a track detail
-   * view will need it next.
+   * GET /tracks/{idOrSlug}/modules
+   * All published modules under a track, with unitCount and totalEstimatedMinutes.
    */
-  getTracks: async (): Promise<Track[]> => {
-    const res = await apiRequest<TracksResponse>("/tracks");
+  getTrackModules: async (trackIdOrSlug: string | number): Promise<TrackModulesResponse> => {
+    return apiRequest<TrackModulesResponse>(`/tracks/${trackIdOrSlug}/modules`);
+  },
+
+  /**
+   * GET /modules/{idOrSlug}/units
+   * All published units under a module (title, slug, description,
+   * estimatedReadMinutes, videoUrl, pdfUrl, status).
+   */
+  getModuleUnits: async (moduleIdOrSlug: string | number): Promise<ModuleUnitsResponse> => {
+    return apiRequest<ModuleUnitsResponse>(`/modules/${moduleIdOrSlug}/units`);
+  },
+
+  /**
+   * GET /units/{slug}
+   * Full unit content including video, PDF, discussion prompt.
+   * Requires a valid Bearer token (401 if unauthenticated).
+   */
+  getUnit: async (slug: string): Promise<UnitContent> => {
+    const res = await apiRequest<UnitContentResponse>(`/units/${slug}`);
     return res.data;
   },
 };

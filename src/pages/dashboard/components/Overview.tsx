@@ -63,24 +63,17 @@ export default function Overview({ onTrackClick }: { onTrackClick?: (trackId: nu
       if (!Array.isArray(course?.tracks)) return;
       
       course.tracks.forEach((track) => {
-        // Guard: ensure enrollments is an array before calling find
-        const enrollment = Array.isArray(enrollments) 
-          ? enrollments.find((e) => e?.trackId === track?.id)
-          : undefined;
-          
-        const totalModules = Array.isArray(track?.modules) ? track.modules.length : 0;
-        const totalUnits = Array.isArray(track?.modules)
-          ? track.modules.reduce((acc, m) => acc + (Array.isArray(m?.units) ? m.units.length : 0), 0)
-          : 0;
-        
+        const totalModules = track?.moduleCount ?? 0;
+        const totalUnits = track?.unitCount ?? 0;
+
         tracks.push({
           ...track,
           courseId: course.id,
           courseTitle: course.title || "Untitled Course",
-          progress: enrollment ? 0 : 0, // TODO: Replace with real progress when API has it
+          progress: track?.progressPercent ?? 0,
           totalModules,
           totalUnits,
-          estimatedHours: track?.estimatedHours || 12,
+          estimatedHours: Math.round((track?.totalEstimatedMinutes ?? 0) / 60) || 12,
         });
       });
     });

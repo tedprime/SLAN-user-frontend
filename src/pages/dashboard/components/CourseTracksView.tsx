@@ -187,10 +187,10 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
           >
             {tracks.map((track: CourseTrack, index: number) => {
               const color = getTrackColor(index);
-              const progress = 0;
-              const moduleCount = track.modules?.length || 0;
-              const unitCount = track.modules?.reduce((acc, m) => acc + (m.units?.length || 0), 0) || 0;
-              const estimatedHours = track.estimatedHours || 12;
+              const progress = track.progressPercent ?? 0;
+              const moduleCount = track.moduleCount ?? 0;
+              const unitCount = track.unitCount ?? 0;
+              const estimatedHours = Math.round((track.totalEstimatedMinutes ?? 0) / 60) || 12;
 
               return (
                 <div
