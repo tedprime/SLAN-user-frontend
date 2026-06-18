@@ -19,6 +19,7 @@ interface DashboardSidebarProps {
   onNavChange: (id: string) => void;
   isOpen: boolean;
   onToggle: () => void;
+  onCoursesLoaded?: (courses: Course[]) => void; // <-- ADDED
 }
 
 export default function DashboardSidebar({
@@ -26,11 +27,14 @@ export default function DashboardSidebar({
   onNavChange,
   isOpen,
   onToggle,
+  onCoursesLoaded, // <-- ADDED
 }: DashboardSidebarProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
   const [coursesError, setCoursesError] = useState(false);
-  const [expandedCourseIds, setExpandedCourseIds] = useState<Set<number>>(new Set());
+  const [expandedCourseIds, setExpandedCourseIds] = useState<Set<number>>(
+    new Set(),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -40,7 +44,10 @@ export default function DashboardSidebar({
       setCoursesError(false);
       try {
         const data = await courseService.getCourses();
-        if (!cancelled) setCourses(data);
+        if (!cancelled) {
+          setCourses(data);
+          onCoursesLoaded?.(data); // <-- ADDED
+        }
       } catch {
         if (!cancelled) setCoursesError(true);
       } finally {
@@ -51,7 +58,7 @@ export default function DashboardSidebar({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [onCoursesLoaded]); // <-- ADDED to dependency array
 
   const toggleCourse = (courseId: number) => {
     setExpandedCourseIds((prev) => {
@@ -63,7 +70,8 @@ export default function DashboardSidebar({
   };
 
   const isOverviewActive = activeNav === "overview";
-  const isAnyCourseActive = activeNav.startsWith("course:") || activeNav.startsWith("track:");
+  const isAnyCourseActive =
+    activeNav.startsWith("course:") || activeNav.startsWith("track:");
 
   return (
     <div
@@ -112,13 +120,19 @@ export default function DashboardSidebar({
             cursor: "pointer",
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.06)";
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+              "rgba(0,100,0,0.06)";
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+              "transparent";
           }}
         >
-          {isOpen ? <X size={20} style={{ color: "#006400" }} /> : <Menu size={20} style={{ color: "#006400" }} />}
+          {isOpen ? (
+            <X size={20} style={{ color: "#006400" }} />
+          ) : (
+            <Menu size={20} style={{ color: "#006400" }} />
+          )}
         </button>
       </div>
 
@@ -135,7 +149,9 @@ export default function DashboardSidebar({
             textTransform: "capitalize",
             letterSpacing: "0.02em",
             transition: "all 0.15s",
-            backgroundColor: isOverviewActive ? "rgba(0,100,0,0.07)" : "transparent",
+            backgroundColor: isOverviewActive
+              ? "rgba(0,100,0,0.07)"
+              : "transparent",
             color: isOverviewActive ? "#006400" : "rgba(0,100,0,0.45)",
             paddingLeft: isOpen ? (isOverviewActive ? "21px" : "24px") : "0px",
             paddingRight: isOpen ? "24px" : "0px",
@@ -150,19 +166,24 @@ export default function DashboardSidebar({
           }}
           onMouseEnter={(e) => {
             if (!isOverviewActive) {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.04)";
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                "rgba(0,100,0,0.04)";
               (e.currentTarget as HTMLButtonElement).style.color = "#006400";
             }
           }}
           onMouseLeave={(e) => {
             if (!isOverviewActive) {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-              (e.currentTarget as HTMLButtonElement).style.color = "rgba(0,100,0,0.45)";
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                "transparent";
+              (e.currentTarget as HTMLButtonElement).style.color =
+                "rgba(0,100,0,0.45)";
             }
           }}
         >
-          <span style={{ flexShrink: 0 }}><LayoutDashboard size={20} /></span>
-          {isOpen && <span>Overview</span>}
+          <span style={{ flexShrink: 0 }}>
+            <LayoutDashboard size={20} />
+          </span>
+          {isOpen && <span>OVERVIEW</span>}
         </button>
 
         {/* ── Courses (collapsed sidebar: single static icon) ─── */}
@@ -174,7 +195,9 @@ export default function DashboardSidebar({
             style={{
               padding: "14px 0",
               transition: "all 0.15s",
-              backgroundColor: isAnyCourseActive ? "rgba(0,100,0,0.07)" : "transparent",
+              backgroundColor: isAnyCourseActive
+                ? "rgba(0,100,0,0.07)"
+                : "transparent",
               color: isAnyCourseActive ? "#006400" : "rgba(0,100,0,0.45)",
               border: "none",
               cursor: "pointer",
@@ -184,14 +207,17 @@ export default function DashboardSidebar({
             }}
             onMouseEnter={(e) => {
               if (!isAnyCourseActive) {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.04)";
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                  "rgba(0,100,0,0.04)";
                 (e.currentTarget as HTMLButtonElement).style.color = "#006400";
               }
             }}
             onMouseLeave={(e) => {
               if (!isAnyCourseActive) {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-                (e.currentTarget as HTMLButtonElement).style.color = "rgba(0,100,0,0.45)";
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                  "transparent";
+                (e.currentTarget as HTMLButtonElement).style.color =
+                  "rgba(0,100,0,0.45)";
               }
             }}
           >
@@ -234,7 +260,10 @@ export default function DashboardSidebar({
                     setCoursesError(false);
                     courseService
                       .getCourses()
-                      .then(setCourses)
+                      .then((data) => {
+                        setCourses(data);
+                        onCoursesLoaded?.(data); // <-- ADDED
+                      })
                       .catch(() => setCoursesError(true))
                       .finally(() => setCoursesLoading(false));
                   }}
@@ -254,7 +283,13 @@ export default function DashboardSidebar({
             )}
 
             {!coursesLoading && !coursesError && courses.length === 0 && (
-              <div style={{ padding: "12px 24px", fontSize: "12px", color: "#b0b0b0" }}>
+              <div
+                style={{
+                  padding: "12px 24px",
+                  fontSize: "12px",
+                  color: "#b0b0b0",
+                }}
+              >
                 No courses available yet.
               </div>
             )}
@@ -264,7 +299,8 @@ export default function DashboardSidebar({
               courses.map((course) => {
                 const isExpanded = expandedCourseIds.has(course.id);
                 const isCourseActive =
-                  activeNav === `course:${course.id}` || activeNav.startsWith(`track:${course.id}:`);
+                  activeNav === `course:${course.id}` ||
+                  activeNav.startsWith(`track:${course.id}:`);
 
                 return (
                   <div key={course.id}>
@@ -281,51 +317,92 @@ export default function DashboardSidebar({
                         fontWeight: 600,
                         letterSpacing: "0.02em",
                         transition: "all 0.15s",
-                        backgroundColor: isCourseActive ? "rgba(0,100,0,0.07)" : "transparent",
-                        color: isCourseActive ? "#006400" : "rgba(0,100,0,0.45)",
+                        backgroundColor: isCourseActive
+                          ? "rgba(0,100,0,0.07)"
+                          : "transparent",
+                        color: isCourseActive
+                          ? "#006400"
+                          : "rgba(0,100,0,0.45)",
                         paddingLeft: isCourseActive ? "21px" : "24px",
                         whiteSpace: "nowrap",
                         border: "none",
                         cursor: "pointer",
                         borderLeftWidth: "3px",
                         borderLeftStyle: "solid",
-                        borderLeftColor: isCourseActive ? "#101b37" : "transparent",
+                        borderLeftColor: isCourseActive
+                          ? "#101b37"
+                          : "transparent",
                       }}
                       onMouseEnter={(e) => {
                         if (!isCourseActive) {
-                          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.04)";
-                          (e.currentTarget as HTMLButtonElement).style.color = "#006400";
+                          (
+                            e.currentTarget as HTMLButtonElement
+                          ).style.backgroundColor = "rgba(0,100,0,0.04)";
+                          (e.currentTarget as HTMLButtonElement).style.color =
+                            "#006400";
                         }
                       }}
                       onMouseLeave={(e) => {
                         if (!isCourseActive) {
-                          (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-                          (e.currentTarget as HTMLButtonElement).style.color = "rgba(0,100,0,0.45)";
+                          (
+                            e.currentTarget as HTMLButtonElement
+                          ).style.backgroundColor = "transparent";
+                          (e.currentTarget as HTMLButtonElement).style.color =
+                            "rgba(0,100,0,0.45)";
                         }
                       }}
                     >
-                      <span style={{ display: "flex", alignItems: "center", gap: "12px", overflow: "hidden" }}>
-                        <span style={{ flexShrink: 0 }}><BookOpen size={20} /></span>
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{course.title}</span>
+                      <span
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <span style={{ flexShrink: 0 }}>
+                          <BookOpen size={20} />
+                        </span>
+                        <span
+                          style={{
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {course.title}
+                        </span>
                       </span>
                       <span style={{ flexShrink: 0, color: "#b0b0b0" }}>
-                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                        {isExpanded ? (
+                          <ChevronDown size={16} />
+                        ) : (
+                          <ChevronRight size={16} />
+                        )}
                       </span>
                     </button>
 
                     {isExpanded && (
                       <div style={{ paddingBottom: "4px" }}>
                         {course.tracks.length === 0 && (
-                          <div style={{ padding: "8px 24px 8px 56px", fontSize: "12px", color: "#b0b0b0" }}>
+                          <div
+                            style={{
+                              padding: "8px 24px 8px 56px",
+                              fontSize: "12px",
+                              color: "#b0b0b0",
+                            }}
+                          >
                             No tracks yet.
                           </div>
                         )}
                         {course.tracks.map((track) => {
-                          const isTrackActive = activeNav === `track:${course.id}:${track.id}`;
+                          const isTrackActive =
+                            activeNav === `track:${course.id}:${track.id}`;
                           return (
                             <button
                               key={track.id}
-                              onClick={() => onNavChange(`track:${course.id}:${track.id}`)}
+                              onClick={() =>
+                                onNavChange(`track:${course.id}:${track.id}`)
+                              }
                               title={track.title}
                               className="w-full flex items-center justify-between text-left"
                               style={{
@@ -333,31 +410,58 @@ export default function DashboardSidebar({
                                 fontSize: "13px",
                                 fontWeight: 500,
                                 transition: "all 0.15s",
-                                backgroundColor: isTrackActive ? "rgba(0,100,0,0.06)" : "transparent",
+                                backgroundColor: isTrackActive
+                                  ? "rgba(0,100,0,0.06)"
+                                  : "transparent",
                                 color: isTrackActive ? "#006400" : "#666666",
                                 whiteSpace: "nowrap",
                                 border: "none",
                                 cursor: "pointer",
                                 borderLeftWidth: "3px",
                                 borderLeftStyle: "solid",
-                                borderLeftColor: isTrackActive ? "#d4af37" : "transparent",
+                                borderLeftColor: isTrackActive
+                                  ? "#d4af37"
+                                  : "transparent",
                               }}
                               onMouseEnter={(e) => {
                                 if (!isTrackActive) {
-                                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.03)";
-                                  (e.currentTarget as HTMLButtonElement).style.color = "#006400";
+                                  (
+                                    e.currentTarget as HTMLButtonElement
+                                  ).style.backgroundColor =
+                                    "rgba(0,100,0,0.03)";
+                                  (
+                                    e.currentTarget as HTMLButtonElement
+                                  ).style.color = "#006400";
                                 }
                               }}
                               onMouseLeave={(e) => {
                                 if (!isTrackActive) {
-                                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-                                  (e.currentTarget as HTMLButtonElement).style.color = "#666666";
+                                  (
+                                    e.currentTarget as HTMLButtonElement
+                                  ).style.backgroundColor = "transparent";
+                                  (
+                                    e.currentTarget as HTMLButtonElement
+                                  ).style.color = "#666666";
                                 }
                               }}
                             >
-                              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{track.title}</span>
+                              <span
+                                style={{
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
+                              >
+                                {track.title}
+                              </span>
                               {!track.isFree && (
-                                <Lock size={12} style={{ color: "#b0b0b0", flexShrink: 0, marginLeft: "8px" }} />
+                                <Lock
+                                  size={12}
+                                  style={{
+                                    color: "#b0b0b0",
+                                    flexShrink: 0,
+                                    marginLeft: "8px",
+                                  }}
+                                />
                               )}
                             </button>
                           );
@@ -371,7 +475,14 @@ export default function DashboardSidebar({
         )}
       </nav>
 
-      <div style={{ padding: "8px", flexShrink: 0, borderTop: "1px solid #e0e0e0", backgroundColor: "#f5f5f5" }}>
+      <div
+        style={{
+          padding: "8px",
+          flexShrink: 0,
+          borderTop: "1px solid #e0e0e0",
+          backgroundColor: "#f5f5f5",
+        }}
+      >
         <button
           title={!isOpen ? "Logout" : undefined}
           style={{
@@ -402,8 +513,14 @@ export default function DashboardSidebar({
             clearTokens();
             window.location.href = "/login";
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#e8eaf0"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+              "#e8eaf0";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+              "transparent";
+          }}
         >
           <LogOut size={20} style={{ flexShrink: 0 }} />
           {isOpen && <span>Logout</span>}
