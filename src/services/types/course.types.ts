@@ -1,3 +1,26 @@
+// ── Modules ─────────────────────────────────────────────
+export interface Unit {
+  id: number;
+  title: string;
+  slug: string;
+  content?: string;
+  duration?: number; // in minutes
+  order: number;
+  status: string;
+}
+
+export interface Module {
+  id: number;
+  title: string;
+  slug: string;
+  description: string;
+  order: number;
+  status: string;
+  units: Unit[];
+  completed?: boolean;
+  locked?: boolean;
+}
+
 // ── Tracks ──────────────────────────────────────────────
 // Shape returned when tracks come nested inside a course (GET /courses).
 export interface CourseTrack {
@@ -6,6 +29,9 @@ export interface CourseTrack {
   slug: string;
   isFree: boolean;
   status: string;
+  shortDescription?: string;
+  estimatedHours?: number;
+  modules: Module[]; // <-- ADDED
 }
 
 // Shape returned when fetching tracks directly (GET /tracks) — includes
