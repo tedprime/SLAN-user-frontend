@@ -449,6 +449,7 @@ export default function DashboardSidebar({
                                 style={{
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
+                                  textTransform: "uppercase",
                                 }}
                               >
                                 {track.title}

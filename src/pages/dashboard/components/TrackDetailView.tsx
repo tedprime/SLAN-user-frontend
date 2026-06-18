@@ -96,6 +96,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick }
               letterSpacing: "-0.02em",
               marginBottom: "12px",
               lineHeight: 1.2,
+              textTransform: "uppercase",
             }}
           >
             {track.title}
@@ -111,7 +112,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick }
               lineHeight: 1.6,
             }}
           >
-            {track.shortDescription || "Master the skills in this track through structured modules and interactive units."}
+            {track.description || "Master the skills in this track through structured modules and interactive units."}
           </p>
 
           {/* Metadata */}

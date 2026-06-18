@@ -29,7 +29,8 @@ export interface CourseTrack {
   slug: string;
   isFree: boolean;
   status: string;
-  shortDescription?: string;
+  description: string;
+  shortDescription: string;
   estimatedHours?: number;
   modules: Module[]; // <-- ADDED
 }
