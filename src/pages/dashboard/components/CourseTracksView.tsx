@@ -1,9 +1,8 @@
 import { useState, useMemo } from "react";
 import { ChevronDown, Lock, BookOpen, Clock, Layers } from "lucide-react";
-// Adjust these paths based on where YOUR files actually are:
 import Button from "../../../components/ui/Button";
 import Progress from "../../../components/ui/Progress";
-import type { Course } from "../../../services/types/course.types";
+import type { Course, CourseTrack } from "../../../services/types/course.types";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -189,6 +188,9 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
             {tracks.map((track: CourseTrack, index: number) => {
               const color = getTrackColor(index);
               const progress = 0;
+              const moduleCount = track.modules?.length || 0;
+              const unitCount = track.modules?.reduce((acc, m) => acc + (m.units?.length || 0), 0) || 0;
+              const estimatedHours = track.estimatedHours || 12;
 
               return (
                 <div
@@ -273,15 +275,15 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                   >
                     <span className="flex items-center gap-1.5">
                       <Layers size={13} />
-                      <span>3 Modules</span>
+                      <span>{moduleCount} Modules</span>
                     </span>
                     <span className="flex items-center gap-1.5">
                       <BookOpen size={13} />
-                      <span>15 Units</span>
+                      <span>{unitCount} Units</span>
                     </span>
                     <span className="flex items-center gap-1.5">
                       <Clock size={13} />
-                      <span>12h</span>
+                      <span>{estimatedHours}h</span>
                     </span>
                   </div>
 
@@ -304,14 +306,4 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
       </div>
     </div>
   );
-}
-
-// Local type for track items
-interface CourseTrack {
-  id: number;
-  title: string;
-  slug: string;
-  isFree: boolean;
-  status: string;
-  shortDescription?: string;
 }
