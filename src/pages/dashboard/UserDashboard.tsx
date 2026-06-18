@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import DashboardSidebar from "./components/DashboardSidebar";
 import DashboardHeader from "./components/DashboardHeader";
+import Overview from "./components/Overview";
 import CourseTracksView from "./components/CourseTracksView";
 import TrackDetailView from "./components/TrackDetailView";
 import type { Course } from "../../services/types/course.types";
@@ -8,7 +9,6 @@ import type { Course } from "../../services/types/course.types";
 const STORAGE_KEY = "dashboard_active_nav";
 
 export default function UserDashboard() {
-  // Restore from sessionStorage on mount, default to "overview"
   const [activeNav, setActiveNav] = useState(() => {
     return sessionStorage.getItem(STORAGE_KEY) || "overview";
   });
@@ -17,7 +17,6 @@ export default function UserDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [courses, setCourses] = useState<Course[]>([]);
 
-  // Persist activeNav to sessionStorage whenever it changes
   useEffect(() => {
     sessionStorage.setItem(STORAGE_KEY, activeNav);
   }, [activeNav]);
@@ -40,15 +39,18 @@ export default function UserDashboard() {
     return { type: "overview" as const };
   }, [activeNav, courses]);
 
-  const handleTrackClick = (trackId: number) => {
-    if (viewState.type === "course" && viewState.course) {
-      setActiveNav(`track:${viewState.course.id}:${trackId}`);
+  const handleTrackClick = (trackId: number, courseId?: number) => {
+    const cid = courseId || (viewState.type === "course" ? viewState.course?.id : undefined);
+    if (cid) {
+      setActiveNav(`track:${cid}:${trackId}`);
     }
   };
 
   const handleBackToCourse = () => {
     if (viewState.type === "track" && viewState.course) {
       setActiveNav(`course:${viewState.course.id}`);
+    } else {
+      setActiveNav("overview");
     }
   };
 
@@ -89,18 +91,15 @@ export default function UserDashboard() {
         />
         <main style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
           {viewState.type === "overview" && (
-            <div style={{ padding: "32px" }}>
-              <h2 style={{ color: "#101b37", fontFamily: "var(--font-headline)" }}>
-                Overview
-              </h2>
-              <p style={{ color: "#888888" }}>Select a course from the sidebar to view tracks.</p>
-            </div>
+            <Overview
+              onTrackClick={handleTrackClick}
+            />
           )}
 
           {viewState.type === "course" && viewState.course && (
             <CourseTracksView
               course={viewState.course}
-              onTrackClick={handleTrackClick}
+              onTrackClick={(trackId) => handleTrackClick(trackId, viewState.course?.id)}
             />
           )}
 
