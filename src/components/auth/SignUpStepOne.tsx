@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Loader2, ArrowRight, X, AlertCircle } from "lucide-react";
+import { Loader2, ArrowRight, X, AlertCircle, Mail } from "lucide-react";
 import AuthInput from "../ui/AuthInput";
 import { authService } from "../../services/authService";
 
@@ -145,15 +145,19 @@ export default function SignUpStepOne({ email, setEmail, onContinue }: StepOnePr
 
       <form onSubmit={handleNextStep} className="space-y-5">
         <AuthInput
-          label="Email Address"
-          id="reg-email"
-          type="email"
-          placeholder="example@email.com"
-          iconName="mail"
-          value={email}
-          onChange={(e) => { setEmail(e.target.value); if (error) setError(""); }}
-          required
-        />
+      label="Email Address"
+      id="login-email"
+      type="email"
+      placeholder="example@email.com"
+
+      icon={Mail} 
+      value={email}
+      onChange={(e) => {
+        setEmail(e.target.value);
+        if (error) setError("");
+      }}
+      required
+    />
 
         {error && (
           <p className="text-xs font-600 text-red-500 font-body -mt-2">{error}</p>

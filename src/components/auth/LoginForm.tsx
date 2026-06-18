@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Lock, Eye, EyeOff, Loader2, Mail } from "lucide-react";
 import AuthInput from "../ui/AuthInput";
 import { authService } from "../../services/authService";
 
@@ -66,16 +66,19 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleFormSubmit} className="space-y-5">
-      <AuthInput
-        label="Email Address"
-        id="login-email"
-        type="email"
-        placeholder="example@email.com"
-        iconName="mail"
-        value={email}
-        onChange={(e) => { setEmail(e.target.value); if (error) setError(""); }}
-        required
-      />
+     <AuthInput
+      label="Email Address"
+      id="login-email"
+      type="email"
+      placeholder="example@email.com"
+      icon={Mail} 
+      value={email}
+      onChange={(e) => {
+        setEmail(e.target.value);
+        if (error) setError("");
+      }}
+      required
+    />
 
       <div className="space-y-1.5">
         <div className="flex justify-between items-center">

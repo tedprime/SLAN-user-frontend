@@ -6,6 +6,9 @@ import {
   ShieldCheck,
   Loader2,
   ArrowRight,
+  User,
+  Smartphone,
+  School
 } from "lucide-react";
 import AuthInput from "../ui/AuthInput";
 import { authService } from "../../services/authService";
@@ -181,26 +184,26 @@ export default function SignUpStepTwo({
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-4">
         <AuthInput
-          label="Full Name"
-          id="reg-fullname"
-          type="text"
-          placeholder="Enter your full name"
-          iconName="person"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          required
-        />
+  label="Full Name"
+  id="reg-fullname"
+  type="text"
+  placeholder="Enter your full name"
+  icon={User} 
+  value={fullName}
+  onChange={(e) => setFullName(e.target.value)}
+  required
+/>
         <AuthInput
-          label="Phone Number"
-          id="reg-phone"
-          type="tel"
-          placeholder="e.g. 08012345678"
-          iconName="smartphone"
-          value={phoneNumber}
-          onChange={(e) => setPhoneNumber(e.target.value)}
-          required
-          autoComplete="off"
-        />
+  label="Phone Number"
+  id="reg-phone"
+  type="tel"
+  placeholder="e.g. 08012345678"
+  icon={Smartphone} 
+  value={phoneNumber}
+  onChange={(e) => setPhoneNumber(e.target.value)}
+  required
+  autoComplete="off"
+/>
 
         {!isGoogleRoute && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -338,15 +341,15 @@ export default function SignUpStepTwo({
         </div>
 
         <AuthInput
-          label="School Name"
-          id="reg-school"
-          type="text"
-          placeholder="Enter your school/institution name"
-          iconName="school"
-          value={schoolName}
-          onChange={(e) => setSchoolName(e.target.value)}
-          required
-        />
+  label="School Name"
+  id="reg-school"
+  type="text"
+  placeholder="Enter your school/institution name"
+  icon={School}
+  value={schoolName}
+  onChange={(e) => setSchoolName(e.target.value)}
+  required
+/>
       </div>
 
       <button

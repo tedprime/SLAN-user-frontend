@@ -7,23 +7,19 @@ interface DashboardSidebarProps {
   onNavChange: (id: string) => void;
   isOpen: boolean;
   onToggle: () => void;
-  isEnrolled: boolean;
 }
+
+const coreNav = [
+  { id: "overview", label: "Overview", icon: <LayoutDashboard size={20} /> },
+  { id: "courses", label: "Course", icon: <BookOpen size={20} /> },
+];
 
 export default function DashboardSidebar({
   activeNav,
   onNavChange,
   isOpen,
   onToggle,
-  isEnrolled,
 }: DashboardSidebarProps) {
-  const coreNav = [
-    { id: "overview", label: "Overview", icon: <LayoutDashboard size={20} /> },
-    ...(isEnrolled
-      ? [{ id: "courses", label: "Course", icon: <BookOpen size={20} /> }]
-      : []),
-  ];
-
   return (
     <div
       style={{
@@ -39,7 +35,6 @@ export default function DashboardSidebar({
         zIndex: 20,
       }}
     >
-      {/* Brand + toggle — same height as header (64px) */}
       <div
         style={{
           height: "64px",
@@ -78,14 +73,10 @@ export default function DashboardSidebar({
             (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
           }}
         >
-          {isOpen
-            ? <X size={20} style={{ color: "#006400" }} />
-            : <Menu size={20} style={{ color: "#006400" }} />
-          }
+          {isOpen ? <X size={20} style={{ color: "#006400" }} /> : <Menu size={20} style={{ color: "#006400" }} />}
         </button>
       </div>
 
-      {/* Nav */}
       <nav style={{ flex: 1, overflowY: "auto", paddingTop: "8px" }}>
         {coreNav.map((item) => {
           const isActive = activeNav === item.id;
@@ -104,7 +95,6 @@ export default function DashboardSidebar({
                 transition: "all 0.15s",
                 backgroundColor: isActive ? "rgba(0,100,0,0.07)" : "transparent",
                 color: isActive ? "#006400" : "rgba(0,100,0,0.45)",
-                borderLeft: isActive ? "3px solid #101b37" : "3px solid transparent",
                 paddingLeft: isOpen ? (isActive ? "21px" : "24px") : "0px",
                 paddingRight: isOpen ? "24px" : "0px",
                 justifyContent: isOpen ? "flex-start" : "center",
@@ -136,15 +126,7 @@ export default function DashboardSidebar({
         })}
       </nav>
 
-      {/* Logout — pinned to bottom */}
-      <div
-        style={{
-          padding: "8px",
-          flexShrink: 0,
-          borderTop: "1px solid #e0e0e0",
-          backgroundColor: "#f5f5f5",
-        }}
-      >
+      <div style={{ padding: "8px", flexShrink: 0, borderTop: "1px solid #e0e0e0", backgroundColor: "#f5f5f5" }}>
         <button
           title={!isOpen ? "Logout" : undefined}
           style={{
@@ -175,12 +157,8 @@ export default function DashboardSidebar({
             clearTokens();
             window.location.href = "/login";
           }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#e8eaf0";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#e8eaf0"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
         >
           <LogOut size={20} style={{ flexShrink: 0 }} />
           {isOpen && <span>Logout</span>}
