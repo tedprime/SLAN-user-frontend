@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { ChevronDown, Lock, BookOpen, Clock, Layers } from "lucide-react";
 // Adjust these paths based on where YOUR files actually are:
 import Button from "../../../components/ui/Button";
-import Progress from "../../../components/ui/progress";
+import Progress from "../../../components/ui/Progress";
 import type { Course } from "../../../services/types/course.types";
 import {
   DropdownMenu,
