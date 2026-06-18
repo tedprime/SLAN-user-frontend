@@ -34,8 +34,10 @@ export default function Overview({ onTrackClick }: { onTrackClick?: (trackId: nu
           enrollmentService.getMyEnrollments().catch(() => [] as Enrollment[]),
         ]);
         if (!cancelled) {
-          setCourses(coursesData);
-          setEnrollments(enrollmentsData);
+          // Ensure coursesData is an array
+          setCourses(Array.isArray(coursesData) ? coursesData : []);
+          // Ensure enrollmentsData is an array
+          setEnrollments(Array.isArray(enrollmentsData) ? enrollmentsData : []);
         }
       } catch {
         if (!cancelled) setError(true);
@@ -52,20 +54,33 @@ export default function Overview({ onTrackClick }: { onTrackClick?: (trackId: nu
   // Flatten all tracks from all courses with metadata
   const allTracks = useMemo<TrackWithProgress[]>(() => {
     const tracks: TrackWithProgress[] = [];
+    
+    // Guard: ensure courses is an array
+    if (!Array.isArray(courses)) return tracks;
+    
     courses.forEach((course) => {
+      // Guard: ensure course.tracks is an array
+      if (!Array.isArray(course?.tracks)) return;
+      
       course.tracks.forEach((track) => {
-        const enrollment = enrollments.find((e) => e.trackId === track.id);
-        const totalModules = track.modules?.length || 0;
-        const totalUnits = track.modules?.reduce((acc, m) => acc + (m.units?.length || 0), 0) || 0;
+        // Guard: ensure enrollments is an array before calling find
+        const enrollment = Array.isArray(enrollments) 
+          ? enrollments.find((e) => e?.trackId === track?.id)
+          : undefined;
+          
+        const totalModules = Array.isArray(track?.modules) ? track.modules.length : 0;
+        const totalUnits = Array.isArray(track?.modules)
+          ? track.modules.reduce((acc, m) => acc + (Array.isArray(m?.units) ? m.units.length : 0), 0)
+          : 0;
         
         tracks.push({
           ...track,
           courseId: course.id,
-          courseTitle: course.title,
+          courseTitle: course.title || "Untitled Course",
           progress: enrollment ? 0 : 0, // TODO: Replace with real progress when API has it
           totalModules,
           totalUnits,
-          estimatedHours: track.estimatedHours || 12,
+          estimatedHours: track?.estimatedHours || 12,
         });
       });
     });
@@ -76,10 +91,10 @@ export default function Overview({ onTrackClick }: { onTrackClick?: (trackId: nu
   const stats = useMemo(() => {
     const totalTracks = allTracks.length;
     const completedTracks = allTracks.filter((t) => t.progress === 100).length;
-    const totalUnits = allTracks.reduce((acc, t) => acc + t.totalUnits, 0);
-    const totalHours = allTracks.reduce((acc, t) => acc + t.estimatedHours, 0);
+    const totalUnits = allTracks.reduce((acc, t) => acc + (t.totalUnits || 0), 0);
+    const totalHours = allTracks.reduce((acc, t) => acc + (t.estimatedHours || 0), 0);
     const overallProgress = totalTracks > 0 
-      ? Math.round(allTracks.reduce((acc, t) => acc + t.progress, 0) / totalTracks)
+      ? Math.round(allTracks.reduce((acc, t) => acc + (t.progress || 0), 0) / totalTracks)
       : 0;
 
     return { totalTracks, completedTracks, totalUnits, totalHours, overallProgress };
@@ -88,8 +103,8 @@ export default function Overview({ onTrackClick }: { onTrackClick?: (trackId: nu
   // In-progress tracks (or first 3 tracks if none in progress)
   const continueLearning = useMemo(() => {
     const inProgress = allTracks
-      .filter((t) => t.progress > 0 && t.progress < 100)
-      .sort((a, b) => b.progress - a.progress);
+      .filter((t) => (t.progress || 0) > 0 && (t.progress || 0) < 100)
+      .sort((a, b) => (b.progress || 0) - (a.progress || 0));
     
     return inProgress.length > 0 ? inProgress.slice(0, 3) : allTracks.slice(0, 3);
   }, [allTracks]);
@@ -279,7 +294,7 @@ export default function Overview({ onTrackClick }: { onTrackClick?: (trackId: nu
                   letterSpacing: "-0.01em",
                 }}
               >
-                {continueLearning.some((t) => t.progress > 0) ? "Continue Learning" : "Get Started"}
+                {continueLearning.some((t) => (t.progress || 0) > 0) ? "Continue Learning" : "Get Started"}
               </h2>
               <div className="space-y-3">
                 {continueLearning.map((track, index) => (
@@ -338,7 +353,7 @@ export default function Overview({ onTrackClick }: { onTrackClick?: (trackId: nu
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
-                        {track.progress > 0 && (
+                        {(track.progress || 0) > 0 && (
                           <span style={{ fontSize: "13px", fontWeight: 700, color: "#101b37" }}>
                             {track.progress}%
                           </span>
@@ -346,7 +361,7 @@ export default function Overview({ onTrackClick }: { onTrackClick?: (trackId: nu
                         <ArrowRight size={18} style={{ color: "#888888" }} />
                       </div>
                     </div>
-                    {track.progress > 0 && (
+                    {(track.progress || 0) > 0 && (
                       <div style={{ marginTop: "12px" }}>
                         <Progress value={track.progress} color={getTrackColor(index)} />
                       </div>
@@ -391,7 +406,6 @@ export default function Overview({ onTrackClick }: { onTrackClick?: (trackId: nu
               onClick={() => {
                 // Navigate to first course or all courses view
                 if (courses.length > 0) {
-                  // This will be handled by parent - we can pass a callback
                   console.log("Explore all tracks");
                 }
               }}
