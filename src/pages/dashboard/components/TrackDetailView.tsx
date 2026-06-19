@@ -16,30 +16,28 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick }
   const [modules, setModules] = useState<ModuleSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
 
   const trackColor = getTrackColor(track.id);
   const trackIndex = getTrackIndex(course, track);
 
   useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      setLoading(true);
-      setError(false);
-      try {
-        const res = await courseService.getTrackModules(track.id);
-        if (!cancelled) setModules(res.modules ?? []);
-      } catch {
-        if (!cancelled) setError(true);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [track.id]);
+  let cancelled = false;
+  (async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await courseService.getTrackModules(track.id);
+      if (!cancelled) setModules(res.modules ?? []);
+    } catch {
+      if (!cancelled) setError(true);
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  })();
+  return () => { cancelled = true; };
+}, [track.id, retryCount]); 
 
   const totalUnits = useMemo(() => {
     return modules.reduce((acc, m) => acc + (m.unitCount || 0), 0);
@@ -230,7 +228,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick }
               <p style={{ fontSize: "15px", fontWeight: 600, color: "#d32f2f", marginBottom: "8px" }}>
                 Couldn't load modules
               </p>
-              <Button variant="outlined" size="sm" onClick={() => setLoading(true)}>
+              <Button variant="outlined" size="sm" onClick={() => setRetryCount(c => c + 1)}>
                 Retry
               </Button>
             </div>
