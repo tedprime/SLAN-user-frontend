@@ -3,9 +3,8 @@ import { BookOpen, TrendingUp, Clock, ArrowRight } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import Progress from "../../../components/ui/Progress";
 import { courseService } from "../../../services/courseService";
-import { enrollmentService } from "../../../services/enrollmentservice";
 import type { Course, CourseTrack } from "../../../services/types/course.types";
-import type { Enrollment } from "../../../services/enrollmentservice";
+
 
 interface TrackWithProgress extends CourseTrack {
   courseId: number;
@@ -18,38 +17,27 @@ interface TrackWithProgress extends CourseTrack {
 
 export default function Overview({ onTrackClick }: { onTrackClick?: (trackId: number, courseId: number) => void }) {
   const [courses, setCourses] = useState<Course[]>([]);
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      setLoading(true);
-      setError(false);
-      try {
-        const [coursesData, enrollmentsData] = await Promise.all([
-          courseService.getCourses(),
-          enrollmentService.getMyEnrollments().catch(() => [] as Enrollment[]),
-        ]);
-        if (!cancelled) {
-          // Ensure coursesData is an array
-          setCourses(Array.isArray(coursesData) ? coursesData : []);
-          // Ensure enrollmentsData is an array
-          setEnrollments(Array.isArray(enrollmentsData) ? enrollmentsData : []);
-        }
-      } catch {
-        if (!cancelled) setError(true);
-      } finally {
-        if (!cancelled) setLoading(false);
+ useEffect(() => {
+  let cancelled = false;
+  (async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const coursesData = await courseService.getCourses();
+      if (!cancelled) {
+        setCourses(Array.isArray(coursesData) ? coursesData : []);
       }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    } catch {
+      if (!cancelled) setError(true);
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  })();
+  return () => { cancelled = true; };
+}, []);
 
   // Flatten all tracks from all courses with metadata
   const allTracks = useMemo<TrackWithProgress[]>(() => {
@@ -78,7 +66,7 @@ export default function Overview({ onTrackClick }: { onTrackClick?: (trackId: nu
       });
     });
     return tracks;
-  }, [courses, enrollments]);
+  }, [courses]);
 
   // Stats
   const stats = useMemo(() => {

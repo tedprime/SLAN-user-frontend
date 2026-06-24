@@ -9,8 +9,8 @@ interface TrackDetailViewProps {
   course: Course;
   track: CourseTrack;
   onBack?: () => void;
-  onModuleClick?: (moduleId: number) => void;
-  onPlayClick?: (moduleId: number) => void;
+  onModuleClick?: (module: ModuleSummary) => void;
+  onPlayClick?: (module: ModuleSummary) => void;
 }
 
 export default function TrackDetailView({ course, track, onBack, onModuleClick, onPlayClick }: TrackDetailViewProps) {
@@ -39,51 +39,28 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
     return () => { cancelled = true; };
   }, [track.id, retryCount]);
 
-  const totalUnits = useMemo(() => {
-    return modules.reduce((acc, m) => acc + (m.unitCount || 0), 0);
-  }, [modules]);
+  const totalUnits = useMemo(() => modules.reduce((acc, m) => acc + (m.unitCount || 0), 0), [modules]);
 
   const estimatedHours = useMemo(() => {
     const totalMinutes = modules.reduce((acc, m) => acc + (m.totalEstimatedMinutes || 0), 0);
     return totalMinutes > 0 ? Math.round(totalMinutes / 60) : 0;
   }, [modules]);
 
-  // Calculate module progress (placeholder until API provides real progress)
   const getModuleProgress = (_module: ModuleSummary, index: number): number => {
-    // TODO: Replace with real progress from API when available
-    // For now, simulate: first module 30%, second 0%, etc.
     if (index === 0) return 30;
-    if (index === 1) return 0;
     return 0;
   };
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: "#fafafa" }}>
-      {/* ── Breadcrumb ── */}
-      <div
-        style={{
-          padding: "16px 32px",
-          borderBottom: "1px solid #e0e0e0",
-          backgroundColor: "#ffffff",
-        }}
-      >
+      {/* Breadcrumb */}
+      <div style={{ padding: "16px 32px", borderBottom: "1px solid #e0e0e0", backgroundColor: "#ffffff" }}>
         <div className="flex items-center gap-2" style={{ fontSize: "14px" }}>
           <button
             onClick={onBack}
-            className="transition-colors duration-150"
-            style={{
-              color: "#888888",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontSize: "14px",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = "#006400";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = "#888888";
-            }}
+            style={{ color: "#888888", background: "none", border: "none", cursor: "pointer", fontSize: "14px" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
           >
             {course.title}
           </button>
@@ -94,64 +71,34 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
         </div>
       </div>
 
-      {/* ── Hero Section ── */}
-      <div
-        style={{
-          borderBottom: "1px solid #e0e0e0",
-          background: `linear-gradient(135deg, ${trackColor.bg} 0%, rgba(255,255,255,0.5) 100%)`,
-          padding: "32px",
-        }}
-      >
+      {/* Hero Section */}
+      <div style={{
+        borderBottom: "1px solid #e0e0e0",
+        background: `linear-gradient(135deg, ${trackColor.bg} 0%, rgba(255,255,255,0.5) 100%)`,
+        padding: "32px",
+      }}>
         <div style={{ maxWidth: "1200px" }}>
-          {/* Track Number */}
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "36px",
-              width: "36px",
-              borderRadius: "50%",
-              backgroundColor: trackColor.border,
-              color: "#ffffff",
-              fontSize: "14px",
-              fontWeight: 800,
-              marginBottom: "16px",
-            }}
-          >
+          <span style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            height: "36px", width: "36px", borderRadius: "50%",
+            backgroundColor: trackColor.border, color: "#ffffff",
+            fontSize: "14px", fontWeight: 800, marginBottom: "16px",
+          }}>
             {trackIndex + 1}
           </span>
 
-          {/* Title */}
-          <h1
-            style={{
-              fontSize: "28px",
-              fontWeight: 800,
-              color: "#101b37",
-              fontFamily: "var(--font-headline)",
-              letterSpacing: "-0.02em",
-              marginBottom: "12px",
-              lineHeight: 1.2,
-              textTransform: "uppercase",
-            }}
-          >
+          <h1 style={{
+            fontSize: "28px", fontWeight: 800, color: "#101b37",
+            fontFamily: "var(--font-headline)", letterSpacing: "-0.02em",
+            marginBottom: "12px", lineHeight: 1.2, textTransform: "uppercase",
+          }}>
             {track.title}
           </h1>
 
-          {/* Description */}
-          <p
-            style={{
-              fontSize: "15px",
-              color: "#666666",
-              marginBottom: "20px",
-              maxWidth: "640px",
-              lineHeight: 1.6,
-            }}
-          >
+          <p style={{ fontSize: "15px", color: "#666666", marginBottom: "20px", maxWidth: "640px", lineHeight: 1.6 }}>
             {track.description || "Master the skills in this track through structured modules and interactive units."}
           </p>
 
-          {/* Metadata */}
           <div className="flex items-center gap-6" style={{ fontSize: "14px", color: "#888888" }}>
             <span className="flex items-center gap-2">
               <Layers size={16} style={{ color: trackColor.border }} />
@@ -168,16 +115,10 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
               </span>
             </span>
             {!track.isFree && (
-              <span
-                className="flex items-center gap-1.5"
-                style={{
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  color: "#d4af37",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
+              <span className="flex items-center gap-1.5" style={{
+                fontSize: "12px", fontWeight: 700, color: "#d4af37",
+                textTransform: "uppercase", letterSpacing: "0.05em",
+              }}>
                 <Lock size={14} />
                 Premium
               </span>
@@ -187,12 +128,8 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
           {track.progressPercent > 0 && (
             <div style={{ marginTop: "20px", maxWidth: "400px" }}>
               <div className="flex items-center justify-between" style={{ marginBottom: "8px" }}>
-                <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>
-                  Track Progress
-                </span>
-                <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>
-                  {track.progressPercent}%
-                </span>
+                <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Track Progress</span>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{track.progressPercent}%</span>
               </div>
               <Progress value={track.progressPercent} color={trackColor.border} />
             </div>
@@ -200,59 +137,36 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
         </div>
       </div>
 
-      {/* ── Modules Section ── */}
+      {/* Modules Section */}
       <div className="flex-1 overflow-y-auto" style={{ padding: "32px" }}>
         <div style={{ maxWidth: "1200px" }}>
-          <h2
-            style={{
-              fontSize: "20px",
-              fontWeight: 800,
-              color: "#101b37",
-              fontFamily: "var(--font-headline)",
-              marginBottom: "24px",
-              letterSpacing: "-0.01em",
-            }}
-          >
+          <h2 style={{
+            fontSize: "20px", fontWeight: 800, color: "#101b37",
+            fontFamily: "var(--font-headline)", marginBottom: "24px", letterSpacing: "-0.01em",
+          }}>
             Modules
           </h2>
 
           {loading ? (
             <div className="flex flex-col items-center justify-center" style={{ padding: "48px 0" }}>
-              <div
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  border: "3px solid #e8e8e8",
-                  borderTopColor: trackColor.border,
-                  borderRadius: "50%",
-                  animation: "spin 1s linear infinite",
-                }}
-              />
+              <div style={{
+                width: "32px", height: "32px",
+                border: "3px solid #e8e8e8", borderTopColor: trackColor.border,
+                borderRadius: "50%", animation: "spin 1s linear infinite",
+              }} />
             </div>
           ) : error ? (
-            <div
-              className="flex flex-col items-center justify-center"
-              style={{ padding: "48px 0", textAlign: "center" }}
-            >
+            <div className="flex flex-col items-center justify-center" style={{ padding: "48px 0", textAlign: "center" }}>
               <p style={{ fontSize: "15px", fontWeight: 600, color: "#d32f2f", marginBottom: "8px" }}>
                 Couldn't load modules
               </p>
-              <Button variant="outlined" size="sm" onClick={() => setRetryCount(c => c + 1)}>
-                Retry
-              </Button>
+              <Button variant="outlined" size="sm" onClick={() => setRetryCount(c => c + 1)}>Retry</Button>
             </div>
           ) : modules.length === 0 ? (
-            <div
-              className="flex flex-col items-center justify-center"
-              style={{ padding: "48px 0", textAlign: "center" }}
-            >
+            <div className="flex flex-col items-center justify-center" style={{ padding: "48px 0", textAlign: "center" }}>
               <Layers size={48} style={{ color: "#d1d1d1", marginBottom: "16px" }} />
-              <p style={{ fontSize: "15px", fontWeight: 600, color: "#888888" }}>
-                No modules available yet
-              </p>
-              <p style={{ fontSize: "13px", color: "#b0b0b0", marginTop: "4px" }}>
-                Check back later for new content
-              </p>
+              <p style={{ fontSize: "15px", fontWeight: 600, color: "#888888" }}>No modules available yet</p>
+              <p style={{ fontSize: "13px", color: "#b0b0b0", marginTop: "4px" }}>Check back later for new content</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -263,16 +177,12 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                 return (
                   <div
                     key={module.id}
-                    onClick={() => onModuleClick?.(module.id)}
+                    onClick={() => onModuleClick?.(module)}
                     className="cursor-pointer"
                     style={{
-                      backgroundColor: "#ffffff",
-                      border: "1px solid #e8e8e8",
-                      borderRadius: "12px",
-                      padding: "24px",
-                      transition: "all 0.2s ease",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                      width: "100%",
+                      backgroundColor: "#ffffff", border: "1px solid #e8e8e8",
+                      borderRadius: "12px", padding: "24px",
+                      transition: "all 0.2s ease", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", width: "100%",
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)";
@@ -285,49 +195,28 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1" style={{ minWidth: 0 }}>
-                        {/* Module Number + Title */}
                         <div className="flex items-center gap-3" style={{ marginBottom: "8px" }}>
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              height: "28px",
-                              width: "28px",
-                              borderRadius: "50%",
-                              backgroundColor: isCompleted ? trackColor.border : "#f5f5f5",
-                              color: isCompleted ? "#ffffff" : "#888888",
-                              fontSize: "12px",
-                              fontWeight: 700,
-                            }}
-                          >
+                          <span style={{
+                            display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            height: "28px", width: "28px", borderRadius: "50%",
+                            backgroundColor: isCompleted ? trackColor.border : "#f5f5f5",
+                            color: isCompleted ? "#ffffff" : "#888888",
+                            fontSize: "12px", fontWeight: 700,
+                          }}>
                             {isCompleted ? <CheckCircle size={14} /> : index + 1}
                           </span>
-                          <h3
-                            style={{
-                              fontSize: "16px",
-                              fontWeight: 700,
-                              color: "#101b37",
-                              fontFamily: "var(--font-headline)",
-                            }}
-                          >
+                          <h3 style={{
+                            fontSize: "16px", fontWeight: 700, color: "#101b37",
+                            fontFamily: "var(--font-headline)",
+                          }}>
                             {module.title}
                           </h3>
                         </div>
 
-                        {/* Description */}
-                        <p
-                          style={{
-                            fontSize: "14px",
-                            color: "#888888",
-                            marginBottom: "12px",
-                            lineHeight: 1.5,
-                          }}
-                        >
+                        <p style={{ fontSize: "14px", color: "#888888", marginBottom: "12px", lineHeight: 1.5 }}>
                           {module.description || "Explore this module to continue your learning journey."}
                         </p>
 
-                        {/* Metadata row */}
                         <div className="flex items-center gap-4" style={{ marginBottom: "12px" }}>
                           <span style={{ fontSize: "12px", fontWeight: 600, color: "#b0b0b0" }}>
                             {module.unitCount} {module.unitCount === 1 ? "Unit" : "Units"}
@@ -339,40 +228,28 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                           )}
                         </div>
 
-                        {/* Progress Bar */}
                         <div style={{ maxWidth: "400px" }}>
                           <div className="flex items-center justify-between" style={{ marginBottom: "6px" }}>
-                            <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>
-                              Progress
-                            </span>
-                            <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>
-                              {progress}%
-                            </span>
+                            <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Progress</span>
+                            <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{progress}%</span>
                           </div>
                           <Progress value={progress} color={trackColor.border} />
                         </div>
                       </div>
 
-                      {/* Action Button */}
                       <div style={{ marginLeft: "16px", flexShrink: 0 }}>
                         <Button
                           variant={isCompleted ? "outlined" : "primary"}
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onPlayClick?.(module.id);
+                            onPlayClick?.(module);
                           }}
                         >
                           {isCompleted ? (
-                            <>
-                              <CheckCircle size={14} />
-                              Completed
-                            </>
+                            <><CheckCircle size={14} />Completed</>
                           ) : (
-                            <>
-                              <Play size={14} />
-                              {progress > 0 ? "Continue" : "Start"}
-                            </>
+                            <><Play size={14} />{progress > 0 ? "Continue" : "Start"}</>
                           )}
                         </Button>
                       </div>
@@ -387,8 +264,6 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
     </div>
   );
 }
-
-// ── Helpers ──────────────────────────────────────────────
 
 function getTrackColor(trackId: number): { border: string; bg: string } {
   const colors = [

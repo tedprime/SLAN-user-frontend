@@ -13,7 +13,7 @@ export default function UserDashboard() {
   const [activeNav, setActiveNav] = useState(() => {
     return sessionStorage.getItem(STORAGE_KEY) || "overview";
   });
-  
+
   const [searchVal, setSearchVal] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -51,9 +51,7 @@ export default function UserDashboard() {
 
   const handleTrackClick = (trackId: number, courseId?: number) => {
     const cid = courseId || (viewState.type === "course" ? viewState.course?.id : undefined);
-    if (cid) {
-      setActiveNav(`track:${cid}:${trackId}`);
-    }
+    if (cid) setActiveNav(`track:${cid}:${trackId}`);
   };
 
   const handleBackToCourse = () => {
@@ -66,39 +64,22 @@ export default function UserDashboard() {
     }
   };
 
-  const handlePlayClick = (moduleId: number) => {
-    // Find the module in the current track
+  const handlePlayClick = (module: ModuleSummary) => {
     if (viewState.type === "track" && viewState.track) {
-      // We'll need to fetch module details or pass them
-      // For now, create a minimal module object
-      const module: ModuleSummary = {
-        id: moduleId,
-        title: "Module",
-        slug: "",
-        description: "",
-        estimatedReadMinutes: 0,
-        unitCount: 0,
-        totalEstimatedMinutes: 0,
-      };
       setSelectedModule(module);
-      setActiveNav(`unit:${viewState.course?.id}:${viewState.track.id}:${moduleId}`);
+      setActiveNav(`unit:${viewState.course?.id}:${viewState.track.id}:${module.id}`);
     }
   };
 
-  const handleModuleClick = (moduleId: number) => {
-    console.log("Module clicked:", moduleId);
+  const handleModuleClick = (module: ModuleSummary) => {
+    console.log("Module clicked:", module.id);
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        height: "100vh",
-        width: "100vw",
-        overflow: "hidden",
-        backgroundColor: "#fafafa",
-      }}
-    >
+    <div style={{
+      display: "flex", height: "100vh", width: "100vw",
+      overflow: "hidden", backgroundColor: "#fafafa",
+    }}>
       <DashboardSidebar
         activeNav={activeNav}
         onNavChange={setActiveNav}
@@ -106,15 +87,7 @@ export default function UserDashboard() {
         onToggle={() => setSidebarOpen((prev) => !prev)}
         onCoursesLoaded={setCourses}
       />
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          minWidth: 0,
-          overflow: "hidden",
-        }}
-      >
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
         <DashboardHeader
           activeNav={activeNav}
           searchVal={searchVal}
@@ -147,6 +120,8 @@ export default function UserDashboard() {
               courseId={viewState.course.id}
               trackId={viewState.track.id}
               module={selectedModule}
+              courseName={viewState.course.title}
+              trackName={viewState.track.title}
               onBack={handleBackToCourse}
             />
           )}
