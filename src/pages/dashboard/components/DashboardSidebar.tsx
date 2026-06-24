@@ -10,7 +10,7 @@ import {
   Lock,
   Layers,
   FileText,
-  Check,
+  CheckCircle,
 } from "lucide-react";
 import { authService } from "../../../services/authService";
 import { courseService } from "../../../services/courseService";
@@ -423,7 +423,7 @@ export default function DashboardSidebar({
                                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</span>
                               </span>
                               <span style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0, marginLeft: "4px" }}>
-                                {isTrackComplete && <Check size={11} style={{ color: "#10b981" }} />}
+                                {isTrackComplete && <CheckCircle size={11} style={{ color: "#10b981" }} />}
                                 {!track.isFree && <Lock size={10} style={{ color: "#dddddd" }} />}
                                 {isLoadingTrackModules
                                   ? <div style={{ width: "10px", height: "10px", border: "2px solid #e0e0e0", borderTopColor: "#006400", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
@@ -471,7 +471,7 @@ export default function DashboardSidebar({
                                         >
                                           <BookOpen size={11} style={{ flexShrink: 0, color: isModuleActive ? "#006400" : "#dddddd" }} />
                                           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{mod.title}</span>
-                                          {moduleComplete && <Check size={10} style={{ color: "#10b981", flexShrink: 0 }} />}
+                                          {moduleComplete && <CheckCircle size={10} style={{ color: "#10b981", flexShrink: 0 }} />}
                                         </button>
                                         <button
                                           onClick={() => toggleModule(mod.id)}
@@ -519,7 +519,7 @@ export default function DashboardSidebar({
                                                 {/* Fixed-width icon slot */}
                                                 <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "14px", flexShrink: 0 }}>
                                                   {isUnitComplete
-                                                    ? <Check size={10} style={{ color: "#10b981" }} />
+                                                    ? <CheckCircle size={10} style={{ color: "#10b981" }} />
                                                     : <FileText size={10} style={{ color: "#e0e0e0" }} />}
                                                 </span>
                                                 <span style={{ whiteSpace: "nowrap" }}>Unit {unitIndex + 1}</span>
