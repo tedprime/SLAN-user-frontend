@@ -95,7 +95,11 @@ export default function UserDashboard() {
         />
         <main style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
           {viewState.type === "overview" && (
-            <Overview onTrackClick={handleTrackClick} />
+            <Overview
+              onExploreClick={() => {
+                if (courses.length > 0) setActiveNav(`course:${courses[0].id}`);
+              }}
+            />
           )}
 
           {viewState.type === "course" && viewState.course && (

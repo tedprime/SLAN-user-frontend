@@ -306,7 +306,6 @@ export default function DashboardSidebar({
                   <div key={course.id}>
                     <button
                       onClick={() => {
-                        onNavChange(`course:${course.id}`);
                         toggleCourse(course.id);
                       }}
                       aria-expanded={isExpanded}
@@ -381,11 +380,7 @@ export default function DashboardSidebar({
                       </span>
                     </button>
 
-                    <div style={{
-                      overflow: "hidden",
-                      maxHeight: isExpanded ? `${course.tracks.length * 44 + 8}px` : "0px",
-                      transition: "max-height 0.25s ease",
-                    }}>
+                    {isExpanded && (
                       <div style={{ paddingBottom: "4px" }}>
                         {course.tracks.length === 0 && (
                           <div
@@ -472,7 +467,7 @@ export default function DashboardSidebar({
                           );
                         })}
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}

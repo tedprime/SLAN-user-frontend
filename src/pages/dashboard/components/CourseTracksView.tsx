@@ -181,7 +181,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
           <div
             className="grid gap-6"
             style={{
-              gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
               maxWidth: "1200px",
             }}
           >
