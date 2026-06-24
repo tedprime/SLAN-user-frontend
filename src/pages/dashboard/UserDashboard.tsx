@@ -22,12 +22,30 @@ export default function UserDashboard() {
   });
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedModule, setSelectedModule] = useState<ModuleSummary | null>(null);
+  // Bumped whenever a unit is marked complete, so the sidebar (and other
+  // progress-aware views) know to refetch completion state from the API.
+  const [progressVersion, setProgressVersion] = useState(0);
+  const handleProgressChange = () => setProgressVersion((v) => v + 1);
 
   useEffect(() => {
     sessionStorage.setItem(STORAGE_KEY, activeNav);
   }, [activeNav]);
 
   const viewState = useMemo(() => {
+    // A "unit:" nav can be restored from sessionStorage on a fresh page load,
+    // but `selectedModule` only ever lives in memory — so on reload we'd have
+    // a unit route with nothing to render. Fall back to the track view in
+    // that case, computed here during render rather than via an effect.
+    if (activeNav.startsWith("unit:") && !selectedModule) {
+      const parts = activeNav.split(":");
+      const courseId = parseInt(parts[1], 10);
+      const trackId = parseInt(parts[2], 10);
+      const course = courses.find((c) => c.id === courseId);
+      const track = course?.tracks.find((t) => t.id === trackId);
+      if (course && track) return { type: "track" as const, course, track };
+      return { type: "overview" as const };
+    }
+
     if (activeNav === "overview") return { type: "overview" as const };
     if (activeNav.startsWith("course:")) {
       const courseId = parseInt(activeNav.replace("course:", ""), 10);
@@ -51,7 +69,7 @@ export default function UserDashboard() {
       return { type: "unit" as const, course, track };
     }
     return { type: "overview" as const };
-  }, [activeNav, courses]);
+  }, [activeNav, courses, selectedModule]);
 
   const handleTrackClick = (trackId: number, courseId?: number) => {
     const cid = courseId || (viewState.type === "course" ? viewState.course?.id : undefined);
@@ -75,6 +93,11 @@ export default function UserDashboard() {
     }
   };
 
+  const handleModuleNavigate = (module: ModuleSummary, courseId: number, trackId: number) => {
+    setSelectedModule(module);
+    setActiveNav(`unit:${courseId}:${trackId}:${module.id}`);
+  };
+
   const handleModuleClick = (module: ModuleSummary) => {
     console.log("Module clicked:", module.id);
   };
@@ -94,6 +117,8 @@ export default function UserDashboard() {
             return next;
           })}
         onCoursesLoaded={setCourses}
+        onModuleNavigate={handleModuleNavigate}
+        progressVersion={progressVersion}
       />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
         <DashboardHeader
@@ -101,7 +126,7 @@ export default function UserDashboard() {
           searchVal={searchVal}
           onSearchChange={setSearchVal}
         />
-        <main style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+        <main style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", minHeight: 0 }}>
           {viewState.type === "overview" && (
             <Overview
               onExploreClick={() => {
@@ -140,6 +165,7 @@ export default function UserDashboard() {
                   setActiveNav(`track:${viewState.course.id}:${viewState.track.id}`);
                 }
               }}
+              onProgressChange={handleProgressChange}
             />
           )}
         </main>

@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
-import { ChevronRight, ChevronLeft, ChevronRight as ChevronSep, Clock, BookOpen, CheckCircle } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { ChevronRight, ChevronLeft, ChevronRight as ChevronSep, Clock, BookOpen, CheckCircle, Check } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import Progress from "../../../components/ui/Progress";
 import { courseService } from "../../../services/courseService";
+import { progressService } from "../../../services/progressService";
 import type { ModuleSummary, UnitSummary, UnitContent } from "../../../services/types/course.types";
 
 interface UnitViewerProps {
@@ -13,28 +14,52 @@ interface UnitViewerProps {
   trackName: string;
   onBack?: () => void;
   onBackToTrack?: () => void;
+  /** Notified whenever a unit is marked complete, so parent views (e.g. the sidebar) can refresh their completion marks. */
+  onProgressChange?: () => void;
 }
 
-export default function UnitViewer({ module, courseName, trackName, onBack, onBackToTrack }: UnitViewerProps) {
+export default function UnitViewer({ module, courseName, trackName, onBack, onBackToTrack, onProgressChange }: UnitViewerProps) {
   const [units, setUnits] = useState<UnitSummary[]>([]);
   const [activeUnit, setActiveUnit] = useState<UnitContent | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  // Real completion / progress state for this module, from the Progress API.
+  const [completedUnitIds, setCompletedUnitIds] = useState<Set<number>>(new Set());
+  const [moduleProgressPercent, setModuleProgressPercent] = useState(0);
+  const [marking, setMarking] = useState(false);
+
+  const refreshModuleProgress = useCallback(async () => {
+    try {
+      const progress = await progressService.getModuleProgress(module.id);
+      setCompletedUnitIds(new Set(progress.completedUnitIds ?? []));
+      setModuleProgressPercent(progress.progressPercent ?? 0);
+    } catch {
+      // Leave existing state as-is if this fails — non-critical for viewing content.
+    }
+  }, [module.id]);
+
+  // Fetch the module's units and its progress together — both are keyed off
+  // module.id, so they belong in a single effect rather than splitting the
+  // progress fetch into its own effect that just calls setState synchronously.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
       setError(false);
       try {
-        const res = await courseService.getModuleUnits(module.id);
+        const [res] = await Promise.all([
+          courseService.getModuleUnits(module.id),
+          refreshModuleProgress(),
+        ]);
         const unitList = Array.isArray(res?.units) ? res.units : [];
         if (!cancelled) {
           setUnits(unitList);
-          if (unitList.length > 0 && !selectedUnitId) {
-            setSelectedUnitId(unitList[0].id);
-          }
+          // Use the functional form so we don't need selectedUnitId in the
+          // dependency array — we only ever want to default-select on the
+          // very first load of this module, not whenever it changes.
+          setSelectedUnitId((prev) => (prev === null && unitList.length > 0 ? unitList[0].id : prev));
         }
       } catch {
         if (!cancelled) setError(true);
@@ -43,7 +68,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
       }
     })();
     return () => { cancelled = true; };
-  }, [module.id]);
+  }, [module.id, refreshModuleProgress]);
 
   useEffect(() => {
     if (!selectedUnitId) return;
@@ -64,9 +89,31 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
   const currentIndex = units.findIndex((u) => u.id === selectedUnitId);
   const canGoPrevious = currentIndex > 0;
   const canGoNext = currentIndex < units.length - 1;
+  const isCurrentUnitCompleted = selectedUnitId !== null && completedUnitIds.has(selectedUnitId);
 
   const goPrevious = () => { if (canGoPrevious) setSelectedUnitId(units[currentIndex - 1].id); };
   const goNext = () => { if (canGoNext) setSelectedUnitId(units[currentIndex + 1].id); };
+
+  const handleMarkComplete = async () => {
+    if (!selectedUnitId || marking || isCurrentUnitCompleted) return;
+    setMarking(true);
+    // Optimistic update so the UI feels instant.
+    setCompletedUnitIds((prev) => new Set(prev).add(selectedUnitId));
+    try {
+      await progressService.markUnitComplete(selectedUnitId);
+      await refreshModuleProgress();
+      onProgressChange?.();
+    } catch {
+      // Roll back the optimistic update if the request actually failed.
+      setCompletedUnitIds((prev) => {
+        const next = new Set(prev);
+        next.delete(selectedUnitId);
+        return next;
+      });
+    } finally {
+      setMarking(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -97,7 +144,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: "#fafafa" }}>
+    <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: "#fafafa", minHeight: 0 }}>
       {/* Breadcrumb */}
       <div style={{
         padding: "14px 24px", borderBottom: "1px solid #e0e0e0",
@@ -177,7 +224,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
           <div className="flex-1 overflow-y-auto" style={{ padding: "8px" }}>
             {units.map((unit, index) => {
               const isActive = unit.id === selectedUnitId;
-              const isCompleted = false;
+              const isCompleted = completedUnitIds.has(unit.id);
 
               return (
                 <button
@@ -223,9 +270,9 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
           <div style={{ padding: "16px 24px", borderTop: "1px solid #e0e0e0" }}>
             <div className="flex items-center justify-between" style={{ marginBottom: "8px" }}>
               <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Module Progress</span>
-              <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>0%</span>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{moduleProgressPercent}%</span>
             </div>
-            <Progress value={0} color="#006400" />
+            <Progress value={moduleProgressPercent} color="#006400" />
           </div>
         </div>
 
@@ -312,9 +359,26 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
                     <ChevronLeft size={14} />
                     Previous Unit
                   </Button>
-                  <span style={{ fontSize: "13px", color: "#888888" }}>
-                    {currentIndex + 1} / {units.length}
-                  </span>
+
+                  <Button
+                    variant={isCurrentUnitCompleted ? "outlined" : "primary"}
+                    size="sm"
+                    onClick={handleMarkComplete}
+                    disabled={isCurrentUnitCompleted || marking}
+                  >
+                    {isCurrentUnitCompleted ? (
+                      <>
+                        <CheckCircle size={14} />
+                        Completed
+                      </>
+                    ) : (
+                      <>
+                        <Check size={14} />
+                        {marking ? "Marking..." : "Mark Complete"}
+                      </>
+                    )}
+                  </Button>
+
                   <Button variant="primary" size="sm" onClick={goNext} disabled={!canGoNext}>
                     Next Unit
                     <ChevronRight size={14} />

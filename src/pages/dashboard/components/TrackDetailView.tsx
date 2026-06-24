@@ -3,6 +3,8 @@ import { ChevronRight, Lock, Play, BookOpen, Clock, Layers, CheckCircle } from "
 import Button from "../../../components/ui/Button";
 import Progress from "../../../components/ui/Progress";
 import { courseService } from "../../../services/courseService";
+import { progressService } from "../../../services/progressService";
+import type { TrackProgress, ModuleProgress } from "../../../services/progressService";
 import type { Course, CourseTrack, ModuleSummary } from "../../../services/types/course.types";
 
 interface TrackDetailViewProps {
@@ -19,6 +21,10 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
   const [error, setError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
+  // Real progress from the API — track-level summary, plus per-module progress.
+  const [trackProgress, setTrackProgress] = useState<TrackProgress | null>(null);
+  const [moduleProgress, setModuleProgress] = useState<Record<number, ModuleProgress>>({});
+
   const trackColor = getTrackColor(track.id);
   const trackIndex = getTrackIndex(course, track);
 
@@ -29,7 +35,27 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
       setError(false);
       try {
         const res = await courseService.getTrackModules(track.id);
-        if (!cancelled) setModules(Array.isArray(res?.modules) ? res.modules : []);
+        const moduleList = Array.isArray(res?.modules) ? res.modules : [];
+        if (!cancelled) setModules(moduleList);
+
+        // Fetch track progress and per-module progress in parallel.
+        // Failures here shouldn't block the page — progress just falls back to 0.
+        const [trackProgressResult, moduleProgressResults] = await Promise.all([
+          progressService.getTrackProgress(track.id).catch(() => null),
+          Promise.all(
+            moduleList.map((m) => progressService.getModuleProgress(m.id).catch(() => null))
+          ),
+        ]);
+
+        if (!cancelled) {
+          if (trackProgressResult) setTrackProgress(trackProgressResult);
+          const progressMap: Record<number, ModuleProgress> = {};
+          moduleList.forEach((m, i) => {
+            const p = moduleProgressResults[i];
+            if (p) progressMap[m.id] = p;
+          });
+          setModuleProgress(progressMap);
+        }
       } catch {
         if (!cancelled) setError(true);
       } finally {
@@ -46,13 +72,20 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
     return totalMinutes > 0 ? Math.round(totalMinutes / 60) : 0;
   }, [modules]);
 
-  const getModuleProgress = (_module: ModuleSummary, index: number): number => {
-    if (index === 0) return 30;
-    return 0;
+  const getModuleProgress = (module: ModuleSummary): number => {
+    return moduleProgress[module.id]?.progressPercent ?? 0;
   };
 
+  const isModuleCompleted = (module: ModuleSummary): boolean => {
+    return moduleProgress[module.id]?.isCompleted ?? false;
+  };
+
+  // Prefer the live track-progress fetch; fall back to the value already on
+  // the track object (e.g. from GET /courses) if that call hasn't resolved yet.
+  const displayedTrackProgress = trackProgress?.progressPercent ?? track.progressPercent ?? 0;
+
   return (
-    <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: "#fafafa" }}>
+    <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: "#fafafa", minHeight: 0 }}>
       {/* Breadcrumb */}
       <div style={{ padding: "16px 32px", borderBottom: "1px solid #e0e0e0", backgroundColor: "#ffffff" }}>
         <div className="flex items-center gap-2" style={{ fontSize: "14px" }}>
@@ -125,13 +158,13 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
             )}
           </div>
 
-          {track.progressPercent > 0 && (
+          {displayedTrackProgress > 0 && (
             <div style={{ marginTop: "20px", maxWidth: "400px" }}>
               <div className="flex items-center justify-between" style={{ marginBottom: "8px" }}>
                 <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Track Progress</span>
-                <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{track.progressPercent}%</span>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{displayedTrackProgress}%</span>
               </div>
-              <Progress value={track.progressPercent} color={trackColor.border} />
+              <Progress value={displayedTrackProgress} color={trackColor.border} />
             </div>
           )}
         </div>
@@ -171,8 +204,8 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
           ) : (
             <div className="space-y-4">
               {modules.map((module: ModuleSummary, index: number) => {
-                const progress = getModuleProgress(module, index);
-                const isCompleted = progress === 100;
+                const progress = getModuleProgress(module);
+                const isCompleted = isModuleCompleted(module);
 
                 return (
                   <div

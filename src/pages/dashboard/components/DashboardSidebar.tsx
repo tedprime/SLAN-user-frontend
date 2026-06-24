@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   LayoutDashboard,
   BookOpen,
@@ -10,9 +10,11 @@ import {
   Lock,
   Layers,
   FileText,
+  Check,
 } from "lucide-react";
 import { authService } from "../../../services/authService";
 import { courseService } from "../../../services/courseService";
+import { progressService } from "../../../services/progressService";
 import { getRefreshToken, clearTokens } from "../../../services/tokenService";
 import type { Course, ModuleSummary, UnitSummary } from "../../../services/types/course.types";
 
@@ -22,6 +24,10 @@ interface DashboardSidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   onCoursesLoaded?: (courses: Course[]) => void;
+  /** Navigate straight to a unit/module's reading view from the sidebar tree. */
+  onModuleNavigate?: (module: ModuleSummary, courseId: number, trackId: number) => void;
+  /** Bump this number to make the sidebar refetch completion checkmarks. */
+  progressVersion?: number;
 }
 
 interface TrackModules {
@@ -31,21 +37,23 @@ interface ModuleUnits {
   [moduleId: number]: UnitSummary[];
 }
 
-// Animated collapsible container
-function Collapsible({ open, estimatedItemHeight = 38, count = 1, children }: {
+// Animated collapsible container.
+// Uses the CSS grid 0fr/1fr trick instead of a hand-computed max-height so that
+// nested collapsibles (units expanding inside a module, inside a track) are
+// never clipped by an estimate that didn't account for their expanded height.
+function Collapsible({ open, children }: {
   open: boolean;
-  estimatedItemHeight?: number;
-  count?: number;
   children: React.ReactNode;
 }) {
-  const maxH = open ? `${estimatedItemHeight * count + 16}px` : "0px";
   return (
-    <div style={{
-      overflow: "hidden",
-      maxHeight: maxH,
-      transition: "max-height 0.25s ease",
-    }}>
-      {children}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateRows: open ? "1fr" : "0fr",
+        transition: "grid-template-rows 0.25s ease",
+      }}
+    >
+      <div style={{ overflow: "hidden", minHeight: 0 }}>{children}</div>
     </div>
   );
 }
@@ -56,6 +64,8 @@ export default function DashboardSidebar({
   isOpen,
   onToggle,
   onCoursesLoaded,
+  onModuleNavigate,
+  progressVersion,
 }: DashboardSidebarProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
@@ -66,11 +76,17 @@ export default function DashboardSidebar({
   const [expandedTrackIds, setExpandedTrackIds] = useState<Set<number>>(new Set());
   const [expandedModuleIds, setExpandedModuleIds] = useState<Set<number>>(new Set());
 
-  // Lazy-loaded modules and units per track/module
+  // Modules and units per track/module — preloaded in the background once
+  // courses arrive, rather than only fetched on first expand.
   const [trackModules, setTrackModules] = useState<TrackModules>({});
   const [moduleUnits, setModuleUnits] = useState<ModuleUnits>({});
   const [loadingTracks, setLoadingTracks] = useState<Set<number>>(new Set());
   const [loadingModules, setLoadingModules] = useState<Set<number>>(new Set());
+
+  // Completed unit IDs per track, from GET /progress/tracks/{trackId}/completed-units.
+  // This single call per track gives us everything needed to derive both
+  // module-level and track-level checkmarks without N+1 requests per module.
+  const [completedUnitIdsByTrack, setCompletedUnitIdsByTrack] = useState<Record<number, Set<number>>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -91,6 +107,79 @@ export default function DashboardSidebar({
     })();
     return () => { cancelled = true; };
   }, [onCoursesLoaded]);
+
+  // Preload the full course -> track -> module -> unit tree in the background
+  // as soon as courses arrive, instead of waiting for the user to expand each
+  // level. Expanding is then instant and never shows a half-loaded list.
+  useEffect(() => {
+    if (courses.length === 0) return;
+    let cancelled = false;
+
+    const allTracks = courses.flatMap((course) => course.tracks);
+
+    (async () => {
+      await Promise.all(
+        allTracks.map(async (track) => {
+          if (cancelled) return;
+          setLoadingTracks((prev) => new Set(prev).add(track.id));
+          try {
+            const res = await courseService.getTrackModules(track.id);
+            const modules = Array.isArray(res?.modules) ? res.modules : [];
+            if (cancelled) return;
+            setTrackModules((prev) => ({ ...prev, [track.id]: modules }));
+
+            // Preload units for every module in this track, in parallel.
+            await Promise.all(
+              modules.map(async (mod) => {
+                setLoadingModules((prev) => new Set(prev).add(mod.id));
+                try {
+                  const unitsRes = await courseService.getModuleUnits(mod.id);
+                  const units = Array.isArray(unitsRes?.units) ? unitsRes.units : [];
+                  if (!cancelled) setModuleUnits((prev) => ({ ...prev, [mod.id]: units }));
+                } catch {
+                  if (!cancelled) setModuleUnits((prev) => ({ ...prev, [mod.id]: [] }));
+                } finally {
+                  setLoadingModules((prev) => { const s = new Set(prev); s.delete(mod.id); return s; });
+                }
+              })
+            );
+          } catch {
+            if (!cancelled) setTrackModules((prev) => ({ ...prev, [track.id]: [] }));
+          } finally {
+            setLoadingTracks((prev) => { const s = new Set(prev); s.delete(track.id); return s; });
+          }
+        })
+      );
+    })();
+
+    return () => { cancelled = true; };
+  }, [courses]);
+
+  // Fetch completed-unit IDs per track — refetches whenever progressVersion
+  // changes (e.g. right after the user marks a unit complete elsewhere).
+  const refreshCompletionForTrack = useCallback(async (trackId: number) => {
+    try {
+      const entries = await progressService.getTrackCompletedUnits(trackId);
+      setCompletedUnitIdsByTrack((prev) => ({
+        ...prev,
+        [trackId]: new Set(entries.map((e) => e.unitId)),
+      }));
+    } catch {
+      // Leave existing completion state as-is on failure.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (courses.length === 0) return;
+    let cancelled = false;
+    const allTracks = courses.flatMap((course) => course.tracks);
+    (async () => {
+      await Promise.all(
+        allTracks.map((track) => (cancelled ? Promise.resolve() : refreshCompletionForTrack(track.id)))
+      );
+    })();
+    return () => { cancelled = true; };
+  }, [courses, progressVersion, refreshCompletionForTrack]);
 
   const toggleCourse = (courseId: number) => {
     setExpandedCourseIds((prev) => {
@@ -286,7 +375,7 @@ export default function DashboardSidebar({
                   </button>
 
                   {/* Tracks */}
-                  <Collapsible open={isCourseExpanded} estimatedItemHeight={38} count={course.tracks.length || 1}>
+                  <Collapsible open={isCourseExpanded}>
                     <div style={{ paddingBottom: "4px" }}>
                       {course.tracks.length === 0 && (
                         <div style={{ padding: "8px 24px 8px 56px", fontSize: "12px", color: "#b0b0b0" }}>No tracks yet.</div>
@@ -296,6 +385,18 @@ export default function DashboardSidebar({
                         const isTrackActive = activeNav === `track:${course.id}:${track.id}` || activeNav.startsWith(`unit:${course.id}:${track.id}:`);
                         const modules = trackModules[track.id] ?? [];
                         const isLoadingModules = loadingTracks.has(track.id);
+                        const completedUnitIds = completedUnitIdsByTrack[track.id] ?? new Set<number>();
+
+                        // A module is complete once every one of its units (that we know about) is completed.
+                        // A track is complete once every module we know about is complete.
+                        // Both require the modules/units to have loaded — an empty/unknown list never counts as "complete".
+                        const isModuleComplete = (mod: ModuleSummary) => {
+                          const units = moduleUnits[mod.id];
+                          if (!units || units.length === 0) return false;
+                          return units.every((u) => completedUnitIds.has(u.id));
+                        };
+                        const isTrackComplete =
+                          modules.length > 0 && modules.every((mod) => isModuleComplete(mod));
 
                         return (
                           <div key={track.id}>
@@ -321,6 +422,9 @@ export default function DashboardSidebar({
                                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", textTransform: "uppercase", fontSize: "12px" }}>{track.title}</span>
                               </span>
                               <span style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0, marginLeft: "4px" }}>
+                                {isTrackComplete && (
+                                  <Check size={12} style={{ color: "#10b981", flexShrink: 0 }} />
+                                )}
                                 {!track.isFree && <Lock size={11} style={{ color: "#b0b0b0" }} />}
                                 {isLoadingModules
                                   ? <div style={{ width: "10px", height: "10px", border: "2px solid #e0e0e0", borderTopColor: "#006400", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
@@ -329,7 +433,7 @@ export default function DashboardSidebar({
                             </button>
 
                             {/* Modules under track */}
-                            <Collapsible open={isTrackExpanded && !isLoadingModules} estimatedItemHeight={36} count={modules.length || 1}>
+                            <Collapsible open={isTrackExpanded && !isLoadingModules}>
                               <div>
                                 {modules.length === 0 && (
                                   <div style={{ padding: "6px 16px 6px 68px", fontSize: "11px", color: "#b0b0b0" }}>No modules yet.</div>
@@ -338,63 +442,89 @@ export default function DashboardSidebar({
                                   const isModExpanded = expandedModuleIds.has(mod.id);
                                   const units = moduleUnits[mod.id] ?? [];
                                   const isLoadingUnits = loadingModules.has(mod.id);
+                                  const isModuleActive = activeNav === `unit:${course.id}:${track.id}:${mod.id}`;
+                                  const moduleComplete = units.length > 0 && units.every((u) => completedUnitIds.has(u.id));
 
                                   return (
                                     <div key={mod.id}>
-                                      {/* Module row */}
-                                      <button
-                                        onClick={() => toggleModule(mod.id)}
-                                        title={mod.title}
-                                        className="w-full flex items-center justify-between text-left"
+                                      {/* Module row — title navigates straight to the module's reading view; chevron just expands/collapses the unit list */}
+                                      <div
+                                        className="w-full flex items-center justify-between"
                                         style={{
-                                          padding: "8px 16px 8px 64px", fontSize: "12px", fontWeight: 500,
-                                          transition: "all 0.15s",
-                                          backgroundColor: "transparent",
-                                          color: "#888888", whiteSpace: "nowrap",
-                                          border: "none", cursor: "pointer",
+                                          paddingRight: "12px",
+                                          backgroundColor: isModuleActive ? "rgba(0,100,0,0.05)" : "transparent",
                                           borderLeftWidth: "3px", borderLeftStyle: "solid",
-                                          borderLeftColor: "transparent",
+                                          borderLeftColor: isModuleActive ? "#d4af37" : "transparent",
                                         }}
-                                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.03)"; (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
-                                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
                                       >
-                                        <span style={{ display: "flex", alignItems: "center", gap: "8px", overflow: "hidden", flex: 1, minWidth: 0 }}>
+                                        <button
+                                          onClick={() => onModuleNavigate?.(mod, course.id, track.id)}
+                                          title={mod.title}
+                                          className="flex items-center text-left flex-1"
+                                          style={{
+                                            padding: "8px 0 8px 64px", fontSize: "12px", fontWeight: 500,
+                                            transition: "all 0.15s", overflow: "hidden", minWidth: 0,
+                                            backgroundColor: "transparent",
+                                            color: isModuleActive ? "#006400" : "#888888", whiteSpace: "nowrap",
+                                            border: "none", cursor: "pointer", gap: "8px",
+                                          }}
+                                          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
+                                          onMouseLeave={(e) => { if (!isModuleActive) (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
+                                        >
                                           <BookOpen size={12} style={{ flexShrink: 0, color: "#c0c0c0" }} />
                                           <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{mod.title}</span>
-                                        </span>
-                                        <span style={{ flexShrink: 0, marginLeft: "4px" }}>
+                                          {moduleComplete && (
+                                            <Check size={11} style={{ color: "#10b981", flexShrink: 0 }} />
+                                          )}
+                                        </button>
+                                        <button
+                                          onClick={() => toggleModule(mod.id)}
+                                          title={isModExpanded ? "Collapse units" : "Expand units"}
+                                          style={{
+                                            background: "transparent", border: "none", cursor: "pointer",
+                                            padding: "4px", display: "flex", alignItems: "center", flexShrink: 0,
+                                          }}
+                                        >
                                           {isLoadingUnits
                                             ? <div style={{ width: "10px", height: "10px", border: "2px solid #e0e0e0", borderTopColor: "#006400", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
                                             : isModExpanded ? <ChevronDown size={12} style={{ color: "#c0c0c0" }} /> : <ChevronRight size={12} style={{ color: "#c0c0c0" }} />}
-                                        </span>
-                                      </button>
+                                        </button>
+                                      </div>
 
                                       {/* Units under module */}
-                                      <Collapsible open={isModExpanded && !isLoadingUnits} estimatedItemHeight={32} count={units.length || 1}>
+                                      <Collapsible open={isModExpanded && !isLoadingUnits}>
                                         <div>
                                           {units.length === 0 && (
                                             <div style={{ padding: "5px 16px 5px 80px", fontSize: "11px", color: "#b0b0b0" }}>No units yet.</div>
                                           )}
-                                          {units.map((unit) => (
-                                            <button
-                                              key={unit.id}
-                                              title={unit.title}
-                                              className="w-full text-left"
-                                              style={{
-                                                padding: "7px 16px 7px 80px", fontSize: "11px", fontWeight: 400,
-                                                transition: "all 0.15s", backgroundColor: "transparent",
-                                                color: "#aaaaaa", whiteSpace: "nowrap", overflow: "hidden",
-                                                textOverflow: "ellipsis", border: "none", cursor: "pointer",
-                                                borderLeftWidth: "3px", borderLeftStyle: "solid", borderLeftColor: "transparent",
-                                                display: "flex", alignItems: "center", gap: "6px",
-                                              }}
-                                              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.03)"; (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
-                                              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#aaaaaa"; }}
-                                            >
-                                              <FileText size={11} style={{ flexShrink: 0, color: "#d0d0d0" }} />
-                                              <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{unit.title}</span>
-                                            </button>
-                                          ))}
+                                          {units.map((unit) => {
+                                            const isUnitActive = isModuleActive; // unit-level nav reuses the module's unit viewer
+                                            const isUnitComplete = completedUnitIds.has(unit.id);
+                                            return (
+                                              <button
+                                                key={unit.id}
+                                                title={unit.title}
+                                                onClick={() => onModuleNavigate?.(mod, course.id, track.id)}
+                                                className="w-full text-left"
+                                                style={{
+                                                  padding: "7px 16px 7px 80px", fontSize: "11px", fontWeight: 400,
+                                                  transition: "all 0.15s",
+                                                  backgroundColor: isUnitActive ? "rgba(0,100,0,0.04)" : "transparent",
+                                                  color: isUnitActive ? "#006400" : "#aaaaaa", whiteSpace: "nowrap", overflow: "hidden",
+                                                  textOverflow: "ellipsis", border: "none", cursor: "pointer",
+                                                  borderLeftWidth: "3px", borderLeftStyle: "solid", borderLeftColor: "transparent",
+                                                  display: "flex", alignItems: "center", gap: "6px",
+                                                }}
+                                                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.03)"; (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
+                                                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = isUnitActive ? "rgba(0,100,0,0.04)" : "transparent"; (e.currentTarget as HTMLButtonElement).style.color = isUnitActive ? "#006400" : "#aaaaaa"; }}
+                                              >
+                                                {isUnitComplete
+                                                  ? <Check size={11} style={{ flexShrink: 0, color: "#10b981" }} />
+                                                  : <FileText size={11} style={{ flexShrink: 0, color: "#d0d0d0" }} />}
+                                                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{unit.title}</span>
+                                              </button>
+                                            );
+                                          })}
                                         </div>
                                       </Collapsible>
                                     </div>

@@ -56,7 +56,10 @@ export default function Overview({ onExploreClick }: { onExploreClick?: () => vo
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: "#fafafa" }}>
+      <div
+        className="flex-1 flex items-center justify-center"
+        style={{ backgroundColor: "#fafafa", minHeight: 0, width: "100%" }}
+      >
         <div className="flex flex-col items-center gap-3">
           <div style={{
             width: "40px",
@@ -74,7 +77,10 @@ export default function Overview({ onExploreClick }: { onExploreClick?: () => vo
 
   if (error) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: "#fafafa" }}>
+      <div
+        className="flex-1 flex items-center justify-center"
+        style={{ backgroundColor: "#fafafa", minHeight: 0, width: "100%" }}
+      >
         <div className="text-center">
           <p style={{ fontSize: "16px", fontWeight: 600, color: "#d32f2f", marginBottom: "8px" }}>
             Failed to load dashboard
@@ -88,7 +94,7 @@ export default function Overview({ onExploreClick }: { onExploreClick?: () => vo
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: "#fafafa" }}>
+    <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: "#fafafa", minHeight: 0 }}>
       {/* Header */}
       <div style={{ padding: "32px 32px 24px 32px", borderBottom: "1px solid #e0e0e0", backgroundColor: "#ffffff" }}>
         <h1
