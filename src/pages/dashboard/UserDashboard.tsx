@@ -8,6 +8,7 @@ import UnitViewer from "./components/UnitDetailView";
 import type { Course, ModuleSummary } from "../../services/types/course.types";
 
 const STORAGE_KEY = "dashboard_active_nav";
+const SIDEBAR_KEY = "dashboard_sidebar_open";
 
 export default function UserDashboard() {
   const [activeNav, setActiveNav] = useState(() => {
@@ -15,7 +16,10 @@ export default function UserDashboard() {
   });
 
   const [searchVal, setSearchVal] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    const stored = sessionStorage.getItem(SIDEBAR_KEY);
+    return stored === null ? true : stored === "true";
+  });
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedModule, setSelectedModule] = useState<ModuleSummary | null>(null);
 
@@ -84,7 +88,11 @@ export default function UserDashboard() {
         activeNav={activeNav}
         onNavChange={setActiveNav}
         isOpen={sidebarOpen}
-        onToggle={() => setSidebarOpen((prev) => !prev)}
+        onToggle={() => setSidebarOpen((prev) => {
+            const next = !prev;
+            sessionStorage.setItem(SIDEBAR_KEY, String(next));
+            return next;
+          })}
         onCoursesLoaded={setCourses}
       />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
@@ -127,6 +135,11 @@ export default function UserDashboard() {
               courseName={viewState.course.title}
               trackName={viewState.track.title}
               onBack={handleBackToCourse}
+              onBackToTrack={() => {
+                if (viewState.type === "unit" && viewState.course && viewState.track) {
+                  setActiveNav(`track:${viewState.course.id}:${viewState.track.id}`);
+                }
+              }}
             />
           )}
         </main>

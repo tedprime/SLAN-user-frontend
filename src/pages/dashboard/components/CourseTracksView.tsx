@@ -37,7 +37,10 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
 
     if (selectedLevel !== "All Levels") {
       const levels = ["Beginner", "Intermediate", "Advanced"];
-      result = result.filter((_: CourseTrack, i: number) => levels[i % 3] === selectedLevel);
+      result = result.filter((track: CourseTrack, i: number) => {
+        const trackLevel = (track as CourseTrack & { level?: string }).level;
+        return trackLevel ? trackLevel === selectedLevel : levels[i % 3] === selectedLevel;
+      });
     }
 
     if (sortBy === "Title (A-Z)") {
@@ -181,7 +184,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
           <div
             className="grid gap-6"
             style={{
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))",
               maxWidth: "1200px",
             }}
           >

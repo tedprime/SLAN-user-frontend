@@ -12,9 +12,10 @@ interface UnitViewerProps {
   courseName: string;
   trackName: string;
   onBack?: () => void;
+  onBackToTrack?: () => void;
 }
 
-export default function UnitViewer({ module, courseName, trackName, onBack }: UnitViewerProps) {
+export default function UnitViewer({ module, courseName, trackName, onBack, onBackToTrack }: UnitViewerProps) {
   const [units, setUnits] = useState<UnitSummary[]>([]);
   const [activeUnit, setActiveUnit] = useState<UnitContent | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<number | null>(null);
@@ -69,7 +70,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack }: Un
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: "#fafafa" }}>
+      <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#fafafa" }}>
         <div className="flex flex-col items-center gap-3">
           <div style={{
             width: "40px", height: "40px",
@@ -84,7 +85,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack }: Un
 
   if (error) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: "#fafafa" }}>
+      <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#fafafa" }}>
         <div className="text-center">
           <p style={{ fontSize: "16px", fontWeight: 600, color: "#d32f2f", marginBottom: "8px" }}>
             Failed to load units
@@ -122,7 +123,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack }: Un
         </button>
         <ChevronSep size={14} style={{ color: "#d1d1d1", flexShrink: 0 }} />
         <span style={{ fontWeight: 600, color: "#101b37" }}>
-          {module.title}
+          {activeUnit?.title ?? module.title}
         </span>
       </div>
 
@@ -136,7 +137,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack }: Un
           {/* Sidebar Header */}
           <div style={{ padding: "20px 24px", borderBottom: "1px solid #e0e0e0" }}>
             <button
-              onClick={onBack}
+              onClick={onBackToTrack ?? onBack}
               style={{
                 fontSize: "13px", color: "#888888", background: "none",
                 border: "none", cursor: "pointer", marginBottom: "12px",
