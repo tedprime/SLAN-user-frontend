@@ -28,12 +28,8 @@ interface DashboardSidebarProps {
   progressVersion?: number;
 }
 
-interface TrackModules {
-  [trackId: number]: ModuleSummary[];
-}
-interface ModuleUnits {
-  [moduleId: number]: UnitSummary[];
-}
+interface TrackModules { [trackId: number]: ModuleSummary[]; }
+interface ModuleUnits { [moduleId: number]: UnitSummary[]; }
 
 const MOBILE_BP = 768;
 
@@ -46,6 +42,13 @@ function useIsMobile() {
     return () => mq.removeEventListener("change", handler);
   }, []);
   return isMobile;
+}
+
+// Unwrap API envelope { success, data } defensively
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function unwrap<T>(res: any): T {
+  if (res && typeof res === "object" && "data" in res) return res.data as T;
+  return res as T;
 }
 
 function Collapsible({ open, children }: { open: boolean; children: React.ReactNode }) {
@@ -82,7 +85,6 @@ export default function DashboardSidebar({
 
   const [completedUnitIdsByTrack, setCompletedUnitIdsByTrack] = useState<Record<number, Set<number>>>({});
 
-  // Mobile-aware nav: close drawer after navigating to a leaf
   const handleNavChange = (id: string) => {
     onNavChange(id);
     if (isMobile && isOpen) onToggle();
@@ -112,7 +114,7 @@ export default function DashboardSidebar({
   useEffect(() => {
     if (courses.length === 0) return;
     let cancelled = false;
-    const allTracks = courses.flatMap((course) => course.tracks);
+    const allTracks = courses.flatMap((c) => c.tracks);
     (async () => {
       await Promise.all(
         allTracks.map(async (track) => {
@@ -150,8 +152,13 @@ export default function DashboardSidebar({
 
   const refreshCompletionForTrack = useCallback(async (trackId: number) => {
     try {
-      const res = await progressService.getTrackCompletedUnits(trackId);
-      const entries = Array.isArray(res) ? res : [];
+      const raw = await progressService.getTrackCompletedUnits(trackId);
+      // Unwrap envelope and handle both array and wrapped forms
+      const entries: { unitId: number }[] = Array.isArray(raw)
+        ? raw
+        : Array.isArray(unwrap<{ unitId: number }[]>(raw))
+        ? unwrap<{ unitId: number }[]>(raw)
+        : [];
       setCompletedUnitIdsByTrack((prev) => ({
         ...prev,
         [trackId]: new Set(entries.map((e) => e.unitId)),
@@ -162,7 +169,7 @@ export default function DashboardSidebar({
   useEffect(() => {
     if (courses.length === 0) return;
     let cancelled = false;
-    const allTracks = courses.flatMap((course) => course.tracks);
+    const allTracks = courses.flatMap((c) => c.tracks);
     (async () => {
       await Promise.all(
         allTracks.map((track) => (cancelled ? Promise.resolve() : refreshCompletionForTrack(track.id)))
@@ -225,125 +232,121 @@ export default function DashboardSidebar({
   const isOverviewActive = activeNav === "overview";
   const isAnyCourseActive = activeNav.startsWith("course:") || activeNav.startsWith("track:") || activeNav.startsWith("unit:");
 
-  // On mobile: overlay drawer (position fixed, translateX off-screen when closed)
-  // On desktop: in-flow collapsible rail
   const sidebarStyle: React.CSSProperties = isMobile
     ? {
-        position: "fixed",
-        top: 0,
-        left: 0,
-        height: "100vh",
-        width: "288px",
-        backgroundColor: "#f5f5f5",
-        borderRight: "1px solid #e0e0e0",
-        display: "flex",
-        flexDirection: "column",
-        zIndex: 50,
+        position: "fixed", top: 0, left: 0, height: "100vh", width: "280px",
+        backgroundColor: "#ffffff", borderRight: "1px solid #e8e8e8",
+        display: "flex", flexDirection: "column", zIndex: 50,
         transform: isOpen ? "translateX(0)" : "translateX(-100%)",
-        transition: "transform 0.25s ease",
-        overflow: "hidden",
+        transition: "transform 0.25s ease", overflow: "hidden",
+        boxShadow: isOpen ? "4px 0 24px rgba(0,0,0,0.10)" : "none",
       }
     : {
-        backgroundColor: "#f5f5f5",
-        width: isOpen ? "288px" : "64px",
-        borderRight: "1px solid #e0e0e0",
-        height: "100vh",
-        overflow: "hidden",
+        backgroundColor: "#ffffff",
+        width: isOpen ? "260px" : "60px",
+        borderRight: "1px solid #e8e8e8",
+        height: "100vh", overflow: "hidden",
         transition: "width 0.25s ease",
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
-        zIndex: 20,
+        flexShrink: 0, display: "flex", flexDirection: "column", zIndex: 20,
       };
 
   const sidebar = (
     <div style={sidebarStyle}>
       {/* Header */}
       <div style={{
-        height: "64px", borderBottom: "1px solid #e0e0e0", display: "flex",
+        height: "64px", borderBottom: "1px solid #e8e8e8", display: "flex",
         alignItems: "center", justifyContent: isOpen ? "space-between" : "center",
-        paddingLeft: isOpen ? "20px" : "0", paddingRight: isOpen ? "12px" : "0", flexShrink: 0,
+        paddingLeft: isOpen ? "20px" : "0", paddingRight: isOpen ? "10px" : "0", flexShrink: 0,
+        backgroundColor: "#ffffff",
       }}>
         {isOpen && (
-          <span className="font-headline font-800 text-xl tracking-tight text-primary-500 whitespace-nowrap">
-            SLAN <span className="text-tertiary-500">Online</span>
+          <span style={{ fontSize: "16px", fontWeight: 800, letterSpacing: "-0.02em", color: "#101b37", whiteSpace: "nowrap", fontFamily: "var(--font-headline)" }}>
+            SLAN <span style={{ color: "#006400" }}>Online</span>
           </span>
         )}
         <button
           onClick={onToggle}
           style={{
-            padding: "6px", borderRadius: "6px", transition: "background-color 0.2s",
+            padding: "6px", borderRadius: "8px", transition: "background-color 0.15s",
             flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
             backgroundColor: "transparent", border: "none", cursor: "pointer",
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.06)"; }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f5f5f5"; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
         >
-          {isOpen ? <X size={20} style={{ color: "#006400" }} /> : <Menu size={20} style={{ color: "#006400" }} />}
+          {isOpen ? <X size={18} style={{ color: "#888888" }} /> : <Menu size={18} style={{ color: "#888888" }} />}
         </button>
       </div>
 
-      <nav style={{ flex: 1, overflowY: "auto", paddingTop: "8px" }}>
+      <nav style={{ flex: 1, overflowY: "auto", padding: "12px 0 8px" }}>
         {/* Overview */}
         <button
           onClick={() => handleNavChange("overview")}
           title={!isOpen ? "Overview" : undefined}
-          className="w-full flex items-center text-left mb-1"
+          className="w-full flex items-center text-left"
           style={{
-            padding: "14px 0", fontSize: "15px", fontWeight: 600, textTransform: "capitalize",
-            letterSpacing: "0.02em", transition: "all 0.15s",
-            backgroundColor: isOverviewActive ? "rgba(0,100,0,0.07)" : "transparent",
-            color: isOverviewActive ? "#006400" : "rgba(0,100,0,0.45)",
-            paddingLeft: isOpen ? (isOverviewActive ? "21px" : "24px") : "0px",
-            paddingRight: isOpen ? "24px" : "0px",
+            padding: isOpen ? "9px 16px" : "10px 0",
+            margin: "0 8px", width: isOpen ? "calc(100% - 16px)" : "100%",
+            borderRadius: isOpen ? "8px" : "0",
+            fontSize: "13px", fontWeight: isOverviewActive ? 600 : 500,
+            transition: "all 0.15s",
+            backgroundColor: isOverviewActive ? "rgba(0,100,0,0.08)" : "transparent",
+            color: isOverviewActive ? "#006400" : "#666666",
             justifyContent: isOpen ? "flex-start" : "center",
-            gap: isOpen ? "12px" : "0px", whiteSpace: "nowrap",
+            gap: isOpen ? "10px" : "0",
             border: "none", cursor: "pointer",
-            borderLeftWidth: "3px", borderLeftStyle: "solid",
-            borderLeftColor: isOverviewActive ? "#101b37" : "transparent",
           }}
-          onMouseEnter={(e) => { if (!isOverviewActive) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.04)"; (e.currentTarget as HTMLButtonElement).style.color = "#006400"; } }}
-          onMouseLeave={(e) => { if (!isOverviewActive) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(0,100,0,0.45)"; } }}
+          onMouseEnter={(e) => { if (!isOverviewActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f5f5f5"; }}
+          onMouseLeave={(e) => { if (!isOverviewActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
         >
-          <span style={{ flexShrink: 0 }}><LayoutDashboard size={20} /></span>
-          {isOpen && <span>OVERVIEW</span>}
+          <LayoutDashboard size={17} style={{ flexShrink: 0, color: isOverviewActive ? "#006400" : "#aaaaaa" }} />
+          {isOpen && <span>Overview</span>}
         </button>
 
-        {/* Collapsed sidebar: single icon */}
+        {/* Collapsed sidebar: courses icon */}
         {!isOpen && !isMobile && (
           <button
             title="Courses"
-            className="w-full flex items-center justify-center mb-1"
+            className="w-full flex items-center justify-center"
             style={{
-              padding: "14px 0", transition: "all 0.15s",
-              backgroundColor: isAnyCourseActive ? "rgba(0,100,0,0.07)" : "transparent",
-              color: isAnyCourseActive ? "#006400" : "rgba(0,100,0,0.45)",
+              padding: "10px 0", marginTop: "4px", transition: "all 0.15s",
+              backgroundColor: isAnyCourseActive ? "rgba(0,100,0,0.08)" : "transparent",
+              color: isAnyCourseActive ? "#006400" : "#aaaaaa",
               border: "none", cursor: "pointer",
-              borderLeftWidth: "3px", borderLeftStyle: "solid",
-              borderLeftColor: isAnyCourseActive ? "#101b37" : "transparent",
             }}
           >
-            <BookOpen size={20} />
+            <BookOpen size={17} />
           </button>
+        )}
+
+        {/* Section label */}
+        {isOpen && (
+          <div style={{
+            padding: "16px 24px 6px",
+            fontSize: "10px", fontWeight: 700, color: "#cccccc",
+            textTransform: "uppercase", letterSpacing: "0.1em",
+          }}>
+            Courses
+          </div>
         )}
 
         {/* Expanded sidebar: full course tree */}
         {isOpen && (
-          <div style={{ marginBottom: "4px" }}>
+          <div>
             {coursesLoading && (
-              <div style={{ padding: "14px 24px", fontSize: "13px", color: "#b0b0b0", display: "flex", alignItems: "center", gap: "12px" }}>
-                <BookOpen size={20} style={{ opacity: 0.5 }} />
-                Loading courses…
+              <div style={{ padding: "10px 24px", fontSize: "12px", color: "#bbbbbb", display: "flex", alignItems: "center", gap: "10px" }}>
+                <BookOpen size={15} style={{ opacity: 0.4 }} />
+                Loading…
               </div>
             )}
             {!coursesLoading && coursesError && (
-              <div style={{ padding: "12px 24px", fontSize: "12px", color: "#d32f2f", lineHeight: 1.4 }}>
+              <div style={{ padding: "10px 24px", fontSize: "12px", color: "#d32f2f", lineHeight: 1.4 }}>
                 Couldn't load courses.{" "}
                 <button onClick={() => { setCoursesLoading(true); setCoursesError(false); courseService.getCourses().then((data) => { setCourses(data); onCoursesLoaded?.(data); }).catch(() => setCoursesError(true)).finally(() => setCoursesLoading(false)); }} style={{ border: "none", background: "none", color: "#006400", fontWeight: 600, cursor: "pointer", padding: 0, textDecoration: "underline" }}>Retry</button>
               </div>
             )}
             {!coursesLoading && !coursesError && courses.length === 0 && (
-              <div style={{ padding: "12px 24px", fontSize: "12px", color: "#b0b0b0" }}>No courses available yet.</div>
+              <div style={{ padding: "10px 24px", fontSize: "12px", color: "#bbbbbb" }}>No courses yet.</div>
             )}
 
             {!coursesLoading && !coursesError && courses.map((course) => {
@@ -351,43 +354,42 @@ export default function DashboardSidebar({
               const isCourseActive = activeNav === `course:${course.id}` || activeNav.startsWith(`track:${course.id}:`);
 
               return (
-                <div key={course.id}>
+                <div key={course.id} style={{ marginBottom: "2px" }}>
+                  {/* Course row */}
                   <button
                     onClick={() => toggleCourse(course.id)}
                     aria-expanded={isCourseExpanded}
-                    className="w-full flex items-center justify-between text-left mb-1"
+                    className="w-full flex items-center justify-between text-left"
                     style={{
-                      padding: "14px 24px", fontSize: "15px", fontWeight: 600,
-                      letterSpacing: "0.02em", transition: "all 0.15s",
-                      backgroundColor: isCourseActive ? "rgba(0,100,0,0.07)" : "transparent",
-                      color: isCourseActive ? "#006400" : "rgba(0,100,0,0.45)",
-                      paddingLeft: isCourseActive ? "21px" : "24px",
-                      whiteSpace: "nowrap", border: "none", cursor: "pointer",
-                      borderLeftWidth: "3px", borderLeftStyle: "solid",
-                      borderLeftColor: isCourseActive ? "#101b37" : "transparent",
+                      padding: "9px 16px", margin: "0 8px", width: "calc(100% - 16px)",
+                      borderRadius: "8px", fontSize: "13px", fontWeight: isCourseActive ? 600 : 500,
+                      transition: "all 0.15s",
+                      backgroundColor: isCourseActive ? "rgba(0,100,0,0.08)" : "transparent",
+                      color: isCourseActive ? "#006400" : "#555555",
+                      border: "none", cursor: "pointer",
                     }}
-                    onMouseEnter={(e) => { if (!isCourseActive) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.04)"; (e.currentTarget as HTMLButtonElement).style.color = "#006400"; } }}
-                    onMouseLeave={(e) => { if (!isCourseActive) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(0,100,0,0.45)"; } }}
+                    onMouseEnter={(e) => { if (!isCourseActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f5f5f5"; }}
+                    onMouseLeave={(e) => { if (!isCourseActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
                   >
-                    <span style={{ display: "flex", alignItems: "center", gap: "12px", overflow: "hidden" }}>
-                      <span style={{ flexShrink: 0 }}><BookOpen size={20} /></span>
-                      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{course.title}</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: "9px", overflow: "hidden", flex: 1, minWidth: 0 }}>
+                      <BookOpen size={15} style={{ flexShrink: 0, color: isCourseActive ? "#006400" : "#aaaaaa" }} />
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{course.title}</span>
                     </span>
-                    <span style={{ flexShrink: 0, color: "#b0b0b0" }}>
-                      {isCourseExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    <span style={{ flexShrink: 0, color: "#cccccc", marginLeft: "6px" }}>
+                      {isCourseExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </span>
                   </button>
 
                   <Collapsible open={isCourseExpanded}>
                     <div style={{ paddingBottom: "4px" }}>
                       {course.tracks.length === 0 && (
-                        <div style={{ padding: "8px 24px 8px 56px", fontSize: "12px", color: "#b0b0b0" }}>No tracks yet.</div>
+                        <div style={{ padding: "6px 16px 6px 52px", fontSize: "11px", color: "#cccccc" }}>No tracks yet.</div>
                       )}
                       {course.tracks.map((track) => {
                         const isTrackExpanded = expandedTrackIds.has(track.id);
                         const isTrackActive = activeNav === `track:${course.id}:${track.id}` || activeNav.startsWith(`unit:${course.id}:${track.id}:`);
                         const modules = trackModules[track.id] ?? [];
-                        const isLoadingModules = loadingTracks.has(track.id);
+                        const isLoadingTrackModules = loadingTracks.has(track.id);
                         const completedUnitIds = completedUnitIdsByTrack[track.id] ?? new Set<number>();
 
                         const isModuleComplete = (mod: ModuleSummary) => {
@@ -399,39 +401,40 @@ export default function DashboardSidebar({
 
                         return (
                           <div key={track.id}>
+                            {/* Track row */}
                             <button
                               onClick={() => toggleTrack(course.id, track.id)}
                               title={track.title}
                               className="w-full flex items-center justify-between text-left"
                               style={{
-                                padding: "9px 16px 9px 48px", fontSize: "13px", fontWeight: 500,
+                                padding: "7px 12px 7px 40px",
+                                margin: "1px 8px", width: "calc(100% - 16px)",
+                                borderRadius: "7px", fontSize: "12px", fontWeight: isTrackActive ? 600 : 400,
                                 transition: "all 0.15s",
-                                backgroundColor: isTrackActive ? "rgba(0,100,0,0.06)" : "transparent",
-                                color: isTrackActive ? "#006400" : "#666666",
-                                whiteSpace: "nowrap", border: "none", cursor: "pointer",
-                                borderLeftWidth: "3px", borderLeftStyle: "solid",
-                                borderLeftColor: isTrackActive ? "#d4af37" : "transparent",
+                                backgroundColor: isTrackActive ? "rgba(0,100,0,0.07)" : "transparent",
+                                color: isTrackActive ? "#006400" : "#777777",
+                                border: "none", cursor: "pointer",
                               }}
-                              onMouseEnter={(e) => { if (!isTrackActive) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.03)"; (e.currentTarget as HTMLButtonElement).style.color = "#006400"; } }}
-                              onMouseLeave={(e) => { if (!isTrackActive) { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#666666"; } }}
+                              onMouseEnter={(e) => { if (!isTrackActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f5f5f5"; }}
+                              onMouseLeave={(e) => { if (!isTrackActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
                             >
-                              <span style={{ display: "flex", alignItems: "center", gap: "8px", overflow: "hidden", flex: 1, minWidth: 0 }}>
-                                <Layers size={13} style={{ flexShrink: 0, color: "#b0b0b0" }} />
-                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", textTransform: "uppercase", fontSize: "12px" }}>{track.title}</span>
+                              <span style={{ display: "flex", alignItems: "center", gap: "7px", overflow: "hidden", flex: 1, minWidth: 0 }}>
+                                <Layers size={12} style={{ flexShrink: 0, color: isTrackActive ? "#006400" : "#cccccc" }} />
+                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</span>
                               </span>
                               <span style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0, marginLeft: "4px" }}>
-                                {isTrackComplete && <Check size={12} style={{ color: "#10b981", flexShrink: 0 }} />}
-                                {!track.isFree && <Lock size={11} style={{ color: "#b0b0b0" }} />}
-                                {isLoadingModules
+                                {isTrackComplete && <Check size={11} style={{ color: "#10b981" }} />}
+                                {!track.isFree && <Lock size={10} style={{ color: "#dddddd" }} />}
+                                {isLoadingTrackModules
                                   ? <div style={{ width: "10px", height: "10px", border: "2px solid #e0e0e0", borderTopColor: "#006400", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                                  : isTrackExpanded ? <ChevronDown size={13} style={{ color: "#b0b0b0" }} /> : <ChevronRight size={13} style={{ color: "#b0b0b0" }} />}
+                                  : isTrackExpanded ? <ChevronDown size={12} style={{ color: "#cccccc" }} /> : <ChevronRight size={12} style={{ color: "#cccccc" }} />}
                               </span>
                             </button>
 
-                            <Collapsible open={isTrackExpanded && !isLoadingModules}>
+                            <Collapsible open={isTrackExpanded && !isLoadingTrackModules}>
                               <div>
                                 {modules.length === 0 && (
-                                  <div style={{ padding: "6px 16px 6px 68px", fontSize: "11px", color: "#b0b0b0" }}>No modules yet.</div>
+                                  <div style={{ padding: "5px 12px 5px 60px", fontSize: "11px", color: "#cccccc" }}>No modules yet.</div>
                                 )}
                                 {modules.map((mod) => {
                                   const isModExpanded = expandedModuleIds.has(mod.id);
@@ -442,13 +445,13 @@ export default function DashboardSidebar({
 
                                   return (
                                     <div key={mod.id}>
+                                      {/* Module row */}
                                       <div
                                         className="w-full flex items-center justify-between"
                                         style={{
-                                          paddingRight: "12px",
-                                          backgroundColor: isModuleActive ? "rgba(0,100,0,0.05)" : "transparent",
-                                          borderLeftWidth: "3px", borderLeftStyle: "solid",
-                                          borderLeftColor: isModuleActive ? "#d4af37" : "transparent",
+                                          margin: "1px 8px", width: "calc(100% - 16px)",
+                                          borderRadius: "7px",
+                                          backgroundColor: isModuleActive ? "rgba(0,100,0,0.06)" : "transparent",
                                         }}
                                       >
                                         <button
@@ -456,37 +459,39 @@ export default function DashboardSidebar({
                                           title={mod.title}
                                           className="flex items-center text-left flex-1"
                                           style={{
-                                            padding: "8px 0 8px 64px", fontSize: "12px", fontWeight: 500,
-                                            transition: "all 0.15s", overflow: "hidden", minWidth: 0,
+                                            padding: "6px 0 6px 56px", fontSize: "12px", fontWeight: isModuleActive ? 600 : 400,
+                                            transition: "color 0.15s", overflow: "hidden", minWidth: 0,
                                             backgroundColor: "transparent",
-                                            color: isModuleActive ? "#006400" : "#888888", whiteSpace: "nowrap",
-                                            border: "none", cursor: "pointer", gap: "8px",
+                                            color: isModuleActive ? "#006400" : "#888888",
+                                            border: "none", cursor: "pointer", gap: "7px",
+                                            borderRadius: "7px 0 0 7px",
                                           }}
                                           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
                                           onMouseLeave={(e) => { if (!isModuleActive) (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
                                         >
-                                          <BookOpen size={12} style={{ flexShrink: 0, color: "#c0c0c0" }} />
-                                          <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{mod.title}</span>
-                                          {moduleComplete && <Check size={11} style={{ color: "#10b981", flexShrink: 0 }} />}
+                                          <BookOpen size={11} style={{ flexShrink: 0, color: isModuleActive ? "#006400" : "#dddddd" }} />
+                                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{mod.title}</span>
+                                          {moduleComplete && <Check size={10} style={{ color: "#10b981", flexShrink: 0 }} />}
                                         </button>
                                         <button
                                           onClick={() => toggleModule(mod.id)}
                                           title={isModExpanded ? "Collapse units" : "Expand units"}
                                           style={{
                                             background: "transparent", border: "none", cursor: "pointer",
-                                            padding: "4px", display: "flex", alignItems: "center", flexShrink: 0,
+                                            padding: "6px 8px", display: "flex", alignItems: "center", flexShrink: 0,
+                                            borderRadius: "0 7px 7px 0",
                                           }}
                                         >
                                           {isLoadingUnits
-                                            ? <div style={{ width: "10px", height: "10px", border: "2px solid #e0e0e0", borderTopColor: "#006400", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                                            : isModExpanded ? <ChevronDown size={12} style={{ color: "#c0c0c0" }} /> : <ChevronRight size={12} style={{ color: "#c0c0c0" }} />}
+                                            ? <div style={{ width: "9px", height: "9px", border: "2px solid #e0e0e0", borderTopColor: "#006400", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                                            : isModExpanded ? <ChevronDown size={11} style={{ color: "#cccccc" }} /> : <ChevronRight size={11} style={{ color: "#cccccc" }} />}
                                         </button>
                                       </div>
 
                                       <Collapsible open={isModExpanded && !isLoadingUnits}>
                                         <div>
                                           {units.length === 0 && (
-                                            <div style={{ padding: "5px 16px 5px 80px", fontSize: "11px", color: "#b0b0b0" }}>No units yet.</div>
+                                            <div style={{ padding: "4px 12px 4px 72px", fontSize: "11px", color: "#cccccc" }}>No units yet.</div>
                                           )}
                                           {units.map((unit, unitIndex) => {
                                             const isUnitActive = isModuleActive;
@@ -498,24 +503,25 @@ export default function DashboardSidebar({
                                                 onClick={() => handleModuleNavigate(mod, course.id, track.id)}
                                                 className="w-full text-left"
                                                 style={{
-                                                  padding: "6px 12px 6px 80px", fontSize: "11px", fontWeight: 400,
+                                                  padding: "5px 12px 5px 72px",
+                                                  margin: "1px 8px", width: "calc(100% - 16px)",
+                                                  borderRadius: "6px",
+                                                  fontSize: "11px", fontWeight: 400,
                                                   transition: "all 0.15s",
-                                                  backgroundColor: isUnitActive ? "rgba(0,100,0,0.04)" : "transparent",
+                                                  backgroundColor: isUnitActive ? "rgba(0,100,0,0.05)" : "transparent",
                                                   color: isUnitActive ? "#006400" : "#aaaaaa",
                                                   border: "none", cursor: "pointer",
-                                                  borderLeftWidth: "3px", borderLeftStyle: "solid", borderLeftColor: "transparent",
                                                   display: "flex", alignItems: "center", gap: "6px",
                                                 }}
-                                                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.03)"; (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
-                                                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = isUnitActive ? "rgba(0,100,0,0.04)" : "transparent"; (e.currentTarget as HTMLButtonElement).style.color = isUnitActive ? "#006400" : "#aaaaaa"; }}
+                                                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f5f5f5"; (e.currentTarget as HTMLButtonElement).style.color = "#555555"; }}
+                                                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = isUnitActive ? "rgba(0,100,0,0.05)" : "transparent"; (e.currentTarget as HTMLButtonElement).style.color = isUnitActive ? "#006400" : "#aaaaaa"; }}
                                               >
-                                                {/* Fixed-width icon slot so check is never squeezed out */}
+                                                {/* Fixed-width icon slot */}
                                                 <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "14px", flexShrink: 0 }}>
                                                   {isUnitComplete
-                                                    ? <Check size={11} style={{ color: "#10b981" }} />
-                                                    : <FileText size={11} style={{ color: "#d0d0d0" }} />}
+                                                    ? <Check size={10} style={{ color: "#10b981" }} />
+                                                    : <FileText size={10} style={{ color: "#e0e0e0" }} />}
                                                 </span>
-                                                {/* "Unit N" label — full title preserved in title attr for tooltip */}
                                                 <span style={{ whiteSpace: "nowrap" }}>Unit {unitIndex + 1}</span>
                                               </button>
                                             );
@@ -540,14 +546,14 @@ export default function DashboardSidebar({
       </nav>
 
       {/* Logout */}
-      <div style={{ padding: "8px", flexShrink: 0, borderTop: "1px solid #e0e0e0", backgroundColor: "#f5f5f5" }}>
+      <div style={{ padding: "8px 8px 12px", flexShrink: 0, borderTop: "1px solid #f0f0f0" }}>
         <button
           title={!isOpen ? "Logout" : undefined}
           style={{
-            display: "flex", alignItems: "center", width: "100%", padding: "8px 0",
-            borderRadius: "6px", transition: "all 0.2s", fontSize: "14px", fontWeight: 500,
-            color: "#101b37", gap: "12px", justifyContent: isOpen ? "flex-start" : "center",
-            paddingLeft: isOpen ? "16px" : "0px", paddingRight: isOpen ? "16px" : "0px",
+            display: "flex", alignItems: "center", width: "100%",
+            padding: isOpen ? "8px 12px" : "8px 0",
+            borderRadius: "8px", transition: "all 0.15s", fontSize: "13px", fontWeight: 500,
+            color: "#888888", gap: "10px", justifyContent: isOpen ? "flex-start" : "center",
             border: "none", backgroundColor: "transparent", cursor: "pointer",
           }}
           onClick={async () => {
@@ -558,10 +564,10 @@ export default function DashboardSidebar({
             clearTokens();
             window.location.href = "/login";
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#e8eaf0"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#fef2f2"; (e.currentTarget as HTMLButtonElement).style.color = "#d32f2f"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
         >
-          <LogOut size={20} style={{ flexShrink: 0 }} />
+          <LogOut size={16} style={{ flexShrink: 0 }} />
           {isOpen && <span>Logout</span>}
         </button>
       </div>
@@ -571,12 +577,11 @@ export default function DashboardSidebar({
   if (isMobile) {
     return (
       <>
-        {/* Backdrop */}
         {isOpen && (
           <div
             onClick={onToggle}
             style={{
-              position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.4)",
+              position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.35)",
               zIndex: 40, transition: "opacity 0.25s ease",
             }}
           />

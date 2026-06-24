@@ -17,6 +17,13 @@ interface UnitViewerProps {
   onProgressChange?: () => void;
 }
 
+// The API wraps responses in { success, data } — unwrap defensively.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function unwrap<T>(res: any): T {
+  if (res && typeof res === "object" && "data" in res) return res.data as T;
+  return res as T;
+}
+
 export default function UnitViewer({ module, courseName, trackName, onBack, onBackToTrack, onProgressChange }: UnitViewerProps) {
   const [units, setUnits] = useState<UnitSummary[]>([]);
   const [activeUnit, setActiveUnit] = useState<UnitContent | null>(null);
@@ -30,7 +37,8 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
 
   const refreshModuleProgress = useCallback(async () => {
     try {
-      const progress = await progressService.getModuleProgress(module.id);
+      const raw = await progressService.getModuleProgress(module.id);
+      const progress = unwrap<{ completedUnitIds?: number[]; progressPercent?: number }>(raw);
       setCompletedUnitIds(new Set(progress.completedUnitIds ?? []));
       setModuleProgressPercent(progress.progressPercent ?? 0);
     } catch { /* non-critical */ }
@@ -87,12 +95,29 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
   const handleMarkComplete = async () => {
     if (!selectedUnitId || marking || isCurrentUnitCompleted) return;
     setMarking(true);
+    // Optimistic update
     setCompletedUnitIds((prev) => new Set(prev).add(selectedUnitId));
     try {
       await progressService.markUnitComplete(selectedUnitId);
-      await refreshModuleProgress();
+      // Refresh progress but merge — don't wipe optimistic state on a stale/empty response
+      try {
+        const raw = await progressService.getModuleProgress(module.id);
+        const progress = unwrap<{ completedUnitIds?: number[]; progressPercent?: number }>(raw);
+        const fromApi = new Set<number>(progress.completedUnitIds ?? []);
+        // If the API returned a non-empty list, use it; otherwise keep the optimistic state
+        if (fromApi.size > 0) {
+          setCompletedUnitIds(fromApi);
+          setModuleProgressPercent(progress.progressPercent ?? 0);
+        } else {
+          // API didn't return ids — just update the percent if available
+          if ((progress.progressPercent ?? 0) > 0) {
+            setModuleProgressPercent(progress.progressPercent ?? 0);
+          }
+        }
+      } catch { /* keep optimistic state */ }
       onProgressChange?.();
     } catch {
+      // Roll back optimistic update only on actual POST failure
       setCompletedUnitIds((prev) => {
         const next = new Set(prev);
         next.delete(selectedUnitId);
@@ -126,8 +151,6 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
   }
 
   return (
-    // Root: fills the flex column from <main>, does NOT set overflow:hidden on itself
-    // so that each internal region can control its own scroll independently.
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, backgroundColor: "#fafafa" }}>
       {/* Breadcrumb: course > track > module */}
       <div style={{
@@ -158,7 +181,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
         </span>
       </div>
 
-      {/* Body: sidebar + content, fills remaining height */}
+      {/* Body */}
       <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
         {/* Left Sidebar */}
         <div style={{
@@ -166,7 +189,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
           backgroundColor: "#ffffff", display: "flex",
           flexDirection: "column", flexShrink: 0, minHeight: 0,
         }}>
-          {/* Sidebar Header — module info (no "Back to modules" link) */}
+          {/* Sidebar Header */}
           <div style={{ padding: "20px 24px", borderBottom: "1px solid #e0e0e0", flexShrink: 0 }}>
             <p style={{
               fontSize: "11px", fontWeight: 600, color: "#b0b0b0",
@@ -192,7 +215,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
             </p>
           </div>
 
-          {/* Unit List — scrollable */}
+          {/* Unit List */}
           <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
             {units.map((unit, index) => {
               const isActive = unit.id === selectedUnitId;
@@ -213,7 +236,6 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
                   onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.03)"; }}
                   onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
                 >
-                  {/* Fixed-width icon slot */}
                   <span style={{
                     display: "inline-flex", alignItems: "center", justifyContent: "center",
                     height: "24px", width: "24px", borderRadius: "50%", flexShrink: 0,
@@ -223,7 +245,6 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
                   }}>
                     {isCompleted ? <CheckCircle size={12} /> : index + 1}
                   </span>
-                  {/* "Unit N" label — full title in title attr for tooltip */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{
                       fontSize: "13px", fontWeight: isActive ? 700 : 600,
@@ -244,18 +265,17 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
           {/* Module Progress */}
           <div style={{ padding: "16px 24px", borderTop: "1px solid #e0e0e0", flexShrink: 0 }}>
             <div className="flex items-center justify-between" style={{ marginBottom: "8px" }}>
-              <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Module Progress</span>
+              <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Module progress</span>
               <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{moduleProgressPercent}%</span>
             </div>
             <Progress value={moduleProgressPercent} color="#006400" />
           </div>
         </div>
 
-        {/* Right Content Area — flex column, fills remaining space */}
+        {/* Right Content Area */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
           {activeUnit ? (
             <>
-              {/* Unit Header */}
               <div style={{ padding: "24px 32px", borderBottom: "1px solid #e0e0e0", backgroundColor: "#ffffff", flexShrink: 0 }}>
                 <div style={{ maxWidth: "800px" }}>
                   <p style={{ fontSize: "13px", color: "#888888", marginBottom: "8px" }}>
@@ -279,7 +299,6 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
                 </div>
               </div>
 
-              {/* Unit Content — the ONLY scrolling region */}
               <div style={{ flex: 1, overflowY: "auto", padding: "32px", minHeight: 0 }}>
                 <div style={{ maxWidth: "800px" }}>
                   {activeUnit.content ? (
@@ -310,7 +329,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
                             style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#006400", textDecoration: "none" }}
                           >
                             <BookOpen size={14} />
-                            Watch Video
+                            Watch video
                           </a>
                         )}
                         {activeUnit.pdfUrl && (
@@ -327,12 +346,11 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
                 </div>
               </div>
 
-              {/* Navigation Footer */}
               <div style={{ padding: "16px 32px", borderTop: "1px solid #e0e0e0", backgroundColor: "#ffffff", flexShrink: 0 }}>
                 <div className="flex items-center justify-between" style={{ maxWidth: "800px" }}>
                   <Button variant="outlined" size="sm" onClick={goPrevious} disabled={!canGoPrevious}>
                     <ChevronLeft size={14} />
-                    Previous Unit
+                    Previous
                   </Button>
 
                   <Button
@@ -344,12 +362,12 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
                     {isCurrentUnitCompleted ? (
                       <><CheckCircle size={14} />Completed</>
                     ) : (
-                      <><Check size={14} />{marking ? "Marking..." : "Mark Complete"}</>
+                      <><Check size={14} />{marking ? "Saving..." : "Mark complete"}</>
                     )}
                   </Button>
 
                   <Button variant="primary" size="sm" onClick={goNext} disabled={!canGoNext}>
-                    Next Unit
+                    Next
                     <ChevronRight size={14} />
                   </Button>
                 </div>
