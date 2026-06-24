@@ -17,7 +17,7 @@ interface UnitViewerProps {
   onProgressChange?: () => void;
 }
 
-// The API wraps responses in { success, data } — unwrap defensively.
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function unwrap<T>(res: any): T {
   if (res && typeof res === "object" && "data" in res) return res.data as T;
@@ -95,16 +95,16 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
   const handleMarkComplete = async () => {
     if (!selectedUnitId || marking || isCurrentUnitCompleted) return;
     setMarking(true);
-    // Optimistic update
+
     setCompletedUnitIds((prev) => new Set(prev).add(selectedUnitId));
     try {
       await progressService.markUnitComplete(selectedUnitId);
-      // Refresh progress but merge — don't wipe optimistic state on a stale/empty response
+    
       try {
         const raw = await progressService.getModuleProgress(module.id);
         const progress = unwrap<{ completedUnitIds?: number[]; progressPercent?: number }>(raw);
         const fromApi = new Set<number>(progress.completedUnitIds ?? []);
-        // If the API returned a non-empty list, use it; otherwise keep the optimistic state
+      
         if (fromApi.size > 0) {
           setCompletedUnitIds(fromApi);
           setModuleProgressPercent(progress.progressPercent ?? 0);
@@ -190,29 +190,13 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
           flexDirection: "column", flexShrink: 0, minHeight: 0,
         }}>
           {/* Sidebar Header */}
-          <div style={{ padding: "20px 24px", borderBottom: "1px solid #e0e0e0", flexShrink: 0 }}>
-            <p style={{
-              fontSize: "11px", fontWeight: 600, color: "#b0b0b0",
-              textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "4px",
-            }}>
-              Module
-            </p>
+          <div style={{ padding: "20px 24px", borderBottom: "1px solid #e0e0e0", flexShrink: 0 }}>  
             <h3 style={{
               fontSize: "15px", fontWeight: 700, color: "#101b37",
               fontFamily: "var(--font-headline)", lineHeight: 1.3,
             }}>
-              {module.title}
-            </h3>
-            <p style={{
-              fontSize: "11px", fontWeight: 600, color: "#b0b0b0",
-              textTransform: "uppercase", letterSpacing: "0.07em",
-              marginTop: "14px", marginBottom: "2px",
-            }}>
               Units
-            </p>
-            <p style={{ fontSize: "12px", color: "#888888" }}>
-              {units.length} {units.length === 1 ? "unit" : "units"}
-            </p>
+            </h3>
           </div>
 
           {/* Unit List */}
