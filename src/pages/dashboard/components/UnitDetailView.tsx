@@ -122,7 +122,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack }: Un
         </button>
         <ChevronSep size={14} style={{ color: "#d1d1d1", flexShrink: 0 }} />
         <span style={{ fontWeight: 600, color: "#101b37" }}>
-          {activeUnit?.title ?? module.title}
+          {module.title}
         </span>
       </div>
 

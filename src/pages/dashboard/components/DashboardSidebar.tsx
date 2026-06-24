@@ -381,7 +381,11 @@ export default function DashboardSidebar({
                       </span>
                     </button>
 
-                    {isExpanded && (
+                    <div style={{
+                      overflow: "hidden",
+                      maxHeight: isExpanded ? `${course.tracks.length * 44 + 8}px` : "0px",
+                      transition: "max-height 0.25s ease",
+                    }}>
                       <div style={{ paddingBottom: "4px" }}>
                         {course.tracks.length === 0 && (
                           <div
@@ -468,7 +472,7 @@ export default function DashboardSidebar({
                           );
                         })}
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })}

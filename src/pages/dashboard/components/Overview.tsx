@@ -92,7 +92,7 @@ export default function Overview({ onTrackClick }: { onTrackClick?: (trackId: nu
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: "#fafafa" }}>
+      <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#fafafa" }}>
         <div className="flex flex-col items-center gap-3">
           <div style={{
             width: "40px",
@@ -110,7 +110,7 @@ export default function Overview({ onTrackClick }: { onTrackClick?: (trackId: nu
 
   if (error) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: "#fafafa" }}>
+      <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#fafafa" }}>
         <div className="text-center">
           <p style={{ fontSize: "16px", fontWeight: 600, color: "#d32f2f", marginBottom: "8px" }}>
             Failed to load dashboard
