@@ -13,9 +13,10 @@ interface TrackDetailViewProps {
   onBack?: () => void;
   onModuleClick?: (module: ModuleSummary) => void;
   onPlayClick?: (module: ModuleSummary) => void;
+  onModulesLoaded?: (modules: ModuleSummary[]) => void;
 }
 
-export default function TrackDetailView({ course, track, onBack, onModuleClick, onPlayClick }: TrackDetailViewProps) {
+export default function TrackDetailView({ course, track, onBack, onModuleClick, onPlayClick, onModulesLoaded }: TrackDetailViewProps) {
   const [modules, setModules] = useState<ModuleSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -36,7 +37,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
       try {
         const res = await courseService.getTrackModules(track.id);
         const moduleList = Array.isArray(res?.modules) ? res.modules : [];
-        if (!cancelled) setModules(moduleList);
+        if (!cancelled) { setModules(moduleList); onModulesLoaded?.(moduleList); }
 
         // Fetch track progress and per-module progress in parallel.
         // Failures here shouldn't block the page — progress just falls back to 0.
@@ -98,7 +99,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
             {course.title}
           </button>
           <ChevronRight size={16} style={{ color: "#b0b0b0" }} />
-          <span style={{ color: "#101b37", fontWeight: 600, textTransform: "uppercase" }}>
+          <span style={{ color: "#101b37", fontWeight: 600 }}>
             {track.title}
           </span>
         </div>
@@ -109,6 +110,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
         borderBottom: "1px solid #e0e0e0",
         background: `linear-gradient(135deg, ${trackColor.bg} 0%, rgba(255,255,255,0.5) 100%)`,
         padding: "32px",
+        flexShrink: 0,
       }}>
         <div style={{ maxWidth: "1200px" }}>
           <span style={{
@@ -123,7 +125,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
           <h1 style={{
             fontSize: "28px", fontWeight: 800, color: "#101b37",
             fontFamily: "var(--font-headline)", letterSpacing: "-0.02em",
-            marginBottom: "12px", lineHeight: 1.2, textTransform: "uppercase",
+            marginBottom: "12px", lineHeight: 1.2,
           }}>
             {track.title}
           </h1>
@@ -171,7 +173,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
       </div>
 
       {/* Modules Section */}
-      <div className="flex-1 overflow-y-auto" style={{ padding: "32px" }}>
+      <div className="flex-1 overflow-y-auto" style={{ padding: "32px", minHeight: 0 }}>
         <div style={{ maxWidth: "1200px" }}>
           <h2 style={{
             fontSize: "20px", fontWeight: 800, color: "#101b37",

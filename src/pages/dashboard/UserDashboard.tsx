@@ -26,6 +26,7 @@ export default function UserDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(getInitialSidebarState);
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedModule, setSelectedModule] = useState<ModuleSummary | null>(null);
+  const [trackModules, setTrackModules] = useState<Record<number, ModuleSummary[]>>({});
   const [progressVersion, setProgressVersion] = useState(0);
   const handleProgressChange = () => setProgressVersion((v) => v + 1);
 
@@ -153,6 +154,10 @@ export default function UserDashboard() {
               onBack={handleBackToCourse}
               onModuleClick={handleModuleClick}
               onPlayClick={handlePlayClick}
+              onModulesLoaded={(mods) => {
+                const trackId = viewState.type === "track" ? viewState.track?.id : undefined;
+                if (trackId) setTrackModules((prev) => ({ ...prev, [trackId]: mods }));
+              }}
             />
           )}
 
@@ -161,6 +166,7 @@ export default function UserDashboard() {
               courseId={viewState.course.id}
               trackId={viewState.track.id}
               module={selectedModule}
+              allModules={trackModules[viewState.track.id]}
               courseName={viewState.course.title}
               trackName={viewState.track.title}
               onBack={handleBackToCourse}
@@ -170,6 +176,11 @@ export default function UserDashboard() {
                 }
               }}
               onProgressChange={handleProgressChange}
+              onNextModule={(nextMod) => {
+                if (viewState.type === "unit" && viewState.course && viewState.track) {
+                  handleModuleNavigate(nextMod, viewState.course.id, viewState.track.id);
+                }
+              }}
             />
           )}
         </main>

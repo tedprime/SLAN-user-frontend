@@ -252,7 +252,6 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                       letterSpacing: "-0.01em",
                       marginBottom: "8px",
                       lineHeight: 1.3,
-                      textTransform: "uppercase",
                     }}
                   >
                     {track.title}

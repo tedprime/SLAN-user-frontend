@@ -278,7 +278,7 @@ export default function DashboardSidebar({
         </button>
       </div>
 
-      <nav style={{ flex: 1, overflowY: "auto", padding: "12px 0 8px" }}>
+      <nav style={{ flex: 1, overflowY: isOpen ? "auto" : "hidden", overflowX: "hidden", padding: "12px 0 8px" }}>
         {/* Overview */}
         <button
           onClick={() => handleNavChange("overview")}
@@ -286,7 +286,8 @@ export default function DashboardSidebar({
           className="w-full flex items-center text-left"
           style={{
             padding: isOpen ? "9px 16px" : "10px 0",
-            margin: "0 8px", width: isOpen ? "calc(100% - 16px)" : "100%",
+            margin: isOpen ? "0 8px" : "0",
+            width: isOpen ? "calc(100% - 16px)" : "100%",
             borderRadius: isOpen ? "8px" : "0",
             fontSize: "13px", fontWeight: isOverviewActive ? 600 : 500,
             transition: "all 0.15s",
@@ -310,6 +311,7 @@ export default function DashboardSidebar({
             className="w-full flex items-center justify-center"
             style={{
               padding: "10px 0", marginTop: "4px", transition: "all 0.15s",
+              width: "100%", margin: "0",
               backgroundColor: isAnyCourseActive ? "rgba(0,100,0,0.08)" : "transparent",
               color: isAnyCourseActive ? "#006400" : "#aaaaaa",
               border: "none", cursor: "pointer",
@@ -494,13 +496,18 @@ export default function DashboardSidebar({
                                             <div style={{ padding: "4px 12px 4px 72px", fontSize: "11px", color: "#cccccc" }}>No units yet.</div>
                                           )}
                                           {units.map((unit, unitIndex) => {
-                                            const isUnitActive = isModuleActive;
+                                            const isUnitActive = activeNav === `unit:${course.id}:${track.id}:${mod.id}:${unit.id}`;
                                             const isUnitComplete = completedUnitIds.has(unit.id);
                                             return (
                                               <button
                                                 key={unit.id}
                                                 title={unit.title}
-                                                onClick={() => handleModuleNavigate(mod, course.id, track.id)}
+                                                onClick={() => {
+                                                  handleModuleNavigate(mod, course.id, track.id);
+                                                  // Signal which specific unit to open
+                                                  onNavChange(`unit:${course.id}:${track.id}:${mod.id}:${unit.id}`);
+                                                  if (isMobile && isOpen) onToggle();
+                                                }}
                                                 className="w-full text-left"
                                                 style={{
                                                   padding: "5px 12px 5px 72px",

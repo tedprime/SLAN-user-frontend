@@ -10,11 +10,13 @@ interface UnitViewerProps {
   courseId: number;
   trackId: number;
   module: ModuleSummary;
+  allModules?: ModuleSummary[];
   courseName: string;
   trackName: string;
   onBack?: () => void;
   onBackToTrack?: () => void;
   onProgressChange?: () => void;
+  onNextModule?: (module: ModuleSummary) => void;
 }
 
 
@@ -24,7 +26,7 @@ function unwrap<T>(res: any): T {
   return res as T;
 }
 
-export default function UnitViewer({ module, courseName, trackName, onBack, onBackToTrack, onProgressChange }: UnitViewerProps) {
+export default function UnitViewer({ module, allModules, courseName, trackName, onBack, onBackToTrack, onProgressChange, onNextModule }: UnitViewerProps) {
   const [units, setUnits] = useState<UnitSummary[]>([]);
   const [activeUnit, setActiveUnit] = useState<UnitContent | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<number | null>(null);
@@ -86,11 +88,22 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
 
   const currentIndex = units.findIndex((u) => u.id === selectedUnitId);
   const canGoPrevious = currentIndex > 0;
-  const canGoNext = currentIndex < units.length - 1;
+  const isLastUnitInModule = currentIndex === units.length - 1;
+  const currentModuleIndex = allModules ? allModules.findIndex((m) => m.id === module.id) : -1;
+  const nextModule = allModules && currentModuleIndex >= 0 && currentModuleIndex < allModules.length - 1
+    ? allModules[currentModuleIndex + 1]
+    : null;
+  const canGoNext = !isLastUnitInModule || !!nextModule;
   const isCurrentUnitCompleted = selectedUnitId !== null && completedUnitIds.has(selectedUnitId);
 
   const goPrevious = () => { if (canGoPrevious) setSelectedUnitId(units[currentIndex - 1].id); };
-  const goNext = () => { if (canGoNext) setSelectedUnitId(units[currentIndex + 1].id); };
+  const goNext = () => {
+    if (!isLastUnitInModule) {
+      setSelectedUnitId(units[currentIndex + 1].id);
+    } else if (nextModule) {
+      onNextModule?.(nextModule);
+    }
+  };
 
   const handleMarkComplete = async () => {
     if (!selectedUnitId || marking || isCurrentUnitCompleted) return;
@@ -351,7 +364,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
                   </Button>
 
                   <Button variant="primary" size="sm" onClick={goNext} disabled={!canGoNext}>
-                    Next
+                    {isLastUnitInModule && nextModule ? "Next Module" : "Next"}
                     <ChevronRight size={14} />
                   </Button>
                 </div>
