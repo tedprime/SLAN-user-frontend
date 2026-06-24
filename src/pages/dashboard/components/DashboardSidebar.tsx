@@ -26,7 +26,7 @@ interface DashboardSidebarProps {
   onCoursesLoaded?: (courses: Course[]) => void;
   /** Navigate straight to a unit/module's reading view from the sidebar tree. */
   onModuleNavigate?: (module: ModuleSummary, courseId: number, trackId: number) => void;
-  /** Bump this number to make the sidebar refetch completion checkmarks. */
+  /** Bump this number to make the sidebar fetch completion status again. */
   progressVersion?: number;
 }
 
@@ -39,7 +39,7 @@ interface ModuleUnits {
 
 // Animated collapsible container.
 // Uses the CSS grid 0fr/1fr trick instead of a hand-computed max-height so that
-// nested collapsibles (units expanding inside a module, inside a track) are
+// nested collapsible sections (units expanding inside a module, inside a track) are
 // never clipped by an estimate that didn't account for their expanded height.
 function Collapsible({ open, children }: {
   open: boolean;
@@ -85,7 +85,7 @@ export default function DashboardSidebar({
 
   // Completed unit IDs per track, from GET /progress/tracks/{trackId}/completed-units.
   // This single call per track gives us everything needed to derive both
-  // module-level and track-level checkmarks without N+1 requests per module.
+  // module-level and track-level completion marks without N+1 requests per module.
   const [completedUnitIdsByTrack, setCompletedUnitIdsByTrack] = useState<Record<number, Set<number>>>({});
 
   useEffect(() => {
@@ -155,11 +155,12 @@ export default function DashboardSidebar({
     return () => { cancelled = true; };
   }, [courses]);
 
-  // Fetch completed-unit IDs per track — refetches whenever progressVersion
+  // Fetch completed-unit IDs per track — refreshes whenever progressVersion
   // changes (e.g. right after the user marks a unit complete elsewhere).
   const refreshCompletionForTrack = useCallback(async (trackId: number) => {
     try {
-      const entries = await progressService.getTrackCompletedUnits(trackId);
+      const res = await progressService.getTrackCompletedUnits(trackId);
+      const entries = Array.isArray(res) ? res : [];
       setCompletedUnitIdsByTrack((prev) => ({
         ...prev,
         [trackId]: new Set(entries.map((e) => e.unitId)),
