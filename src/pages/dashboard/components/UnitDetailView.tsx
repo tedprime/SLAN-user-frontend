@@ -14,7 +14,6 @@ interface UnitViewerProps {
   trackName: string;
   onBack?: () => void;
   onBackToTrack?: () => void;
-  /** Notified whenever a unit is marked complete, so parent views (e.g. the sidebar) can refresh their completion marks. */
   onProgressChange?: () => void;
 }
 
@@ -25,7 +24,6 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  // Real completion / progress state for this module, from the Progress API.
   const [completedUnitIds, setCompletedUnitIds] = useState<Set<number>>(new Set());
   const [moduleProgressPercent, setModuleProgressPercent] = useState(0);
   const [marking, setMarking] = useState(false);
@@ -35,14 +33,9 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
       const progress = await progressService.getModuleProgress(module.id);
       setCompletedUnitIds(new Set(progress.completedUnitIds ?? []));
       setModuleProgressPercent(progress.progressPercent ?? 0);
-    } catch {
-      // Leave existing state as-is if this fails — non-critical for viewing content.
-    }
+    } catch { /* non-critical */ }
   }, [module.id]);
 
-  // Fetch the module's units and its progress together — both are keyed off
-  // module.id, so they belong in a single effect rather than splitting the
-  // progress fetch into its own effect that just calls setState synchronously.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -56,9 +49,6 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
         const unitList = Array.isArray(res?.units) ? res.units : [];
         if (!cancelled) {
           setUnits(unitList);
-          // Use the functional form so we don't need selectedUnitId in the
-          // dependency array — we only ever want to default-select on the
-          // very first load of this module, not whenever it changes.
           setSelectedUnitId((prev) => (prev === null && unitList.length > 0 ? unitList[0].id : prev));
         }
       } catch {
@@ -97,14 +87,12 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
   const handleMarkComplete = async () => {
     if (!selectedUnitId || marking || isCurrentUnitCompleted) return;
     setMarking(true);
-    // Optimistic update so the UI feels instant.
     setCompletedUnitIds((prev) => new Set(prev).add(selectedUnitId));
     try {
       await progressService.markUnitComplete(selectedUnitId);
       await refreshModuleProgress();
       onProgressChange?.();
     } catch {
-      // Roll back the optimistic update if the request actually failed.
       setCompletedUnitIds((prev) => {
         const next = new Set(prev);
         next.delete(selectedUnitId);
@@ -117,13 +105,9 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
 
   if (loading) {
     return (
-      <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#fafafa" }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#fafafa" }}>
         <div className="flex flex-col items-center gap-3">
-          <div style={{
-            width: "40px", height: "40px",
-            border: "3px solid #e8e8e8", borderTopColor: "#006400",
-            borderRadius: "50%", animation: "spin 1s linear infinite",
-          }} />
+          <div style={{ width: "40px", height: "40px", border: "3px solid #e8e8e8", borderTopColor: "#006400", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
           <p style={{ fontSize: "14px", color: "#888888" }}>Loading units...</p>
         </div>
       </div>
@@ -132,11 +116,9 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
 
   if (error) {
     return (
-      <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#fafafa" }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#fafafa" }}>
         <div className="text-center">
-          <p style={{ fontSize: "16px", fontWeight: 600, color: "#d32f2f", marginBottom: "8px" }}>
-            Failed to load units
-          </p>
+          <p style={{ fontSize: "16px", fontWeight: 600, color: "#d32f2f", marginBottom: "8px" }}>Failed to load units</p>
           <Button variant="primary" size="sm" onClick={() => window.location.reload()}>Retry</Button>
         </div>
       </div>
@@ -144,8 +126,10 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: "#fafafa", minHeight: 0 }}>
-      {/* Breadcrumb */}
+    // Root: fills the flex column from <main>, does NOT set overflow:hidden on itself
+    // so that each internal region can control its own scroll independently.
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, backgroundColor: "#fafafa" }}>
+      {/* Breadcrumb: course > track > module */}
       <div style={{
         padding: "14px 24px", borderBottom: "1px solid #e0e0e0",
         backgroundColor: "#ffffff", display: "flex", alignItems: "center",
@@ -161,7 +145,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
         </button>
         <ChevronSep size={14} style={{ color: "#d1d1d1", flexShrink: 0 }} />
         <button
-          onClick={onBack}
+          onClick={onBackToTrack ?? onBack}
           style={{ background: "none", border: "none", cursor: "pointer", color: "#888888", fontSize: "13px", padding: 0 }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
@@ -170,32 +154,20 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
         </button>
         <ChevronSep size={14} style={{ color: "#d1d1d1", flexShrink: 0 }} />
         <span style={{ fontWeight: 600, color: "#101b37" }}>
-          {activeUnit?.title ?? module.title}
+          {module.title}
         </span>
       </div>
 
-      <div className="flex" style={{ flex: 1, minHeight: 0 }}>
+      {/* Body: sidebar + content, fills remaining height */}
+      <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
         {/* Left Sidebar */}
         <div style={{
-          width: "320px", borderRight: "1px solid #e0e0e0",
+          width: "300px", borderRight: "1px solid #e0e0e0",
           backgroundColor: "#ffffff", display: "flex",
-          flexDirection: "column", overflow: "hidden", flexShrink: 0,
+          flexDirection: "column", flexShrink: 0, minHeight: 0,
         }}>
-          {/* Sidebar Header */}
-          <div style={{ padding: "20px 24px", borderBottom: "1px solid #e0e0e0" }}>
-            <button
-              onClick={onBackToTrack ?? onBack}
-              style={{
-                fontSize: "13px", color: "#888888", background: "none",
-                border: "none", cursor: "pointer", marginBottom: "12px",
-                display: "flex", alignItems: "center", gap: "4px", padding: 0,
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
-            >
-              <ChevronLeft size={14} />
-              Back to modules
-            </button>
+          {/* Sidebar Header — module info (no "Back to modules" link) */}
+          <div style={{ padding: "20px 24px", borderBottom: "1px solid #e0e0e0", flexShrink: 0 }}>
             <p style={{
               fontSize: "11px", fontWeight: 600, color: "#b0b0b0",
               textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "4px",
@@ -220,8 +192,8 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
             </p>
           </div>
 
-          {/* Unit List */}
-          <div className="flex-1 overflow-y-auto" style={{ padding: "8px" }}>
+          {/* Unit List — scrollable */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
             {units.map((unit, index) => {
               const isActive = unit.id === selectedUnitId;
               const isCompleted = completedUnitIds.has(unit.id);
@@ -230,36 +202,39 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
                 <button
                   key={unit.id}
                   onClick={() => setSelectedUnitId(unit.id)}
+                  title={unit.title}
                   className="w-full text-left"
                   style={{
-                    padding: "12px 16px", borderRadius: "8px", marginBottom: "4px",
+                    padding: "10px 16px", borderRadius: "8px", marginBottom: "4px",
                     backgroundColor: isActive ? "rgba(0,100,0,0.06)" : "transparent",
                     border: "none", cursor: "pointer", transition: "all 0.15s",
+                    display: "flex", alignItems: "center", gap: "10px",
                   }}
+                  onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.03)"; }}
+                  onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
                 >
-                  <div className="flex items-center gap-3">
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", justifyContent: "center",
-                      height: "24px", width: "24px", borderRadius: "50%",
-                      backgroundColor: isCompleted ? "#10b981" : isActive ? "#006400" : "#f5f5f5",
-                      color: isCompleted || isActive ? "#ffffff" : "#888888",
-                      fontSize: "11px", fontWeight: 700, flexShrink: 0,
+                  {/* Fixed-width icon slot */}
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    height: "24px", width: "24px", borderRadius: "50%", flexShrink: 0,
+                    backgroundColor: isCompleted ? "#10b981" : isActive ? "#006400" : "#f5f5f5",
+                    color: isCompleted || isActive ? "#ffffff" : "#888888",
+                    fontSize: "11px", fontWeight: 700,
+                  }}>
+                    {isCompleted ? <CheckCircle size={12} /> : index + 1}
+                  </span>
+                  {/* "Unit N" label — full title in title attr for tooltip */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{
+                      fontSize: "13px", fontWeight: isActive ? 700 : 600,
+                      color: isActive ? "#006400" : "#101b37",
+                      lineHeight: 1.3, whiteSpace: "nowrap",
                     }}>
-                      {isCompleted ? <CheckCircle size={12} /> : index + 1}
-                    </span>
-                    <div className="flex-1" style={{ minWidth: 0 }}>
-                      <p style={{
-                        fontSize: "13px", fontWeight: isActive ? 700 : 600,
-                        color: isActive ? "#006400" : "#101b37",
-                        lineHeight: 1.3, overflow: "hidden",
-                        textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      }}>
-                        {unit.title}
-                      </p>
-                      <p style={{ fontSize: "11px", color: "#b0b0b0", marginTop: "2px" }}>
-                        {unit.estimatedReadMinutes} min
-                      </p>
-                    </div>
+                      Unit {index + 1}
+                    </p>
+                    <p style={{ fontSize: "11px", color: "#b0b0b0", marginTop: "2px" }}>
+                      {unit.estimatedReadMinutes} min
+                    </p>
                   </div>
                 </button>
               );
@@ -267,7 +242,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
           </div>
 
           {/* Module Progress */}
-          <div style={{ padding: "16px 24px", borderTop: "1px solid #e0e0e0" }}>
+          <div style={{ padding: "16px 24px", borderTop: "1px solid #e0e0e0", flexShrink: 0 }}>
             <div className="flex items-center justify-between" style={{ marginBottom: "8px" }}>
               <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Module Progress</span>
               <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{moduleProgressPercent}%</span>
@@ -276,12 +251,12 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
           </div>
         </div>
 
-        {/* Right Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Right Content Area — flex column, fills remaining space */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
           {activeUnit ? (
             <>
               {/* Unit Header */}
-              <div style={{ padding: "24px 32px", borderBottom: "1px solid #e0e0e0", backgroundColor: "#ffffff" }}>
+              <div style={{ padding: "24px 32px", borderBottom: "1px solid #e0e0e0", backgroundColor: "#ffffff", flexShrink: 0 }}>
                 <div style={{ maxWidth: "800px" }}>
                   <p style={{ fontSize: "13px", color: "#888888", marginBottom: "8px" }}>
                     Unit {currentIndex + 1} of {units.length}
@@ -304,8 +279,8 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
                 </div>
               </div>
 
-              {/* Unit Content */}
-              <div className="flex-1 overflow-y-auto" style={{ padding: "32px" }}>
+              {/* Unit Content — the ONLY scrolling region */}
+              <div style={{ flex: 1, overflowY: "auto", padding: "32px", minHeight: 0 }}>
                 <div style={{ maxWidth: "800px" }}>
                   {activeUnit.content ? (
                     <div
@@ -353,7 +328,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
               </div>
 
               {/* Navigation Footer */}
-              <div style={{ padding: "16px 32px", borderTop: "1px solid #e0e0e0", backgroundColor: "#ffffff" }}>
+              <div style={{ padding: "16px 32px", borderTop: "1px solid #e0e0e0", backgroundColor: "#ffffff", flexShrink: 0 }}>
                 <div className="flex items-center justify-between" style={{ maxWidth: "800px" }}>
                   <Button variant="outlined" size="sm" onClick={goPrevious} disabled={!canGoPrevious}>
                     <ChevronLeft size={14} />
@@ -367,15 +342,9 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
                     disabled={isCurrentUnitCompleted || marking}
                   >
                     {isCurrentUnitCompleted ? (
-                      <>
-                        <CheckCircle size={14} />
-                        Completed
-                      </>
+                      <><CheckCircle size={14} />Completed</>
                     ) : (
-                      <>
-                        <Check size={14} />
-                        {marking ? "Marking..." : "Mark Complete"}
-                      </>
+                      <><Check size={14} />{marking ? "Marking..." : "Mark Complete"}</>
                     )}
                   </Button>
 
@@ -387,7 +356,7 @@ export default function UnitViewer({ module, courseName, trackName, onBack, onBa
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <p style={{ fontSize: "15px", color: "#888888" }}>Select a unit to begin</p>
             </div>
           )}

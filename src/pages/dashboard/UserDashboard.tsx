@@ -10,20 +10,22 @@ import type { Course, ModuleSummary } from "../../services/types/course.types";
 const STORAGE_KEY = "dashboard_active_nav";
 const SIDEBAR_KEY = "dashboard_sidebar_open";
 
+function getInitialSidebarState(): boolean {
+  // Default closed on mobile so the drawer doesn't cover the whole screen on first load
+  if (typeof window !== "undefined" && window.innerWidth < 768) return false;
+  const stored = sessionStorage.getItem(SIDEBAR_KEY);
+  return stored === null ? true : stored === "true";
+}
+
 export default function UserDashboard() {
   const [activeNav, setActiveNav] = useState(() => {
     return sessionStorage.getItem(STORAGE_KEY) || "overview";
   });
 
   const [searchVal, setSearchVal] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    const stored = sessionStorage.getItem(SIDEBAR_KEY);
-    return stored === null ? true : stored === "true";
-  });
+  const [sidebarOpen, setSidebarOpen] = useState(getInitialSidebarState);
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedModule, setSelectedModule] = useState<ModuleSummary | null>(null);
-  // Bumped whenever a unit is marked complete, so the sidebar (and other
-  // progress-aware views) know to refetch completion state from the API.
   const [progressVersion, setProgressVersion] = useState(0);
   const handleProgressChange = () => setProgressVersion((v) => v + 1);
 
@@ -31,11 +33,15 @@ export default function UserDashboard() {
     sessionStorage.setItem(STORAGE_KEY, activeNav);
   }, [activeNav]);
 
+  const handleToggleSidebar = () => {
+    setSidebarOpen((prev) => {
+      const next = !prev;
+      sessionStorage.setItem(SIDEBAR_KEY, String(next));
+      return next;
+    });
+  };
+
   const viewState = useMemo(() => {
-    // A "unit:" nav can be restored from sessionStorage on a fresh page load,
-    // but `selectedModule` only ever lives in memory — so on reload we'd have
-    // a unit route with nothing to render. Fall back to the track view in
-    // that case, computed here during render rather than via an effect.
     if (activeNav.startsWith("unit:") && !selectedModule) {
       const parts = activeNav.split(":");
       const courseId = parseInt(parts[1], 10);
@@ -111,11 +117,7 @@ export default function UserDashboard() {
         activeNav={activeNav}
         onNavChange={setActiveNav}
         isOpen={sidebarOpen}
-        onToggle={() => setSidebarOpen((prev) => {
-            const next = !prev;
-            sessionStorage.setItem(SIDEBAR_KEY, String(next));
-            return next;
-          })}
+        onToggle={handleToggleSidebar}
         onCoursesLoaded={setCourses}
         onModuleNavigate={handleModuleNavigate}
         progressVersion={progressVersion}
@@ -125,8 +127,10 @@ export default function UserDashboard() {
           activeNav={activeNav}
           searchVal={searchVal}
           onSearchChange={setSearchVal}
+          onMenuClick={handleToggleSidebar}
         />
-        <main style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", minHeight: 0 }}>
+        {/* overflow:hidden here — each child view manages its own internal scroll */}
+        <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
           {viewState.type === "overview" && (
             <Overview
               onExploreClick={() => {

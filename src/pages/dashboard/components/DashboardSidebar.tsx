@@ -24,9 +24,7 @@ interface DashboardSidebarProps {
   isOpen: boolean;
   onToggle: () => void;
   onCoursesLoaded?: (courses: Course[]) => void;
-  /** Navigate straight to a unit/module's reading view from the sidebar tree. */
   onModuleNavigate?: (module: ModuleSummary, courseId: number, trackId: number) => void;
-  /** Bump this number to make the sidebar fetch completion status again. */
   progressVersion?: number;
 }
 
@@ -37,22 +35,22 @@ interface ModuleUnits {
   [moduleId: number]: UnitSummary[];
 }
 
-// Animated collapsible container.
-// Uses the CSS grid 0fr/1fr trick instead of a hand-computed max-height so that
-// nested collapsible sections (units expanding inside a module, inside a track) are
-// never clipped by an estimate that didn't account for their expanded height.
-function Collapsible({ open, children }: {
-  open: boolean;
-  children: React.ReactNode;
-}) {
+const MOBILE_BP = 768;
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BP);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BP - 1}px)`);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
+function Collapsible({ open, children }: { open: boolean; children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateRows: open ? "1fr" : "0fr",
-        transition: "grid-template-rows 0.25s ease",
-      }}
-    >
+    <div style={{ display: "grid", gridTemplateRows: open ? "1fr" : "0fr", transition: "grid-template-rows 0.25s ease" }}>
       <div style={{ overflow: "hidden", minHeight: 0 }}>{children}</div>
     </div>
   );
@@ -67,26 +65,32 @@ export default function DashboardSidebar({
   onModuleNavigate,
   progressVersion,
 }: DashboardSidebarProps) {
+  const isMobile = useIsMobile();
+
   const [courses, setCourses] = useState<Course[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
   const [coursesError, setCoursesError] = useState(false);
 
-  // Expanded state for each level
   const [expandedCourseIds, setExpandedCourseIds] = useState<Set<number>>(new Set());
   const [expandedTrackIds, setExpandedTrackIds] = useState<Set<number>>(new Set());
   const [expandedModuleIds, setExpandedModuleIds] = useState<Set<number>>(new Set());
 
-  // Modules and units per track/module — preloaded in the background once
-  // courses arrive, rather than only fetched on first expand.
   const [trackModules, setTrackModules] = useState<TrackModules>({});
   const [moduleUnits, setModuleUnits] = useState<ModuleUnits>({});
   const [loadingTracks, setLoadingTracks] = useState<Set<number>>(new Set());
   const [loadingModules, setLoadingModules] = useState<Set<number>>(new Set());
 
-  // Completed unit IDs per track, from GET /progress/tracks/{trackId}/completed-units.
-  // This single call per track gives us everything needed to derive both
-  // module-level and track-level completion marks without N+1 requests per module.
   const [completedUnitIdsByTrack, setCompletedUnitIdsByTrack] = useState<Record<number, Set<number>>>({});
+
+  // Mobile-aware nav: close drawer after navigating to a leaf
+  const handleNavChange = (id: string) => {
+    onNavChange(id);
+    if (isMobile && isOpen) onToggle();
+  };
+  const handleModuleNavigate = (mod: ModuleSummary, courseId: number, trackId: number) => {
+    onModuleNavigate?.(mod, courseId, trackId);
+    if (isMobile && isOpen) onToggle();
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -95,10 +99,7 @@ export default function DashboardSidebar({
       setCoursesError(false);
       try {
         const data = await courseService.getCourses();
-        if (!cancelled) {
-          setCourses(data);
-          onCoursesLoaded?.(data);
-        }
+        if (!cancelled) { setCourses(data); onCoursesLoaded?.(data); }
       } catch {
         if (!cancelled) setCoursesError(true);
       } finally {
@@ -108,15 +109,10 @@ export default function DashboardSidebar({
     return () => { cancelled = true; };
   }, [onCoursesLoaded]);
 
-  // Preload the full course -> track -> module -> unit tree in the background
-  // as soon as courses arrive, instead of waiting for the user to expand each
-  // level. Expanding is then instant and never shows a half-loaded list.
   useEffect(() => {
     if (courses.length === 0) return;
     let cancelled = false;
-
     const allTracks = courses.flatMap((course) => course.tracks);
-
     (async () => {
       await Promise.all(
         allTracks.map(async (track) => {
@@ -127,8 +123,6 @@ export default function DashboardSidebar({
             const modules = Array.isArray(res?.modules) ? res.modules : [];
             if (cancelled) return;
             setTrackModules((prev) => ({ ...prev, [track.id]: modules }));
-
-            // Preload units for every module in this track, in parallel.
             await Promise.all(
               modules.map(async (mod) => {
                 setLoadingModules((prev) => new Set(prev).add(mod.id));
@@ -151,12 +145,9 @@ export default function DashboardSidebar({
         })
       );
     })();
-
     return () => { cancelled = true; };
   }, [courses]);
 
-  // Fetch completed-unit IDs per track — refreshes whenever progressVersion
-  // changes (e.g. right after the user marks a unit complete elsewhere).
   const refreshCompletionForTrack = useCallback(async (trackId: number) => {
     try {
       const res = await progressService.getTrackCompletedUnits(trackId);
@@ -165,9 +156,7 @@ export default function DashboardSidebar({
         ...prev,
         [trackId]: new Set(entries.map((e) => e.unitId)),
       }));
-    } catch {
-      // Leave existing completion state as-is on failure.
-    }
+    } catch { /* keep existing state */ }
   }, []);
 
   useEffect(() => {
@@ -197,9 +186,7 @@ export default function DashboardSidebar({
       if (next.has(trackId)) { next.delete(trackId); } else { next.add(trackId); }
       return next;
     });
-    // Also navigate to the track view
     onNavChange(`track:${courseId}:${trackId}`);
-    // Lazy load modules if expanding and not yet loaded
     if (isExpanding && !trackModules[trackId]) {
       setLoadingTracks((prev) => new Set(prev).add(trackId));
       try {
@@ -238,10 +225,25 @@ export default function DashboardSidebar({
   const isOverviewActive = activeNav === "overview";
   const isAnyCourseActive = activeNav.startsWith("course:") || activeNav.startsWith("track:") || activeNav.startsWith("unit:");
 
-
-  return (
-    <div
-      style={{
+  // On mobile: overlay drawer (position fixed, translateX off-screen when closed)
+  // On desktop: in-flow collapsible rail
+  const sidebarStyle: React.CSSProperties = isMobile
+    ? {
+        position: "fixed",
+        top: 0,
+        left: 0,
+        height: "100vh",
+        width: "288px",
+        backgroundColor: "#f5f5f5",
+        borderRight: "1px solid #e0e0e0",
+        display: "flex",
+        flexDirection: "column",
+        zIndex: 50,
+        transform: isOpen ? "translateX(0)" : "translateX(-100%)",
+        transition: "transform 0.25s ease",
+        overflow: "hidden",
+      }
+    : {
         backgroundColor: "#f5f5f5",
         width: isOpen ? "288px" : "64px",
         borderRight: "1px solid #e0e0e0",
@@ -252,8 +254,10 @@ export default function DashboardSidebar({
         display: "flex",
         flexDirection: "column",
         zIndex: 20,
-      }}
-    >
+      };
+
+  const sidebar = (
+    <div style={sidebarStyle}>
       {/* Header */}
       <div style={{
         height: "64px", borderBottom: "1px solid #e0e0e0", display: "flex",
@@ -282,7 +286,7 @@ export default function DashboardSidebar({
       <nav style={{ flex: 1, overflowY: "auto", paddingTop: "8px" }}>
         {/* Overview */}
         <button
-          onClick={() => onNavChange("overview")}
+          onClick={() => handleNavChange("overview")}
           title={!isOpen ? "Overview" : undefined}
           className="w-full flex items-center text-left mb-1"
           style={{
@@ -306,7 +310,7 @@ export default function DashboardSidebar({
         </button>
 
         {/* Collapsed sidebar: single icon */}
-        {!isOpen && (
+        {!isOpen && !isMobile && (
           <button
             title="Courses"
             className="w-full flex items-center justify-center mb-1"
@@ -348,7 +352,6 @@ export default function DashboardSidebar({
 
               return (
                 <div key={course.id}>
-                  {/* Course row — toggle only */}
                   <button
                     onClick={() => toggleCourse(course.id)}
                     aria-expanded={isCourseExpanded}
@@ -375,7 +378,6 @@ export default function DashboardSidebar({
                     </span>
                   </button>
 
-                  {/* Tracks */}
                   <Collapsible open={isCourseExpanded}>
                     <div style={{ paddingBottom: "4px" }}>
                       {course.tracks.length === 0 && (
@@ -388,20 +390,15 @@ export default function DashboardSidebar({
                         const isLoadingModules = loadingTracks.has(track.id);
                         const completedUnitIds = completedUnitIdsByTrack[track.id] ?? new Set<number>();
 
-                        // A module is complete once every one of its units (that we know about) is completed.
-                        // A track is complete once every module we know about is complete.
-                        // Both require the modules/units to have loaded — an empty/unknown list never counts as "complete".
                         const isModuleComplete = (mod: ModuleSummary) => {
                           const units = moduleUnits[mod.id];
                           if (!units || units.length === 0) return false;
                           return units.every((u) => completedUnitIds.has(u.id));
                         };
-                        const isTrackComplete =
-                          modules.length > 0 && modules.every((mod) => isModuleComplete(mod));
+                        const isTrackComplete = modules.length > 0 && modules.every((mod) => isModuleComplete(mod));
 
                         return (
                           <div key={track.id}>
-                            {/* Track row */}
                             <button
                               onClick={() => toggleTrack(course.id, track.id)}
                               title={track.title}
@@ -423,9 +420,7 @@ export default function DashboardSidebar({
                                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", textTransform: "uppercase", fontSize: "12px" }}>{track.title}</span>
                               </span>
                               <span style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0, marginLeft: "4px" }}>
-                                {isTrackComplete && (
-                                  <Check size={12} style={{ color: "#10b981", flexShrink: 0 }} />
-                                )}
+                                {isTrackComplete && <Check size={12} style={{ color: "#10b981", flexShrink: 0 }} />}
                                 {!track.isFree && <Lock size={11} style={{ color: "#b0b0b0" }} />}
                                 {isLoadingModules
                                   ? <div style={{ width: "10px", height: "10px", border: "2px solid #e0e0e0", borderTopColor: "#006400", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
@@ -433,7 +428,6 @@ export default function DashboardSidebar({
                               </span>
                             </button>
 
-                            {/* Modules under track */}
                             <Collapsible open={isTrackExpanded && !isLoadingModules}>
                               <div>
                                 {modules.length === 0 && (
@@ -448,7 +442,6 @@ export default function DashboardSidebar({
 
                                   return (
                                     <div key={mod.id}>
-                                      {/* Module row — title navigates straight to the module's reading view; chevron just expands/collapses the unit list */}
                                       <div
                                         className="w-full flex items-center justify-between"
                                         style={{
@@ -459,7 +452,7 @@ export default function DashboardSidebar({
                                         }}
                                       >
                                         <button
-                                          onClick={() => onModuleNavigate?.(mod, course.id, track.id)}
+                                          onClick={() => handleModuleNavigate(mod, course.id, track.id)}
                                           title={mod.title}
                                           className="flex items-center text-left flex-1"
                                           style={{
@@ -474,9 +467,7 @@ export default function DashboardSidebar({
                                         >
                                           <BookOpen size={12} style={{ flexShrink: 0, color: "#c0c0c0" }} />
                                           <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{mod.title}</span>
-                                          {moduleComplete && (
-                                            <Check size={11} style={{ color: "#10b981", flexShrink: 0 }} />
-                                          )}
+                                          {moduleComplete && <Check size={11} style={{ color: "#10b981", flexShrink: 0 }} />}
                                         </button>
                                         <button
                                           onClick={() => toggleModule(mod.id)}
@@ -492,37 +483,40 @@ export default function DashboardSidebar({
                                         </button>
                                       </div>
 
-                                      {/* Units under module */}
                                       <Collapsible open={isModExpanded && !isLoadingUnits}>
                                         <div>
                                           {units.length === 0 && (
                                             <div style={{ padding: "5px 16px 5px 80px", fontSize: "11px", color: "#b0b0b0" }}>No units yet.</div>
                                           )}
-                                          {units.map((unit) => {
-                                            const isUnitActive = isModuleActive; // unit-level nav reuses the module's unit viewer
+                                          {units.map((unit, unitIndex) => {
+                                            const isUnitActive = isModuleActive;
                                             const isUnitComplete = completedUnitIds.has(unit.id);
                                             return (
                                               <button
                                                 key={unit.id}
                                                 title={unit.title}
-                                                onClick={() => onModuleNavigate?.(mod, course.id, track.id)}
+                                                onClick={() => handleModuleNavigate(mod, course.id, track.id)}
                                                 className="w-full text-left"
                                                 style={{
-                                                  padding: "7px 16px 7px 80px", fontSize: "11px", fontWeight: 400,
+                                                  padding: "6px 12px 6px 80px", fontSize: "11px", fontWeight: 400,
                                                   transition: "all 0.15s",
                                                   backgroundColor: isUnitActive ? "rgba(0,100,0,0.04)" : "transparent",
-                                                  color: isUnitActive ? "#006400" : "#aaaaaa", whiteSpace: "nowrap", overflow: "hidden",
-                                                  textOverflow: "ellipsis", border: "none", cursor: "pointer",
+                                                  color: isUnitActive ? "#006400" : "#aaaaaa",
+                                                  border: "none", cursor: "pointer",
                                                   borderLeftWidth: "3px", borderLeftStyle: "solid", borderLeftColor: "transparent",
                                                   display: "flex", alignItems: "center", gap: "6px",
                                                 }}
                                                 onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.03)"; (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
                                                 onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = isUnitActive ? "rgba(0,100,0,0.04)" : "transparent"; (e.currentTarget as HTMLButtonElement).style.color = isUnitActive ? "#006400" : "#aaaaaa"; }}
                                               >
-                                                {isUnitComplete
-                                                  ? <Check size={11} style={{ flexShrink: 0, color: "#10b981" }} />
-                                                  : <FileText size={11} style={{ flexShrink: 0, color: "#d0d0d0" }} />}
-                                                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{unit.title}</span>
+                                                {/* Fixed-width icon slot so check is never squeezed out */}
+                                                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "14px", flexShrink: 0 }}>
+                                                  {isUnitComplete
+                                                    ? <Check size={11} style={{ color: "#10b981" }} />
+                                                    : <FileText size={11} style={{ color: "#d0d0d0" }} />}
+                                                </span>
+                                                {/* "Unit N" label — full title preserved in title attr for tooltip */}
+                                                <span style={{ whiteSpace: "nowrap" }}>Unit {unitIndex + 1}</span>
                                               </button>
                                             );
                                           })}
@@ -573,4 +567,24 @@ export default function DashboardSidebar({
       </div>
     </div>
   );
+
+  if (isMobile) {
+    return (
+      <>
+        {/* Backdrop */}
+        {isOpen && (
+          <div
+            onClick={onToggle}
+            style={{
+              position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.4)",
+              zIndex: 40, transition: "opacity 0.25s ease",
+            }}
+          />
+        )}
+        {sidebar}
+      </>
+    );
+  }
+
+  return sidebar;
 }

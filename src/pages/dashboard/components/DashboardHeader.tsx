@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Menu } from "lucide-react";
 import { getUser } from "../../../services/tokenService";
 
 interface DashboardHeaderProps {
   activeNav: string;
   searchVal: string;
   onSearchChange: (val: string) => void;
+  onMenuClick?: () => void;
 }
 
 function getInitials(fullName: string): string {
@@ -21,16 +22,13 @@ function getInitials(fullName: string): string {
 export default function DashboardHeader({
   searchVal,
   onSearchChange,
+  onMenuClick,
 }: DashboardHeaderProps) {
-  // ── FIX: Reactive user state so initials update when auth state changes ──
   const [user, setUserState] = useState(getUser());
 
   useEffect(() => {
-    // Re-read user from cookies on mount and when storage changes
     const handleStorageChange = () => setUserState(getUser());
     window.addEventListener("storage", handleStorageChange);
-
-    // Also poll for cookie changes (since cookies don't trigger storage events reliably)
     const interval = setInterval(() => {
       const current = getUser();
       setUserState((prev) => {
@@ -38,7 +36,6 @@ export default function DashboardHeader({
         return prev;
       });
     }, 1000);
-
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       clearInterval(interval);
@@ -49,14 +46,25 @@ export default function DashboardHeader({
 
   return (
     <header
-      className="shrink-0 bg-white flex items-center justify-between px-6 z-10"
-      style={{
-        height: "64px",
-        borderBottom: "1px solid #e0e0e0",
-      }}
+      className="shrink-0 bg-white flex items-center justify-between px-4 z-10"
+      style={{ height: "64px", borderBottom: "1px solid #e0e0e0" }}
     >
+      {/* Left: hamburger (mobile only) */}
+      <div className="flex items-center shrink-0" style={{ minWidth: "40px" }}>
+        <button
+          onClick={onMenuClick}
+          aria-label="Open menu"
+          className="md:hidden flex items-center justify-center rounded-lg transition-colors duration-150"
+          style={{ width: "36px", height: "36px", color: "#888888", backgroundColor: "transparent", border: "none", cursor: "pointer" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f5f5f5"; (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
+        >
+          <Menu size={20} />
+        </button>
+      </div>
+
       {/* Center: search */}
-      <div className="flex-1 flex justify-center px-8 max-w-xl mx-auto w-full">
+      <div className="flex-1 flex justify-center px-4 max-w-xl mx-auto w-full">
         <div className="relative w-full">
           <Search
             size={13}
@@ -91,58 +99,29 @@ export default function DashboardHeader({
         </div>
       </div>
 
-      {/* Right: bell + initials avatar */}
+      {/* Right: bell + initials */}
       <div className="flex items-center gap-2 shrink-0">
-        {/* Bell */}
         <button
           className="relative flex items-center justify-center rounded-lg transition-colors duration-150"
-          style={{
-            width: "36px",
-            height: "36px",
-            color: "#888888",
-            backgroundColor: "transparent",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f5f5f5";
-            (e.currentTarget as HTMLButtonElement).style.color = "#006400";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
-            (e.currentTarget as HTMLButtonElement).style.color = "#888888";
-          }}
+          style={{ width: "36px", height: "36px", color: "#888888", backgroundColor: "transparent", border: "none", cursor: "pointer" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f5f5f5"; (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
         >
           <Bell size={18} />
           <span
             className="absolute"
-            style={{
-              top: "8px",
-              right: "8px",
-              width: "7px",
-              height: "7px",
-              backgroundColor: "#d4af37",
-              borderRadius: "50%",
-              border: "1.5px solid white",
-            }}
+            style={{ top: "8px", right: "8px", width: "7px", height: "7px", backgroundColor: "#d4af37", borderRadius: "50%", border: "1.5px solid white" }}
           />
         </button>
 
-        {/* Initials avatar */}
         <div
           title={user?.fullName || "User"}
           style={{
-            width: "40px",
-            height: "40px",
-            minWidth: "36px",
-            borderRadius: "50%",
-            backgroundColor: "#1e2e55",
-            color: "#c0c6d8",
-            fontSize: "12px",
-            fontWeight: "700",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            letterSpacing: "0.3px",
+            width: "40px", height: "40px", minWidth: "36px", borderRadius: "50%",
+            backgroundColor: "#1e2e55", color: "#c0c6d8",
+            fontSize: "12px", fontWeight: "700",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", letterSpacing: "0.3px",
           }}
         >
           {initials}
