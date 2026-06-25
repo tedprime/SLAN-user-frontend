@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ChevronRight, ChevronLeft, ChevronRight as ChevronSep, Clock, BookOpen, CheckCircle, Check } from "lucide-react";
+import { ChevronRight, ChevronLeft, ChevronRight as ChevronSep, Clock, BookOpen, CheckCircle, Check, Lock } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import Progress from "../../../components/ui/Progress";
 import { courseService } from "../../../services/courseService";
@@ -93,8 +93,8 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
   const nextModule = allModules && currentModuleIndex >= 0 && currentModuleIndex < allModules.length - 1
     ? allModules[currentModuleIndex + 1]
     : null;
-  const canGoNext = !isLastUnitInModule || !!nextModule;
   const isCurrentUnitCompleted = selectedUnitId !== null && completedUnitIds.has(selectedUnitId);
+  const canGoNext = isCurrentUnitCompleted && (!isLastUnitInModule || !!nextModule);
 
   const goPrevious = () => { if (canGoPrevious) setSelectedUnitId(units[currentIndex - 1].id); };
   const goNext = () => {
@@ -217,38 +217,45 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
             {units.map((unit, index) => {
               const isActive = unit.id === selectedUnitId;
               const isCompleted = completedUnitIds.has(unit.id);
+              // A unit is locked if the previous unit is not completed (and this isn't the first unit)
+              const isLocked = index > 0 && !completedUnitIds.has(units[index - 1].id);
 
               return (
                 <button
                   key={unit.id}
-                  onClick={() => setSelectedUnitId(unit.id)}
-                  title={unit.title}
+                  onClick={() => { if (!isLocked) setSelectedUnitId(unit.id); }}
+                  title={isLocked ? "Complete the previous unit first" : unit.title}
+                  disabled={isLocked}
                   className="w-full text-left"
                   style={{
                     padding: "10px 16px", borderRadius: "8px", marginBottom: "4px",
                     backgroundColor: isActive ? "rgba(0,100,0,0.06)" : "transparent",
-                    border: "none", cursor: "pointer", transition: "all 0.15s",
+                    border: "none",
+                    cursor: isLocked ? "not-allowed" : "pointer",
+                    transition: "all 0.15s",
                     display: "flex", alignItems: "center", gap: "10px",
+                    opacity: isLocked ? 0.55 : 1,
                   }}
-                  onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.03)"; }}
+                  onMouseEnter={(e) => { if (!isActive && !isLocked) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.03)"; }}
                   onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
                 >
                   <span style={{
                     display: "inline-flex", alignItems: "center", justifyContent: "center",
                     height: "24px", width: "24px", borderRadius: "50%", flexShrink: 0,
-                    backgroundColor: isCompleted ? "#10b981" : isActive ? "#006400" : "#f5f5f5",
+                    backgroundColor: isCompleted ? "#10b981" : isActive ? "#006400" : isLocked ? "#e8e8e8" : "#f5f5f5",
                     color: isCompleted || isActive ? "#ffffff" : "#888888",
                     fontSize: "11px", fontWeight: 700,
                   }}>
-                    {isCompleted ? <CheckCircle size={12} /> : index + 1}
+                    {isCompleted ? <CheckCircle size={12} /> : isLocked ? <Lock size={10} /> : index + 1}
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{
                       fontSize: "13px", fontWeight: isActive ? 700 : 600,
-                      color: isActive ? "#006400" : "#101b37",
-                      lineHeight: 1.3, whiteSpace: "nowrap",
+                      color: isActive ? "#006400" : isLocked ? "#aaaaaa" : "#101b37",
+                      lineHeight: 1.3,
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                     }}>
-                      Unit {index + 1}
+                      {unit.title || `Unit ${index + 1}`}
                     </p>
                     <p style={{ fontSize: "11px", color: "#b0b0b0", marginTop: "2px" }}>
                       {unit.estimatedReadMinutes} min

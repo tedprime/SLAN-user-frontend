@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import DashboardSidebar from "./components/DashboardSidebar";
 import DashboardHeader from "./components/DashboardHeader";
 import Overview from "./components/Overview";
@@ -109,6 +109,13 @@ export default function UserDashboard() {
     console.log("Module clicked:", module.id);
   };
 
+  const handleModulesLoaded = useCallback((trackId: number, mods: ModuleSummary[]) => {
+    setTrackModules((prev) => {
+      if (prev[trackId] === mods) return prev; // no-op if reference unchanged
+      return { ...prev, [trackId]: mods };
+    });
+  }, []);
+
   return (
     <div style={{
       display: "flex", height: "100vh", width: "100vw",
@@ -154,10 +161,7 @@ export default function UserDashboard() {
               onBack={handleBackToCourse}
               onModuleClick={handleModuleClick}
               onPlayClick={handlePlayClick}
-              onModulesLoaded={(mods) => {
-                const trackId = viewState.type === "track" ? viewState.track?.id : undefined;
-                if (trackId) setTrackModules((prev) => ({ ...prev, [trackId]: mods }));
-              }}
+              onModulesLoaded={(mods) => handleModulesLoaded(viewState.track!.id, mods)}
             />
           )}
 
