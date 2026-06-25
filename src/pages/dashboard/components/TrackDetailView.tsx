@@ -108,10 +108,10 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
   return (
     <div style={{
       flex: 1, display: "flex", flexDirection: "column",
-      overflow: "hidden", backgroundColor: "#fafafa", minHeight: 0,
+      overflow: "hidden", backgroundColor: "#fafafa", minHeight: 0, height: 0,
     }}>
       {/* Breadcrumb */}
-      <div style={{ padding: "16px 32px", borderBottom: "1px solid #e0e0e0", backgroundColor: "#ffffff" }}>
+      <div style={{ padding: "16px 20px", borderBottom: "1px solid #e0e0e0", backgroundColor: "#ffffff" }}>
         <div className="flex items-center gap-2" style={{ fontSize: "14px" }}>
           <button
             onClick={onBack}
@@ -132,7 +132,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
       <div style={{
         borderBottom: "1px solid #e0e0e0",
         background: `linear-gradient(135deg, ${trackColor.bg} 0%, rgba(255,255,255,0.5) 100%)`,
-        padding: "32px",
+        padding: "24px 20px",
         flexShrink: 0,
       }}>
         <div style={{ maxWidth: "1200px" }}>
@@ -196,7 +196,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
       </div>
 
       {/* Modules Section */}
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "32px", minHeight: 0 }}>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "32px", minHeight: 0, height: 0 }}>
         <div style={{ maxWidth: "1200px" }}>
           <h2 style={{
             fontSize: "20px", fontWeight: 800, color: "#101b37",

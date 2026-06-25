@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ChevronRight, ChevronLeft, ChevronRight as ChevronSep, Clock, BookOpen, CheckCircle, Check, Lock } from "lucide-react";
+import { ChevronRight, ChevronLeft, ChevronRight as ChevronSep, Clock, BookOpen, CheckCircle, Check, Lock, List, X } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import Progress from "../../../components/ui/Progress";
 import { courseService } from "../../../services/courseService";
@@ -19,19 +19,43 @@ interface UnitViewerProps {
   onNextModule?: (module: ModuleSummary) => void;
 }
 
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function unwrap<T>(res: any): T {
   if (res && typeof res === "object" && "data" in res) return res.data as T;
   return res as T;
 }
 
+const MOBILE_BP = 768;
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BP);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BP - 1}px)`);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
 export default function UnitViewer({ module, allModules, courseName, trackName, onBack, onBackToTrack, onProgressChange, onNextModule }: UnitViewerProps) {
+  const isMobile = useIsMobile();
+
   const [units, setUnits] = useState<UnitSummary[]>([]);
   const [activeUnit, setActiveUnit] = useState<UnitContent | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  // sidebarOpen: on desktop default open, on mobile default closed.
+  // We store the user's explicit choice per breakpoint so rotation resets it.
+  const [desktopOpen, setDesktopOpen] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const sidebarOpen = isMobile ? mobileOpen : desktopOpen;
+  const setSidebarOpen = (next: boolean | ((prev: boolean) => boolean)) => {
+    if (isMobile) setMobileOpen((p) => typeof next === "function" ? next(p) : next);
+    else setDesktopOpen((p) => typeof next === "function" ? next(p) : next);
+  };
 
   const [completedUnitIds, setCompletedUnitIds] = useState<Set<number>>(new Set());
   const [moduleProgressPercent, setModuleProgressPercent] = useState(0);
@@ -108,21 +132,17 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
   const handleMarkComplete = async () => {
     if (!selectedUnitId || marking || isCurrentUnitCompleted) return;
     setMarking(true);
-
     setCompletedUnitIds((prev) => new Set(prev).add(selectedUnitId));
     try {
       await progressService.markUnitComplete(selectedUnitId);
-    
       try {
         const raw = await progressService.getModuleProgress(module.id);
         const progress = unwrap<{ completedUnitIds?: number[]; progressPercent?: number }>(raw);
         const fromApi = new Set<number>(progress.completedUnitIds ?? []);
-      
         if (fromApi.size > 0) {
           setCompletedUnitIds(fromApi);
           setModuleProgressPercent(progress.progressPercent ?? 0);
         } else {
-          // API didn't return ids — just update the percent if available
           if ((progress.progressPercent ?? 0) > 0) {
             setModuleProgressPercent(progress.progressPercent ?? 0);
           }
@@ -130,7 +150,6 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
       } catch { /* keep optimistic state */ }
       onProgressChange?.();
     } catch {
-      // Roll back optimistic update only on actual POST failure
       setCompletedUnitIds((prev) => {
         const next = new Set(prev);
         next.delete(selectedUnitId);
@@ -139,6 +158,12 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
     } finally {
       setMarking(false);
     }
+  };
+
+  // When a unit is selected on mobile, close the drawer so the content is visible.
+  const handleUnitSelect = (unitId: number) => {
+    setSelectedUnitId(unitId);
+    if (isMobile) setSidebarOpen(false);
   };
 
   if (loading) {
@@ -163,130 +188,230 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
     );
   }
 
-  return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, backgroundColor: "#fafafa" }}>
-      {/* Breadcrumb: course > track > module */}
+  // ─── Sidebar panel (shared between drawer and inline) ───────────────────────
+  const sidebarPanel = (
+    <div style={{
+      display: "flex", flexDirection: "column",
+      width: isMobile ? "min(300px, 85vw)" : "300px",
+      height: "100%",
+      backgroundColor: "#ffffff",
+    }}>
+      {/* Sidebar header */}
       <div style={{
-        padding: "14px 24px", borderBottom: "1px solid #e0e0e0",
-        backgroundColor: "#ffffff", display: "flex", alignItems: "center",
-        gap: "6px", fontSize: "13px", flexShrink: 0,
+        padding: "20px 24px", borderBottom: "1px solid #e0e0e0",
+        flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
+        <h3 style={{
+          fontSize: "15px", fontWeight: 700, color: "#101b37",
+          fontFamily: "var(--font-headline)", lineHeight: 1.3, margin: 0,
+        }}>
+          Units
+        </h3>
+        {/* Close button — shown on mobile inside the drawer */}
+        {isMobile && (
+          <button
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close unit list"
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              padding: "4px", borderRadius: "6px", color: "#888888",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <X size={18} />
+          </button>
+        )}
+      </div>
+
+      {/* Unit list */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "8px", minHeight: 0, height: 0 }}>
+        {units.map((unit, index) => {
+          const isActive = unit.id === selectedUnitId;
+          const isCompleted = completedUnitIds.has(unit.id);
+          const isLocked = index > 0 && !completedUnitIds.has(units[index - 1].id);
+
+          return (
+            <button
+              key={unit.id}
+              onClick={() => { if (!isLocked) handleUnitSelect(unit.id); }}
+              title={isLocked ? "Complete the previous unit first" : unit.title}
+              disabled={isLocked}
+              className="w-full text-left"
+              style={{
+                padding: "10px 16px", borderRadius: "8px", marginBottom: "4px",
+                backgroundColor: isActive ? "rgba(0,100,0,0.06)" : "transparent",
+                border: "none",
+                cursor: isLocked ? "not-allowed" : "pointer",
+                transition: "all 0.15s",
+                display: "flex", alignItems: "center", gap: "10px",
+                opacity: isLocked ? 0.55 : 1,
+              }}
+              onMouseEnter={(e) => { if (!isActive && !isLocked) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.03)"; }}
+              onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+            >
+              <span style={{
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                height: "24px", width: "24px", borderRadius: "50%", flexShrink: 0,
+                backgroundColor: isCompleted ? "#10b981" : isActive ? "#006400" : isLocked ? "#e8e8e8" : "#f5f5f5",
+                color: isCompleted || isActive ? "#ffffff" : "#888888",
+                fontSize: "11px", fontWeight: 700,
+              }}>
+                {isCompleted ? <CheckCircle size={12} /> : isLocked ? <Lock size={10} /> : index + 1}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{
+                  fontSize: "13px", fontWeight: isActive ? 700 : 600,
+                  color: isActive ? "#006400" : isLocked ? "#aaaaaa" : "#101b37",
+                  lineHeight: 1.3,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
+                  {unit.title || `Unit ${index + 1}`}
+                </p>
+                <p style={{ fontSize: "11px", color: "#b0b0b0", marginTop: "2px" }}>
+                  {unit.estimatedReadMinutes} min
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Module progress */}
+      <div style={{ padding: "16px 24px", borderTop: "1px solid #e0e0e0", flexShrink: 0 }}>
+        <div className="flex items-center justify-between" style={{ marginBottom: "8px" }}>
+          <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Module progress</span>
+          <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{moduleProgressPercent}%</span>
+        </div>
+        <Progress value={moduleProgressPercent} color="#006400" />
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, height: 0, backgroundColor: "#fafafa" }}>
+
+      {/* Breadcrumb bar */}
+      <div style={{
+        padding: isMobile ? "12px 16px" : "14px 24px",
+        borderBottom: "1px solid #e0e0e0",
+        backgroundColor: "#ffffff",
+        display: "flex", alignItems: "center", gap: "6px",
+        fontSize: "13px", flexShrink: 0,
+        // On mobile the breadcrumb truncates; the Units toggle sits on the right.
+        minWidth: 0,
+      }}>
+        {/* Units toggle button — always visible, opens/closes the sidebar */}
         <button
-          onClick={onBack}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "#888888", fontSize: "13px", padding: 0 }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
+          onClick={() => setSidebarOpen((v) => !v)}
+          aria-label={sidebarOpen ? "Hide unit list" : "Show unit list"}
+          title={sidebarOpen ? "Hide unit list" : "Show unit list"}
+          style={{
+            background: sidebarOpen ? "rgba(0,100,0,0.08)" : "none",
+            border: "1px solid",
+            borderColor: sidebarOpen ? "#006400" : "#e0e0e0",
+            borderRadius: "7px",
+            cursor: "pointer",
+            padding: "5px 7px",
+            display: "flex", alignItems: "center",
+            color: sidebarOpen ? "#006400" : "#888888",
+            flexShrink: 0,
+            transition: "all 0.15s",
+          }}
         >
-          {courseName}
+          <List size={15} />
         </button>
-        <ChevronSep size={14} style={{ color: "#d1d1d1", flexShrink: 0 }} />
-        <button
-          onClick={onBackToTrack ?? onBack}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "#888888", fontSize: "13px", padding: 0 }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
-        >
-          {trackName}
-        </button>
-        <ChevronSep size={14} style={{ color: "#d1d1d1", flexShrink: 0 }} />
-        <span style={{ fontWeight: 600, color: "#101b37" }}>
-          {module.title}
-        </span>
+
+        {/* Breadcrumb — truncates gracefully on mobile */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0, overflow: "hidden" }}>
+          <button
+            onClick={onBack}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#888888", fontSize: "13px", padding: 0, flexShrink: 0 }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
+          >
+            {courseName}
+          </button>
+          <ChevronSep size={14} style={{ color: "#d1d1d1", flexShrink: 0 }} />
+          <button
+            onClick={onBackToTrack ?? onBack}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#888888", fontSize: "13px", padding: 0, flexShrink: isMobile ? 1 : 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
+          >
+            {trackName}
+          </button>
+          <ChevronSep size={14} style={{ color: "#d1d1d1", flexShrink: 0 }} />
+          <span style={{ fontWeight: 600, color: "#101b37", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
+            {module.title}
+          </span>
+        </div>
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
-        {/* Left Sidebar */}
-        <div style={{
-          width: "300px", borderRight: "1px solid #e0e0e0",
-          backgroundColor: "#ffffff", display: "flex",
-          flexDirection: "column", flexShrink: 0, minHeight: 0,
-        }}>
-          {/* Sidebar Header */}
-          <div style={{ padding: "20px 24px", borderBottom: "1px solid #e0e0e0", flexShrink: 0 }}>  
-            <h3 style={{
-              fontSize: "15px", fontWeight: 700, color: "#101b37",
-              fontFamily: "var(--font-headline)", lineHeight: 1.3,
+      <div style={{ flex: 1, display: "flex", minHeight: 0, height: 0, overflow: "hidden", position: "relative" }}>
+
+        {/* ── MOBILE: sidebar as a slide-over drawer ── */}
+        {isMobile && (
+          <>
+            {/* Backdrop */}
+            {sidebarOpen && (
+              <div
+                onClick={() => setSidebarOpen(false)}
+                style={{
+                  position: "absolute", inset: 0,
+                  backgroundColor: "rgba(0,0,0,0.35)",
+                  zIndex: 30,
+                  touchAction: "none",
+                }}
+              />
+            )}
+            {/* Drawer */}
+            <div style={{
+              position: "absolute", top: 0, left: 0, bottom: 0,
+              zIndex: 40,
+              transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+              transition: "transform 0.25s ease",
+              borderRight: "1px solid #e0e0e0",
+              boxShadow: sidebarOpen ? "4px 0 20px rgba(0,0,0,0.10)" : "none",
+              overflow: "hidden",
             }}>
-              Units
-            </h3>
-          </div>
-
-          {/* Unit List */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
-            {units.map((unit, index) => {
-              const isActive = unit.id === selectedUnitId;
-              const isCompleted = completedUnitIds.has(unit.id);
-              // A unit is locked if the previous unit is not completed (and this isn't the first unit)
-              const isLocked = index > 0 && !completedUnitIds.has(units[index - 1].id);
-
-              return (
-                <button
-                  key={unit.id}
-                  onClick={() => { if (!isLocked) setSelectedUnitId(unit.id); }}
-                  title={isLocked ? "Complete the previous unit first" : unit.title}
-                  disabled={isLocked}
-                  className="w-full text-left"
-                  style={{
-                    padding: "10px 16px", borderRadius: "8px", marginBottom: "4px",
-                    backgroundColor: isActive ? "rgba(0,100,0,0.06)" : "transparent",
-                    border: "none",
-                    cursor: isLocked ? "not-allowed" : "pointer",
-                    transition: "all 0.15s",
-                    display: "flex", alignItems: "center", gap: "10px",
-                    opacity: isLocked ? 0.55 : 1,
-                  }}
-                  onMouseEnter={(e) => { if (!isActive && !isLocked) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.03)"; }}
-                  onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
-                >
-                  <span style={{
-                    display: "inline-flex", alignItems: "center", justifyContent: "center",
-                    height: "24px", width: "24px", borderRadius: "50%", flexShrink: 0,
-                    backgroundColor: isCompleted ? "#10b981" : isActive ? "#006400" : isLocked ? "#e8e8e8" : "#f5f5f5",
-                    color: isCompleted || isActive ? "#ffffff" : "#888888",
-                    fontSize: "11px", fontWeight: 700,
-                  }}>
-                    {isCompleted ? <CheckCircle size={12} /> : isLocked ? <Lock size={10} /> : index + 1}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{
-                      fontSize: "13px", fontWeight: isActive ? 700 : 600,
-                      color: isActive ? "#006400" : isLocked ? "#aaaaaa" : "#101b37",
-                      lineHeight: 1.3,
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    }}>
-                      {unit.title || `Unit ${index + 1}`}
-                    </p>
-                    <p style={{ fontSize: "11px", color: "#b0b0b0", marginTop: "2px" }}>
-                      {unit.estimatedReadMinutes} min
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Module Progress */}
-          <div style={{ padding: "16px 24px", borderTop: "1px solid #e0e0e0", flexShrink: 0 }}>
-            <div className="flex items-center justify-between" style={{ marginBottom: "8px" }}>
-              <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Module progress</span>
-              <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{moduleProgressPercent}%</span>
+              {sidebarPanel}
             </div>
-            <Progress value={moduleProgressPercent} color="#006400" />
+          </>
+        )}
+
+        {/* ── DESKTOP: sidebar inline ── */}
+        {!isMobile && sidebarOpen && (
+          <div style={{
+            borderRight: "1px solid #e0e0e0",
+            flexShrink: 0,
+            overflow: "hidden",
+            display: "flex",
+            // Animate width open/closed
+            width: sidebarOpen ? "300px" : "0px",
+            transition: "width 0.25s ease",
+          }}>
+            {sidebarPanel}
           </div>
-        </div>
+        )}
 
         {/* Right Content Area */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, height: 0 }}>
           {activeUnit ? (
             <>
-              <div style={{ padding: "24px 32px", borderBottom: "1px solid #e0e0e0", backgroundColor: "#ffffff", flexShrink: 0 }}>
+              {/* Unit header */}
+              <div style={{
+                padding: isMobile ? "16px" : "24px 32px",
+                borderBottom: "1px solid #e0e0e0",
+                backgroundColor: "#ffffff", flexShrink: 0,
+              }}>
                 <div style={{ maxWidth: "800px" }}>
                   <p style={{ fontSize: "13px", color: "#888888", marginBottom: "8px" }}>
                     Unit {currentIndex + 1} of {units.length}
                   </p>
                   <h1 style={{
-                    fontSize: "24px", fontWeight: 800, color: "#101b37",
+                    fontSize: isMobile ? "20px" : "24px",
+                    fontWeight: 800, color: "#101b37",
                     fontFamily: "var(--font-headline)", marginBottom: "8px", lineHeight: 1.2,
                   }}>
                     {activeUnit.title}
@@ -303,7 +428,12 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
                 </div>
               </div>
 
-              <div style={{ flex: 1, overflowY: "auto", padding: "32px", minHeight: 0 }}>
+              {/* Unit content (scrollable) */}
+              <div style={{
+                flex: 1, overflowY: "auto",
+                padding: isMobile ? "20px 16px" : "32px",
+                minHeight: 0, height: 0,
+              }}>
                 <div style={{ maxWidth: "800px" }}>
                   {activeUnit.content ? (
                     <div
@@ -350,11 +480,19 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
                 </div>
               </div>
 
-              <div style={{ padding: "16px 32px", borderTop: "1px solid #e0e0e0", backgroundColor: "#ffffff", flexShrink: 0 }}>
-                <div className="flex items-center justify-between" style={{ maxWidth: "800px" }}>
+              {/* Bottom nav */}
+              <div style={{
+                padding: isMobile ? "12px 16px" : "16px 32px",
+                borderTop: "1px solid #e0e0e0",
+                backgroundColor: "#ffffff", flexShrink: 0,
+              }}>
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  gap: "8px", maxWidth: "800px",
+                }}>
                   <Button variant="outlined" size="sm" onClick={goPrevious} disabled={!canGoPrevious}>
                     <ChevronLeft size={14} />
-                    Previous
+                    {!isMobile && "Previous"}
                   </Button>
 
                   <Button
@@ -364,14 +502,14 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
                     disabled={isCurrentUnitCompleted || marking}
                   >
                     {isCurrentUnitCompleted ? (
-                      <><CheckCircle size={14} />Completed</>
+                      <><CheckCircle size={14} />{!isMobile && "Completed"}</>
                     ) : (
-                      <><Check size={14} />{marking ? "Saving..." : "Mark complete"}</>
+                      <><Check size={14} />{marking ? "Saving…" : isMobile ? "Complete" : "Mark complete"}</>
                     )}
                   </Button>
 
                   <Button variant="primary" size="sm" onClick={goNext} disabled={!canGoNext}>
-                    {isLastUnitInModule && nextModule ? "Next Module" : "Next"}
+                    {isLastUnitInModule && nextModule ? (isMobile ? "Next mod." : "Next Module") : (isMobile ? "Next" : "Next")}
                     <ChevronRight size={14} />
                   </Button>
                 </div>

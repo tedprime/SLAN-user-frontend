@@ -234,7 +234,9 @@ export default function DashboardSidebar({
 
   const sidebarStyle: React.CSSProperties = isMobile
     ? {
-        position: "fixed", top: 0, left: 0, height: "100vh", width: "280px",
+        position: "fixed", top: 0, left: 0,
+        height: "100dvh",
+        width: "280px",
         backgroundColor: "#ffffff", borderRight: "1px solid #e8e8e8",
         display: "flex", flexDirection: "column", zIndex: 50,
         transform: isOpen ? "translateX(0)" : "translateX(-100%)",
@@ -245,7 +247,7 @@ export default function DashboardSidebar({
         backgroundColor: "#ffffff",
         width: isOpen ? "260px" : "60px",
         borderRight: "1px solid #e8e8e8",
-        height: "100vh", overflow: "hidden",
+        height: "100dvh", overflow: "hidden",
         transition: "width 0.25s ease",
         flexShrink: 0, display: "flex", flexDirection: "column", zIndex: 20,
       };
@@ -278,7 +280,7 @@ export default function DashboardSidebar({
         </button>
       </div>
 
-      <nav style={{ flex: 1, overflowY: isOpen ? "auto" : "hidden", overflowX: "hidden", padding: "12px 0 8px" }}>
+      <nav style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "12px 0 8px", minHeight: 0, height: 0 }}>
         {/* Overview */}
         <button
           onClick={() => handleNavChange("overview")}
@@ -590,6 +592,9 @@ export default function DashboardSidebar({
             style={{
               position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.35)",
               zIndex: 40, transition: "opacity 0.25s ease",
+              // Prevent iOS from scrolling the page behind the overlay
+              touchAction: "none",
+              WebkitOverflowScrolling: "auto" as React.CSSProperties["WebkitOverflowScrolling"],
             }}
           />
         )}

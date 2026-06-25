@@ -54,7 +54,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
   const getTrackColor = (index: number) => TRACK_COLORS[index % TRACK_COLORS.length];
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "#fafafa", minHeight: 0 }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "#fafafa", minHeight: 0, height: 0 }}>
       {/* Header */}
       <div style={{ padding: "32px 32px 16px 32px" }}>
         <span
@@ -142,7 +142,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
       </div>
 
       {/* Track Cards Grid */}
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "32px", minHeight: 0 }}>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "32px", minHeight: 0, height: 0 }}>
         {tracks.length === 0 ? (
           <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
             <BookOpen size={48} style={{ color: "#d1d1d1", marginBottom: "16px" }} />
@@ -157,7 +157,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(2, 1fr)",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
               gap: "24px",
             }}
           >
