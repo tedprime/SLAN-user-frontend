@@ -49,6 +49,15 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
       result.sort((a: CourseTrack, b: CourseTrack) => b.id - a.id);
     }
 
+    // Foundational Track always stays first, regardless of sort or filter order
+    const foundationalIndex = result.findIndex((t) =>
+      t.title.toLowerCase().includes("foundational")
+    );
+    if (foundationalIndex > 0) {
+      const [foundational] = result.splice(foundationalIndex, 1);
+      result.unshift(foundational);
+    }
+
     return result;
   }, [course.tracks, selectedLevel, sortBy]);
 
