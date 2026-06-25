@@ -10,7 +10,6 @@ import {
   DropdownMenuItem,
 } from "../../../components/ui/DropdownMenu";
 
-const LEVEL_FILTERS = ["All Levels", "Beginner", "Intermediate", "Advanced"];
 const SORT_OPTIONS = ["Progress", "Title (A-Z)", "Recently Added"];
 
 const TRACK_COLORS = [
@@ -29,19 +28,10 @@ interface CourseTracksViewProps {
 }
 
 export default function CourseTracksView({ course, onTrackClick }: CourseTracksViewProps) {
-  const [selectedLevel, setSelectedLevel] = useState("All Levels");
   const [sortBy, setSortBy] = useState("Progress");
 
   const tracks = useMemo(() => {
-    let result = [...course.tracks];
-
-    if (selectedLevel !== "All Levels") {
-      const levels = ["Beginner", "Intermediate", "Advanced"];
-      result = result.filter((track: CourseTrack, i: number) => {
-        const trackLevel = (track as CourseTrack & { level?: string }).level;
-        return trackLevel ? trackLevel === selectedLevel : levels[i % 3] === selectedLevel;
-      });
-    }
+    const result = [...course.tracks];
 
     if (sortBy === "Title (A-Z)") {
       result.sort((a: CourseTrack, b: CourseTrack) => a.title.localeCompare(b.title));
@@ -59,12 +49,12 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
     }
 
     return result;
-  }, [course.tracks, selectedLevel, sortBy]);
+  }, [course.tracks, sortBy]);
 
   const getTrackColor = (index: number) => TRACK_COLORS[index % TRACK_COLORS.length];
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: "#fafafa" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "#fafafa", minHeight: 0 }}>
       {/* Header */}
       <div style={{ padding: "32px 32px 16px 32px" }}>
         <span
@@ -111,7 +101,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
           backgroundColor: "#ffffff",
         }}
       >
-        <div className="flex items-center gap-3">
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <DropdownMenu>
             <DropdownMenuTrigger>
               <Button variant="outlined" size="sm">
@@ -122,29 +112,6 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
               <DropdownMenuItem>All Tracks</DropdownMenuItem>
               {course.tracks.map((track: CourseTrack) => (
                 <DropdownMenuItem key={track.id}>{track.title}</DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Button variant="outlined" size="sm">
-                {selectedLevel} <ChevronDown size={14} style={{ color: "#888888" }} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent style={{ minWidth: "160px" }}>
-              {LEVEL_FILTERS.map((level: string) => (
-                <DropdownMenuItem
-                  key={level}
-                  onClick={() => setSelectedLevel(level)}
-                  style={{
-                    color: selectedLevel === level ? "#006400" : "#444444",
-                    backgroundColor: selectedLevel === level ? "rgba(0,100,0,0.06)" : "transparent",
-                    fontWeight: selectedLevel === level ? 700 : 500,
-                  }}
-                >
-                  {level}
-                </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -175,12 +142,9 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
       </div>
 
       {/* Track Cards Grid */}
-      <div className="flex-1 overflow-y-auto" style={{ padding: "32px" }}>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "32px", minHeight: 0 }}>
         {tracks.length === 0 ? (
-          <div
-            className="flex flex-col items-center justify-center"
-            style={{ height: "100%", textAlign: "center" }}
-          >
+          <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
             <BookOpen size={48} style={{ color: "#d1d1d1", marginBottom: "16px" }} />
             <p style={{ fontSize: "15px", fontWeight: 600, color: "#888888" }}>
               No tracks match your filters
@@ -191,10 +155,10 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
           </div>
         ) : (
           <div
-            className="grid gap-6"
             style={{
-              gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))",
-              maxWidth: "1200px",
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: "24px",
             }}
           >
             {tracks.map((track: CourseTrack, index: number) => {
@@ -230,7 +194,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                     e.currentTarget.style.transform = "translateY(0)";
                   }}
                 >
-                  <div className="flex items-start justify-between" style={{ marginBottom: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "12px" }}>
                     <span
                       style={{
                         display: "inline-flex",
@@ -281,26 +245,23 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                     {track.shortDescription || "Explore this track to build your skills."}
                   </p>
 
-                  <div
-                    className="flex items-center gap-4"
-                    style={{ fontSize: "12px", color: "#b0b0b0", marginBottom: "20px" }}
-                  >
-                    <span className="flex items-center gap-1.5">
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px", fontSize: "12px", color: "#b0b0b0", marginBottom: "20px" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <Layers size={13} />
                       <span>{moduleCount} Modules</span>
                     </span>
-                    <span className="flex items-center gap-1.5">
+                    <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <BookOpen size={13} />
                       <span>{unitCount} Units</span>
                     </span>
-                    <span className="flex items-center gap-1.5">
+                    <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <Clock size={13} />
                       <span>{estimatedHours}h</span>
                     </span>
                   </div>
 
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    <div className="flex items-center justify-between">
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>
                         Progress
                       </span>
