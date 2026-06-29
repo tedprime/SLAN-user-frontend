@@ -94,7 +94,7 @@ export default function Overview({ onExploreClick }: { onExploreClick?: () => vo
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: "#fafafa", minHeight: 0, height: 0 }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", backgroundColor: "#fafafa", minHeight: 0 }}>
       {/* Header */}
       <div style={{ padding: "32px 32px 24px 32px", borderBottom: "1px solid #e0e0e0", backgroundColor: "#ffffff" }}>
         <h1
@@ -115,7 +115,7 @@ export default function Overview({ onExploreClick }: { onExploreClick?: () => vo
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto" style={{ padding: "32px", minHeight: 0, height: 0 }}>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "32px", minHeight: 0, scrollBehavior: "smooth" }}>
         <div style={{ maxWidth: "1200px" }}>
           {/* Stats Grid */}
           <div

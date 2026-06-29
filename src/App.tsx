@@ -13,7 +13,16 @@ import OtpPage from "./pages/OtpPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import UserDashboard from "./pages/dashboard/UserDashboard";
 import GoogleCompletePage from "./pages/GoogleCompletePage";
-import { setTokens, setUser } from "./services/tokenService";
+import { setTokens, setUser, getAccessToken, getRefreshToken } from "./services/tokenService";
+
+function requireAuth() {
+  const hasToken = getAccessToken() || getRefreshToken();
+  if (!hasToken) {
+    window.location.replace("/login");
+    return false;
+  }
+  return true;
+}
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -65,7 +74,7 @@ export default function App() {
     case "/verify-otp":           return <OtpPage />;
     case "/forgot-password":      return <ForgotPasswordPage />;
     case "/reset-password":       return <ForgotPasswordPage />;
-    case "/dashboard":            return <UserDashboard />;
+    case "/dashboard":            return requireAuth() ? <UserDashboard /> : null;
     case "/auth/google/complete": return <GoogleCompletePage />;
     default:
       return (

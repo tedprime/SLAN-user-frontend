@@ -119,13 +119,11 @@ export default function UserDashboard() {
   return (
     <div style={{
       display: "flex",
-      // 100dvh accounts for mobile browser chrome (address bar) collapsing/expanding.
-      // Falls back to 100vh on browsers that don't support dvh yet.
       height: "100dvh",
-      // Fallback for older browsers
       minHeight: "-webkit-fill-available",
       width: "100vw",
-      overflow: "hidden", backgroundColor: "#fafafa",
+      overflow: "hidden",
+      backgroundColor: "#fafafa",
     }}>
       <DashboardSidebar
         activeNav={activeNav}
@@ -144,13 +142,10 @@ export default function UserDashboard() {
           onMenuClick={handleToggleSidebar}
         />
         {/*
-          flex: 1 + minHeight: 0 lets this grow to fill remaining space.
-          overflow: hidden here — each child view manages its own internal scroll.
-          height: 0 is the key trick on mobile: without an explicit height, some
-          mobile browsers won't constrain the flex child, so inner overflowY: auto
-          containers expand instead of scroll.
+          flex: 1 + min-height: 0 lets this grow to fill remaining space without
+          overflowing its parent. Each child view manages its own internal scroll.
         */}
-        <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0, height: 0 }}>
+        <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
           {viewState.type === "overview" && (
             <Overview
               onExploreClick={() => {

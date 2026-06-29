@@ -15,7 +15,7 @@ import {
 import { authService } from "../../../services/authService";
 import { courseService } from "../../../services/courseService";
 import { progressService } from "../../../services/progressService";
-import { getRefreshToken, clearTokens } from "../../../services/tokenService";
+import { getRefreshToken, clearTokens, getAccessToken } from "../../../services/tokenService";
 import type { Course, ModuleSummary, UnitSummary } from "../../../services/types/course.types";
 
 interface DashboardSidebarProps {
@@ -151,6 +151,8 @@ export default function DashboardSidebar({
   }, [courses]);
 
   const refreshCompletionForTrack = useCallback(async (trackId: number) => {
+    // Don't attempt progress fetch if there's no auth token — avoid 401 flood
+    if (!getAccessToken() && !getRefreshToken()) return;
     try {
       const raw = await progressService.getTrackCompletedUnits(trackId);
       // Unwrap envelope and handle both array and wrapped forms
