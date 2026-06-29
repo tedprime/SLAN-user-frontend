@@ -1,10 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
-import { ChevronRight, ChevronLeft, ChevronRight as ChevronSep, Clock, BookOpen, CheckCircle, Check, Lock, List, X } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronLeft,
+  ChevronRight as ChevronSep,
+  Clock,
+  BookOpen,
+  CheckCircle,
+  Check,
+  Lock,
+  X,
+} from "lucide-react";
 import Button from "../../../components/ui/Button";
 import Progress from "../../../components/ui/Progress";
 import { courseService } from "../../../services/courseService";
 import { progressService } from "../../../services/progressService";
-import type { ModuleSummary, UnitSummary, UnitContent } from "../../../services/types/course.types";
+import type {
+  ModuleSummary,
+  UnitSummary,
+  UnitContent,
+} from "../../../services/types/course.types";
 
 interface UnitViewerProps {
   courseId: number;
@@ -38,7 +52,16 @@ function useIsMobile() {
   return isMobile;
 }
 
-export default function UnitViewer({ module, allModules, courseName, trackName, onBack, onBackToTrack, onProgressChange, onNextModule }: UnitViewerProps) {
+export default function UnitViewer({
+  module,
+  allModules,
+  courseName,
+  trackName,
+  onBack,
+  onBackToTrack,
+  onProgressChange,
+  onNextModule,
+}: UnitViewerProps) {
   const isMobile = useIsMobile();
 
   const [units, setUnits] = useState<UnitSummary[]>([]);
@@ -53,21 +76,29 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
   const [mobileOpen, setMobileOpen] = useState(false);
   const sidebarOpen = isMobile ? mobileOpen : desktopOpen;
   const setSidebarOpen = (next: boolean | ((prev: boolean) => boolean)) => {
-    if (isMobile) setMobileOpen((p) => typeof next === "function" ? next(p) : next);
-    else setDesktopOpen((p) => typeof next === "function" ? next(p) : next);
+    if (isMobile)
+      setMobileOpen((p) => (typeof next === "function" ? next(p) : next));
+    else setDesktopOpen((p) => (typeof next === "function" ? next(p) : next));
   };
 
-  const [completedUnitIds, setCompletedUnitIds] = useState<Set<number>>(new Set());
+  const [completedUnitIds, setCompletedUnitIds] = useState<Set<number>>(
+    new Set(),
+  );
   const [moduleProgressPercent, setModuleProgressPercent] = useState(0);
   const [marking, setMarking] = useState(false);
 
   const refreshModuleProgress = useCallback(async () => {
     try {
       const raw = await progressService.getModuleProgress(module.id);
-      const progress = unwrap<{ completedUnitIds?: number[]; progressPercent?: number }>(raw);
+      const progress = unwrap<{
+        completedUnitIds?: number[];
+        progressPercent?: number;
+      }>(raw);
       setCompletedUnitIds(new Set(progress.completedUnitIds ?? []));
       setModuleProgressPercent(progress.progressPercent ?? 0);
-    } catch { /* non-critical */ }
+    } catch {
+      /* non-critical */
+    }
   }, [module.id]);
 
   useEffect(() => {
@@ -83,7 +114,9 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
         const unitList = Array.isArray(res?.units) ? res.units : [];
         if (!cancelled) {
           setUnits(unitList);
-          setSelectedUnitId((prev) => (prev === null && unitList.length > 0 ? unitList[0].id : prev));
+          setSelectedUnitId((prev) =>
+            prev === null && unitList.length > 0 ? unitList[0].id : prev,
+          );
         }
       } catch {
         if (!cancelled) setError(true);
@@ -91,7 +124,9 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [module.id, refreshModuleProgress]);
 
   useEffect(() => {
@@ -107,20 +142,31 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
         if (!cancelled) setActiveUnit(null);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [selectedUnitId, units]);
 
   const currentIndex = units.findIndex((u) => u.id === selectedUnitId);
   const canGoPrevious = currentIndex > 0;
   const isLastUnitInModule = currentIndex === units.length - 1;
-  const currentModuleIndex = allModules ? allModules.findIndex((m) => m.id === module.id) : -1;
-  const nextModule = allModules && currentModuleIndex >= 0 && currentModuleIndex < allModules.length - 1
-    ? allModules[currentModuleIndex + 1]
-    : null;
-  const isCurrentUnitCompleted = selectedUnitId !== null && completedUnitIds.has(selectedUnitId);
-  const canGoNext = isCurrentUnitCompleted && (!isLastUnitInModule || !!nextModule);
+  const currentModuleIndex = allModules
+    ? allModules.findIndex((m) => m.id === module.id)
+    : -1;
+  const nextModule =
+    allModules &&
+    currentModuleIndex >= 0 &&
+    currentModuleIndex < allModules.length - 1
+      ? allModules[currentModuleIndex + 1]
+      : null;
+  const isCurrentUnitCompleted =
+    selectedUnitId !== null && completedUnitIds.has(selectedUnitId);
+  const canGoNext =
+    isCurrentUnitCompleted && (!isLastUnitInModule || !!nextModule);
 
-  const goPrevious = () => { if (canGoPrevious) setSelectedUnitId(units[currentIndex - 1].id); };
+  const goPrevious = () => {
+    if (canGoPrevious) setSelectedUnitId(units[currentIndex - 1].id);
+  };
   const goNext = () => {
     if (!isLastUnitInModule) {
       setSelectedUnitId(units[currentIndex + 1].id);
@@ -137,7 +183,10 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
       await progressService.markUnitComplete(selectedUnitId);
       try {
         const raw = await progressService.getModuleProgress(module.id);
-        const progress = unwrap<{ completedUnitIds?: number[]; progressPercent?: number }>(raw);
+        const progress = unwrap<{
+          completedUnitIds?: number[];
+          progressPercent?: number;
+        }>(raw);
         const fromApi = new Set<number>(progress.completedUnitIds ?? []);
         if (fromApi.size > 0) {
           setCompletedUnitIds(fromApi);
@@ -147,7 +196,9 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
             setModuleProgressPercent(progress.progressPercent ?? 0);
           }
         }
-      } catch { /* keep optimistic state */ }
+      } catch {
+        /* keep optimistic state */
+      }
       onProgressChange?.();
     } catch {
       setCompletedUnitIds((prev) => {
@@ -168,9 +219,26 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
 
   if (loading) {
     return (
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#fafafa" }}>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#fafafa",
+        }}
+      >
         <div className="flex flex-col items-center gap-3">
-          <div style={{ width: "40px", height: "40px", border: "3px solid #e8e8e8", borderTopColor: "#006400", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+          <div
+            style={{
+              width: "40px",
+              height: "40px",
+              border: "3px solid #e8e8e8",
+              borderTopColor: "#006400",
+              borderRadius: "50%",
+              animation: "spin 1s linear infinite",
+            }}
+          />
           <p style={{ fontSize: "14px", color: "#888888" }}>Loading units...</p>
         </div>
       </div>
@@ -179,10 +247,33 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
 
   if (error) {
     return (
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#fafafa" }}>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#fafafa",
+        }}
+      >
         <div className="text-center">
-          <p style={{ fontSize: "16px", fontWeight: 600, color: "#d32f2f", marginBottom: "8px" }}>Failed to load units</p>
-          <Button variant="primary" size="sm" onClick={() => window.location.reload()}>Retry</Button>
+          <p
+            style={{
+              fontSize: "16px",
+              fontWeight: 600,
+              color: "#d32f2f",
+              marginBottom: "8px",
+            }}
+          >
+            Failed to load units
+          </p>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </Button>
         </div>
       </div>
     );
@@ -190,21 +281,36 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
 
   // ─── Sidebar panel (shared between drawer and inline) ───────────────────────
   const sidebarPanel = (
-    <div style={{
-      display: "flex", flexDirection: "column",
-      width: isMobile ? "min(300px, 85vw)" : "300px",
-      height: "100%",
-      backgroundColor: "#ffffff",
-    }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        width: isMobile ? "min(300px, 85vw)" : "300px",
+        height: "100%",
+        backgroundColor: "#ffffff",
+      }}
+    >
       {/* Sidebar header */}
-      <div style={{
-        padding: "20px 24px", borderBottom: "1px solid #e0e0e0",
-        flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
-      }}>
-        <h3 style={{
-          fontSize: "15px", fontWeight: 700, color: "#101b37",
-          fontFamily: "var(--font-headline)", lineHeight: 1.3, margin: 0,
-        }}>
+      <div
+        style={{
+          padding: "20px 24px",
+          borderBottom: "1px solid #e0e0e0",
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <h3
+          style={{
+            fontSize: "15px",
+            fontWeight: 700,
+            color: "#101b37",
+            fontFamily: "var(--font-headline)",
+            lineHeight: 1.3,
+            margin: 0,
+          }}
+        >
           Units
         </h3>
         {/* Close button — shown on mobile inside the drawer */}
@@ -213,9 +319,15 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
             onClick={() => setSidebarOpen(false)}
             aria-label="Close unit list"
             style={{
-              background: "none", border: "none", cursor: "pointer",
-              padding: "4px", borderRadius: "6px", color: "#888888",
-              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "4px",
+              borderRadius: "6px",
+              color: "#888888",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             <X size={18} />
@@ -224,50 +336,110 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
       </div>
 
       {/* Unit list */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "8px", minHeight: 0, height: 0 }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "8px",
+          minHeight: 0,
+          height: 0,
+        }}
+      >
         {units.map((unit, index) => {
           const isActive = unit.id === selectedUnitId;
           const isCompleted = completedUnitIds.has(unit.id);
-          const isLocked = index > 0 && !completedUnitIds.has(units[index - 1].id);
+          const isLocked =
+            index > 0 && !completedUnitIds.has(units[index - 1].id);
 
           return (
             <button
               key={unit.id}
-              onClick={() => { if (!isLocked) handleUnitSelect(unit.id); }}
+              onClick={() => {
+                if (!isLocked) handleUnitSelect(unit.id);
+              }}
               title={isLocked ? "Complete the previous unit first" : unit.title}
               disabled={isLocked}
               className="w-full text-left"
               style={{
-                padding: "10px 16px", borderRadius: "8px", marginBottom: "4px",
-                backgroundColor: isActive ? "rgba(0,100,0,0.06)" : "transparent",
+                padding: "10px 16px",
+                borderRadius: "8px",
+                marginBottom: "4px",
+                backgroundColor: isActive
+                  ? "rgba(0,100,0,0.06)"
+                  : "transparent",
                 border: "none",
                 cursor: isLocked ? "not-allowed" : "pointer",
                 transition: "all 0.15s",
-                display: "flex", alignItems: "center", gap: "10px",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
                 opacity: isLocked ? 0.55 : 1,
               }}
-              onMouseEnter={(e) => { if (!isActive && !isLocked) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(0,100,0,0.03)"; }}
-              onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+              onMouseEnter={(e) => {
+                if (!isActive && !isLocked)
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                    "rgba(0,100,0,0.03)";
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive)
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor =
+                    "transparent";
+              }}
             >
-              <span style={{
-                display: "inline-flex", alignItems: "center", justifyContent: "center",
-                height: "24px", width: "24px", borderRadius: "50%", flexShrink: 0,
-                backgroundColor: isCompleted ? "#10b981" : isActive ? "#006400" : isLocked ? "#e8e8e8" : "#f5f5f5",
-                color: isCompleted || isActive ? "#ffffff" : "#888888",
-                fontSize: "11px", fontWeight: 700,
-              }}>
-                {isCompleted ? <CheckCircle size={12} /> : isLocked ? <Lock size={10} /> : index + 1}
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "24px",
+                  width: "24px",
+                  borderRadius: "50%",
+                  flexShrink: 0,
+                  backgroundColor: isCompleted
+                    ? "#10b981"
+                    : isActive
+                      ? "#006400"
+                      : isLocked
+                        ? "#e8e8e8"
+                        : "#f5f5f5",
+                  color: isCompleted || isActive ? "#ffffff" : "#888888",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                }}
+              >
+                {isCompleted ? (
+                  <CheckCircle size={12} />
+                ) : isLocked ? (
+                  <Lock size={10} />
+                ) : (
+                  index + 1
+                )}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{
-                  fontSize: "13px", fontWeight: isActive ? 700 : 600,
-                  color: isActive ? "#006400" : isLocked ? "#aaaaaa" : "#101b37",
-                  lineHeight: 1.3,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: isActive ? 700 : 600,
+                    color: isActive
+                      ? "#006400"
+                      : isLocked
+                        ? "#aaaaaa"
+                        : "#101b37",
+                    lineHeight: 1.3,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {unit.title || `Unit ${index + 1}`}
                 </p>
-                <p style={{ fontSize: "11px", color: "#b0b0b0", marginTop: "2px" }}>
+                <p
+                  style={{
+                    fontSize: "11px",
+                    color: "#b0b0b0",
+                    marginTop: "2px",
+                  }}
+                >
                   {unit.estimatedReadMinutes} min
                 </p>
               </div>
@@ -277,10 +449,23 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
       </div>
 
       {/* Module progress */}
-      <div style={{ padding: "16px 24px", borderTop: "1px solid #e0e0e0", flexShrink: 0 }}>
-        <div className="flex items-center justify-between" style={{ marginBottom: "8px" }}>
-          <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Module progress</span>
-          <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{moduleProgressPercent}%</span>
+      <div
+        style={{
+          padding: "16px 24px",
+          borderTop: "1px solid #e0e0e0",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          className="flex items-center justify-between"
+          style={{ marginBottom: "8px" }}
+        >
+          <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>
+            Module progress
+          </span>
+          <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>
+            {moduleProgressPercent}%
+          </span>
         </div>
         <Progress value={moduleProgressPercent} color="#006400" />
       </div>
@@ -288,68 +473,115 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
   );
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, height: 0, backgroundColor: "#fafafa" }}>
-
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+        height: 0,
+        backgroundColor: "#fafafa",
+      }}
+    >
       {/* Breadcrumb bar */}
-      <div style={{
-        padding: isMobile ? "12px 16px" : "14px 24px",
-        borderBottom: "1px solid #e0e0e0",
-        backgroundColor: "#ffffff",
-        display: "flex", alignItems: "center", gap: "6px",
-        fontSize: "13px", flexShrink: 0,
-        // On mobile the breadcrumb truncates; the Units toggle sits on the right.
-        minWidth: 0,
-      }}>
+      <div
+        style={{
+          padding: isMobile ? "12px 16px" : "14px 24px",
+          borderBottom: "1px solid #e0e0e0",
+          backgroundColor: "#ffffff",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          fontSize: "13px",
+          flexShrink: 0,
+          // On mobile the breadcrumb truncates; the Units toggle sits on the right.
+          minWidth: 0,
+        }}
+      >
         {/* Units toggle button — always visible, opens/closes the sidebar */}
-        <button
-          onClick={() => setSidebarOpen((v) => !v)}
-          aria-label={sidebarOpen ? "Hide unit list" : "Show unit list"}
-          title={sidebarOpen ? "Hide unit list" : "Show unit list"}
-          style={{
-            background: sidebarOpen ? "rgba(0,100,0,0.08)" : "none",
-            border: "1px solid",
-            borderColor: sidebarOpen ? "#006400" : "#e0e0e0",
-            borderRadius: "7px",
-            cursor: "pointer",
-            padding: "5px 7px",
-            display: "flex", alignItems: "center",
-            color: sidebarOpen ? "#006400" : "#888888",
-            flexShrink: 0,
-            transition: "all 0.15s",
-          }}
-        >
-          <List size={15} />
-        </button>
 
         {/* Breadcrumb — truncates gracefully on mobile */}
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0, overflow: "hidden" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            minWidth: 0,
+            overflow: "hidden",
+          }}
+        >
           <button
             onClick={onBack}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "#888888", fontSize: "13px", padding: 0, flexShrink: 0 }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "#888888",
+              fontSize: "13px",
+              padding: 0,
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.color = "#006400";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.color = "#888888";
+            }}
           >
             {courseName}
           </button>
           <ChevronSep size={14} style={{ color: "#d1d1d1", flexShrink: 0 }} />
           <button
             onClick={onBackToTrack ?? onBack}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "#888888", fontSize: "13px", padding: 0, flexShrink: isMobile ? 1 : 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "#888888",
+              fontSize: "13px",
+              padding: 0,
+              flexShrink: isMobile ? 1 : 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              minWidth: 0,
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.color = "#006400";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.color = "#888888";
+            }}
           >
             {trackName}
           </button>
           <ChevronSep size={14} style={{ color: "#d1d1d1", flexShrink: 0 }} />
-          <span style={{ fontWeight: 600, color: "#101b37", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>
+          <span
+            style={{
+              fontWeight: 600,
+              color: "#101b37",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              minWidth: 0,
+            }}
+          >
             {module.title}
           </span>
         </div>
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, display: "flex", minHeight: 0, height: 0, overflow: "hidden", position: "relative" }}>
-
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          minHeight: 0,
+          height: 0,
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
         {/* ── MOBILE: sidebar as a slide-over drawer ── */}
         {isMobile && (
           <>
@@ -358,7 +590,8 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
               <div
                 onClick={() => setSidebarOpen(false)}
                 style={{
-                  position: "absolute", inset: 0,
+                  position: "absolute",
+                  inset: 0,
                   backgroundColor: "rgba(0,0,0,0.35)",
                   zIndex: 30,
                   touchAction: "none",
@@ -366,15 +599,20 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
               />
             )}
             {/* Drawer */}
-            <div style={{
-              position: "absolute", top: 0, left: 0, bottom: 0,
-              zIndex: 40,
-              transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
-              transition: "transform 0.25s ease",
-              borderRight: "1px solid #e0e0e0",
-              boxShadow: sidebarOpen ? "4px 0 20px rgba(0,0,0,0.10)" : "none",
-              overflow: "hidden",
-            }}>
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                bottom: 0,
+                zIndex: 40,
+                transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+                transition: "transform 0.25s ease",
+                borderRight: "1px solid #e0e0e0",
+                boxShadow: sidebarOpen ? "4px 0 20px rgba(0,0,0,0.10)" : "none",
+                overflow: "hidden",
+              }}
+            >
               {sidebarPanel}
             </div>
           </>
@@ -382,44 +620,82 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
 
         {/* ── DESKTOP: sidebar inline ── */}
         {!isMobile && sidebarOpen && (
-          <div style={{
-            borderRight: "1px solid #e0e0e0",
-            flexShrink: 0,
-            overflow: "hidden",
-            display: "flex",
-            // Animate width open/closed
-            width: sidebarOpen ? "300px" : "0px",
-            transition: "width 0.25s ease",
-          }}>
+          <div
+            style={{
+              borderRight: "1px solid #e0e0e0",
+              flexShrink: 0,
+              overflow: "hidden",
+              display: "flex",
+              // Animate width open/closed
+              width: sidebarOpen ? "300px" : "0px",
+              transition: "width 0.25s ease",
+            }}
+          >
             {sidebarPanel}
           </div>
         )}
 
         {/* Right Content Area */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, height: 0 }}>
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            minWidth: 0,
+            minHeight: 0,
+            height: 0,
+          }}
+        >
           {activeUnit ? (
             <>
               {/* Unit header */}
-              <div style={{
-                padding: isMobile ? "16px" : "24px 32px",
-                borderBottom: "1px solid #e0e0e0",
-                backgroundColor: "#ffffff", flexShrink: 0,
-              }}>
+              <div
+                style={{
+                  padding: isMobile ? "16px" : "24px 32px",
+                  borderBottom: "1px solid #e0e0e0",
+                  backgroundColor: "#ffffff",
+                  flexShrink: 0,
+                }}
+              >
                 <div style={{ maxWidth: "800px" }}>
-                  <p style={{ fontSize: "13px", color: "#888888", marginBottom: "8px" }}>
+                  <p
+                    style={{
+                      fontSize: "13px",
+                      color: "#888888",
+                      marginBottom: "8px",
+                    }}
+                  >
                     Unit {currentIndex + 1} of {units.length}
                   </p>
-                  <h1 style={{
-                    fontSize: isMobile ? "20px" : "24px",
-                    fontWeight: 800, color: "#101b37",
-                    fontFamily: "var(--font-headline)", marginBottom: "8px", lineHeight: 1.2,
-                  }}>
+                  <h1
+                    style={{
+                      fontSize: isMobile ? "20px" : "24px",
+                      fontWeight: 800,
+                      color: "#101b37",
+                      fontFamily: "var(--font-headline)",
+                      marginBottom: "8px",
+                      lineHeight: 1.2,
+                    }}
+                  >
                     {activeUnit.title}
                   </h1>
-                  <p style={{ fontSize: "15px", color: "#888888", lineHeight: 1.5 }}>
+                  <p
+                    style={{
+                      fontSize: "15px",
+                      color: "#888888",
+                      lineHeight: 1.5,
+                    }}
+                  >
                     {activeUnit.description}
                   </p>
-                  <div style={{ marginTop: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div
+                    style={{
+                      marginTop: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
                     <Clock size={14} style={{ color: "#b0b0b0" }} />
                     <span style={{ fontSize: "13px", color: "#888888" }}>
                       {activeUnit.estimatedReadMinutes} minutes
@@ -429,46 +705,90 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
               </div>
 
               {/* Unit content (scrollable) */}
-              <div style={{
-                flex: 1, overflowY: "auto",
-                padding: isMobile ? "20px 16px" : "32px",
-                minHeight: 0, height: 0,
-              }}>
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  padding: isMobile ? "20px 16px" : "32px",
+                  minHeight: 0,
+                  height: 0,
+                }}
+              >
                 <div style={{ maxWidth: "800px" }}>
                   {activeUnit.content ? (
                     <div
-                      style={{ fontSize: "15px", lineHeight: 1.7, color: "#444444" }}
+                      style={{
+                        fontSize: "15px",
+                        lineHeight: 1.7,
+                        color: "#444444",
+                      }}
                       dangerouslySetInnerHTML={{ __html: activeUnit.content }}
                     />
                   ) : (
-                    <p style={{ fontSize: "15px", color: "#444444", lineHeight: 1.7 }}>
+                    <p
+                      style={{
+                        fontSize: "15px",
+                        color: "#444444",
+                        lineHeight: 1.7,
+                      }}
+                    >
                       {activeUnit.description}
                     </p>
                   )}
 
                   {(activeUnit.videoUrl || activeUnit.pdfUrl) && (
-                    <div style={{
-                      marginTop: "32px", padding: "20px",
-                      backgroundColor: "#f5f5f5", borderRadius: "12px", border: "1px solid #e8e8e8",
-                    }}>
-                      <h4 style={{
-                        fontSize: "14px", fontWeight: 700, color: "#101b37",
-                        marginBottom: "12px", fontFamily: "var(--font-headline)",
-                      }}>
+                    <div
+                      style={{
+                        marginTop: "32px",
+                        padding: "20px",
+                        backgroundColor: "#f5f5f5",
+                        borderRadius: "12px",
+                        border: "1px solid #e8e8e8",
+                      }}
+                    >
+                      <h4
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: 700,
+                          color: "#101b37",
+                          marginBottom: "12px",
+                          fontFamily: "var(--font-headline)",
+                        }}
+                      >
                         Resources
                       </h4>
                       <div className="space-y-2">
                         {activeUnit.videoUrl && (
-                          <a href={activeUnit.videoUrl} target="_blank" rel="noopener noreferrer"
-                            style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#006400", textDecoration: "none" }}
+                          <a
+                            href={activeUnit.videoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              fontSize: "13px",
+                              color: "#006400",
+                              textDecoration: "none",
+                            }}
                           >
                             <BookOpen size={14} />
                             Watch video
                           </a>
                         )}
                         {activeUnit.pdfUrl && (
-                          <a href={activeUnit.pdfUrl} target="_blank" rel="noopener noreferrer"
-                            style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#006400", textDecoration: "none" }}
+                          <a
+                            href={activeUnit.pdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              fontSize: "13px",
+                              color: "#006400",
+                              textDecoration: "none",
+                            }}
                           >
                             <BookOpen size={14} />
                             Download PDF
@@ -481,16 +801,29 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
               </div>
 
               {/* Bottom nav */}
-              <div style={{
-                padding: isMobile ? "12px 16px" : "16px 32px",
-                borderTop: "1px solid #e0e0e0",
-                backgroundColor: "#ffffff", flexShrink: 0,
-              }}>
-                <div style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  gap: "8px", maxWidth: "800px",
-                }}>
-                  <Button variant="outlined" size="sm" onClick={goPrevious} disabled={!canGoPrevious}>
+              <div
+                style={{
+                  padding: isMobile ? "12px 16px" : "16px 32px",
+                  borderTop: "1px solid #e0e0e0",
+                  backgroundColor: "#ffffff",
+                  flexShrink: 0,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "8px",
+                    maxWidth: "800px",
+                  }}
+                >
+                  <Button
+                    variant="outlined"
+                    size="sm"
+                    onClick={goPrevious}
+                    disabled={!canGoPrevious}
+                  >
                     <ChevronLeft size={14} />
                     {!isMobile && "Previous"}
                   </Button>
@@ -502,22 +835,52 @@ export default function UnitViewer({ module, allModules, courseName, trackName, 
                     disabled={isCurrentUnitCompleted || marking}
                   >
                     {isCurrentUnitCompleted ? (
-                      <><CheckCircle size={14} />{!isMobile && "Completed"}</>
+                      <>
+                        <CheckCircle size={14} />
+                        {!isMobile && "Completed"}
+                      </>
                     ) : (
-                      <><Check size={14} />{marking ? "Saving…" : isMobile ? "Complete" : "Mark complete"}</>
+                      <>
+                        <Check size={14} />
+                        {marking
+                          ? "Saving…"
+                          : isMobile
+                            ? "Complete"
+                            : "Mark complete"}
+                      </>
                     )}
                   </Button>
 
-                  <Button variant="primary" size="sm" onClick={goNext} disabled={!canGoNext}>
-                    {isLastUnitInModule && nextModule ? (isMobile ? "Next mod." : "Next Module") : (isMobile ? "Next" : "Next")}
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={goNext}
+                    disabled={!canGoNext}
+                  >
+                    {isLastUnitInModule && nextModule
+                      ? isMobile
+                        ? "Next mod."
+                        : "Next Module"
+                      : isMobile
+                        ? "Next"
+                        : "Next"}
                     <ChevronRight size={14} />
                   </Button>
                 </div>
               </div>
             </>
           ) : (
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <p style={{ fontSize: "15px", color: "#888888" }}>Select a unit to begin</p>
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <p style={{ fontSize: "15px", color: "#888888" }}>
+                Select a unit to begin
+              </p>
             </div>
           )}
         </div>
