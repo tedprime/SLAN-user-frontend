@@ -29,12 +29,9 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
   const [error, setError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
-  // Real progress from the API — track-level summary, plus per-module progress.
   const [trackProgress, setTrackProgress] = useState<TrackProgress | null>(null);
   const [moduleProgress, setModuleProgress] = useState<Record<number, ModuleProgress>>({});
 
-  // Use a ref for the callback so we don't need it in the dependency array (avoids
-  // infinite re-fetch loops when the parent passes an inline arrow function).
   const onModulesLoadedRef = useRef(onModulesLoaded);
   useEffect(() => { onModulesLoadedRef.current = onModulesLoaded; }, [onModulesLoaded]);
 
@@ -55,8 +52,6 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
         setModules(moduleList);
         onModulesLoadedRef.current?.(moduleList);
 
-        // Fetch track progress and per-module progress in parallel.
-        // Unwrap envelopes — the API may return { success, data: T } or flat T.
         const [trackProgressRaw, moduleProgressRaws] = await Promise.all([
           progressService.getTrackProgress(track.id).catch(() => null),
           Promise.all(
@@ -101,14 +96,21 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
     return moduleProgress[module.id]?.isCompleted ?? false;
   };
 
-  // Prefer the live track-progress fetch; fall back to the value already on
-  // the track object (e.g. from GET /courses) if that call hasn't resolved yet.
   const displayedTrackProgress = trackProgress?.progressPercent ?? track.progressPercent ?? 0;
 
   return (
+    // Single scroll container — breadcrumb, hero, and modules all scroll
+    // together so the page always starts at the top, matching the pattern
+    // used in Overview.tsx / CourseTracksView.tsx.
     <div style={{
-      flex: 1, display: "flex", flexDirection: "column",
-      overflow: "hidden", backgroundColor: "#fafafa", minHeight: 0, height: 0,
+      flex: 1,
+      overflowY: "auto",
+      overflowX: "hidden",
+      minHeight: 0,
+      backgroundColor: "#fafafa",
+      scrollBehavior: "smooth",
+      WebkitOverflowScrolling: "touch",
+      overscrollBehavior: "contain",
     }}>
       {/* Breadcrumb */}
       <div style={{ padding: "16px 20px", borderBottom: "1px solid #e0e0e0", backgroundColor: "#ffffff" }}>
@@ -133,7 +135,6 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
         borderBottom: "1px solid #e0e0e0",
         background: `linear-gradient(135deg, ${trackColor.bg} 0%, rgba(255,255,255,0.5) 100%)`,
         padding: "24px 20px",
-        flexShrink: 0,
       }}>
         <div style={{ maxWidth: "1200px" }}>
           <span style={{
@@ -195,8 +196,8 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
         </div>
       </div>
 
-      {/* Modules Section */}
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "32px", minHeight: 0, height: 0 }}>
+      {/* Modules Section — regular content now, not its own scroll region */}
+      <div style={{ padding: "32px" }}>
         <div style={{ maxWidth: "1200px" }}>
           <h2 style={{
             fontSize: "20px", fontWeight: 800, color: "#101b37",
@@ -236,11 +237,18 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                   <div
                     key={module.id}
                     onClick={() => onModuleClick?.(module)}
-                    className="cursor-pointer"
+                    className="cursor-pointer flex flex-col sm:flex-row sm:items-center"
                     style={{
-                      backgroundColor: "#ffffff", border: "1px solid #e8e8e8",
-                      borderRadius: "12px", padding: "24px",
-                      transition: "all 0.2s ease", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", width: "100%",
+                      backgroundColor: "#ffffff",
+                      border: "1px solid #e8e8e8",
+                      borderLeftWidth: "4px",
+                      borderLeftColor: trackColor.border,
+                      borderRadius: "12px",
+                      padding: "20px 24px",
+                      gap: "16px",
+                      transition: "all 0.2s ease",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                      width: "100%",
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)";
@@ -251,66 +259,63 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                       e.currentTarget.style.transform = "translateY(0)";
                     }}
                   >
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
-                          <span style={{
-                            display: "inline-flex", alignItems: "center", justifyContent: "center",
-                            height: "28px", width: "28px", borderRadius: "50%",
-                            backgroundColor: isCompleted ? trackColor.border : "#f5f5f5",
-                            color: isCompleted ? "#ffffff" : "#888888",
-                            fontSize: "12px", fontWeight: 700,
-                          }}>
-                            {isCompleted ? <CheckCircle size={14} /> : index + 1}
-                          </span>
-                          <h3 style={{
-                            fontSize: "16px", fontWeight: 700, color: "#101b37",
-                            fontFamily: "var(--font-headline)",
-                          }}>
-                            {module.title}
-                          </h3>
-                        </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          height: "28px", width: "28px", minWidth: "28px", borderRadius: "50%",
+                          backgroundColor: isCompleted ? trackColor.border : "#f5f5f5",
+                          color: isCompleted ? "#ffffff" : "#888888",
+                          fontSize: "12px", fontWeight: 700, flexShrink: 0,
+                        }}>
+                          {isCompleted ? <CheckCircle size={14} /> : index + 1}
+                        </span>
+                        <h3 style={{
+                          fontSize: "16px", fontWeight: 700, color: "#101b37",
+                          fontFamily: "var(--font-headline)", lineHeight: 1.4,
+                        }}>
+                          {module.title}
+                        </h3>
+                      </div>
 
-                        <p style={{ fontSize: "14px", color: "#888888", marginBottom: "12px", lineHeight: 1.5 }}>
-                          {module.description || "Explore this module to continue your learning journey."}
-                        </p>
+                      <p style={{ fontSize: "14px", color: "#888888", marginBottom: "12px", lineHeight: 1.5 }}>
+                        {module.description || "Explore this module to continue your learning journey."}
+                      </p>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: "12px", fontWeight: 600, color: "#b0b0b0" }}>
+                          {module.unitCount} {module.unitCount === 1 ? "Unit" : "Units"}
+                        </span>
+                        {module.estimatedReadMinutes > 0 && (
                           <span style={{ fontSize: "12px", fontWeight: 600, color: "#b0b0b0" }}>
-                            {module.unitCount} {module.unitCount === 1 ? "Unit" : "Units"}
+                            {module.estimatedReadMinutes} min read
                           </span>
-                          {module.estimatedReadMinutes > 0 && (
-                            <span style={{ fontSize: "12px", fontWeight: 600, color: "#b0b0b0" }}>
-                              {module.estimatedReadMinutes} min read
-                            </span>
-                          )}
-                        </div>
-
-                        <div style={{ maxWidth: "400px" }}>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                            <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Progress</span>
-                            <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{progress}%</span>
-                          </div>
-                          <Progress value={progress} color={trackColor.border} />
-                        </div>
+                        )}
                       </div>
 
-                      <div style={{ marginLeft: "16px", flexShrink: 0 }}>
-                        <Button
-                          variant={isCompleted ? "outlined" : "primary"}
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onPlayClick?.(module);
-                          }}
-                        >
-                          {isCompleted ? (
-                            <><CheckCircle size={14} />Completed</>
-                          ) : (
-                            <><Play size={14} />{progress > 0 ? "Continue" : "Start"}</>
-                          )}
-                        </Button>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                        <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Progress</span>
+                        <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{progress}%</span>
                       </div>
+                      <Progress value={progress} color={trackColor.border} />
+                    </div>
+
+                    <div style={{ flexShrink: 0, width: "100%" }} className="sm:w-auto">
+                      <Button
+                        variant={isCompleted ? "outlined" : "primary"}
+                        size="sm"
+                        className="w-full sm:w-auto"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPlayClick?.(module);
+                        }}
+                      >
+                        {isCompleted ? (
+                          <><CheckCircle size={14} />Completed</>
+                        ) : (
+                          <><Play size={14} />{progress > 0 ? "Continue" : "Start"}</>
+                        )}
+                      </Button>
                     </div>
                   </div>
                 );
@@ -318,6 +323,9 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
             </div>
           )}
         </div>
+
+        {/* Bottom padding so last module card isn't flush against edge on mobile */}
+        <div style={{ height: "32px" }} />
       </div>
     </div>
   );
@@ -338,4 +346,4 @@ function getTrackColor(trackId: number): { border: string; bg: string } {
 
 function getTrackIndex(course: Course, track: CourseTrack): number {
   return course.tracks.findIndex((t) => t.id === track.id);
-}
+      }
