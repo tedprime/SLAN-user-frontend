@@ -142,7 +142,18 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
       </div>
 
       {/* Track Cards Grid */}
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "32px", minHeight: 0, scrollBehavior: "smooth" }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          overflowX: "hidden",
+          padding: "32px",
+          minHeight: 0,
+          scrollBehavior: "smooth",
+          WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
+        }}
+      >
         {tracks.length === 0 ? (
           <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
             <BookOpen size={48} style={{ color: "#d1d1d1", marginBottom: "16px" }} />
@@ -159,6 +170,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
               gap: "24px",
+              alignItems: "stretch",
             }}
           >
             {tracks.map((track: CourseTrack, index: number) => {
@@ -174,6 +186,9 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                   onClick={() => onTrackClick?.(track.id)}
                   className="cursor-pointer"
                   style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    height: "100%",
                     backgroundColor: "#ffffff",
                     border: "1px solid #e8e8e8",
                     borderLeftWidth: "4px",
@@ -225,6 +240,11 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                       letterSpacing: "-0.01em",
                       marginBottom: "8px",
                       lineHeight: 1.3,
+                      minHeight: "47px",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
                     }}
                   >
                     {track.title}
@@ -240,12 +260,13 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: "vertical",
                       overflow: "hidden",
+                      minHeight: "42px",
                     }}
                   >
                     {track.shortDescription || "Explore this track to build your skills."}
                   </p>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px", fontSize: "12px", color: "#b0b0b0", marginBottom: "20px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px", fontSize: "12px", color: "#b0b0b0", marginBottom: "20px", flexWrap: "wrap" }}>
                     <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <Layers size={13} />
                       <span>{moduleCount} Modules</span>
@@ -260,7 +281,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                     </span>
                   </div>
 
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "auto" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>
                         Progress
@@ -279,4 +300,4 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
       </div>
     </div>
   );
-}
+                      }
