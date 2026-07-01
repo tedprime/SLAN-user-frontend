@@ -14,6 +14,19 @@ function unwrap<T>(res: any): T {
   return res as T;
 }
 
+const MOBILE_BP = 768;
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BP);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BP - 1}px)`);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
 interface TrackDetailViewProps {
   course: Course;
   track: CourseTrack;
@@ -24,6 +37,7 @@ interface TrackDetailViewProps {
 }
 
 export default function TrackDetailView({ course, track, onBack, onModuleClick, onPlayClick, onModulesLoaded }: TrackDetailViewProps) {
+  const isMobile = useIsMobile();
   const [modules, setModules] = useState<ModuleSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -94,6 +108,14 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
 
   const isModuleCompleted = (module: ModuleSummary): boolean => {
     return moduleProgress[module.id]?.isCompleted ?? false;
+  };
+
+  // A module is locked unless it's the first module in the track, or the
+  // module directly before it has been fully completed (progress = 100%).
+  const isModuleLocked = (index: number): boolean => {
+    if (index === 0) return false;
+    const previousModule = modules[index - 1];
+    return previousModule ? !isModuleCompleted(previousModule) : false;
   };
 
   const displayedTrackProgress = trackProgress?.progressPercent ?? track.progressPercent ?? 0;
@@ -232,51 +254,85 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
               {modules.map((module: ModuleSummary, index: number) => {
                 const progress = getModuleProgress(module);
                 const isCompleted = isModuleCompleted(module);
+                const locked = isModuleLocked(index);
 
                 return (
                   <div
                     key={module.id}
-                    onClick={() => onModuleClick?.(module)}
-                    className="cursor-pointer"
+                    onClick={() => {
+                      if (!locked) onModuleClick?.(module);
+                    }}
+                    className={locked ? "cursor-not-allowed" : "cursor-pointer"}
+                    title={locked ? "Complete the previous module first" : undefined}
                     style={{
-                      backgroundColor: "#ffffff", border: "1px solid #e8e8e8",
-                      borderRadius: "12px", padding: "24px",
-                      transition: "all 0.2s ease", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", width: "100%",
+                      backgroundColor: "#ffffff",
+                      border: "1px solid #e8e8e8",
+                      borderRadius: "12px",
+                      padding: isMobile ? "16px" : "24px",
+                      transition: "all 0.2s ease",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                      width: "100%",
+                      boxSizing: "border-box",
+                      opacity: locked ? 0.6 : 1,
                     }}
                     onMouseEnter={(e) => {
+                      if (locked) return;
                       e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)";
                       e.currentTarget.style.transform = "translateY(-1px)";
                     }}
                     onMouseLeave={(e) => {
+                      if (locked) return;
                       e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
                       e.currentTarget.style.transform = "translateY(0)";
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: isMobile ? "column" : "row",
+                        alignItems: isMobile ? "stretch" : "flex-start",
+                        justifyContent: "space-between",
+                        gap: isMobile ? "16px" : "20px",
+                      }}
+                    >
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "8px" }}>
                           <span style={{
                             display: "inline-flex", alignItems: "center", justifyContent: "center",
                             height: "28px", width: "28px", minWidth: "28px", borderRadius: "50%",
-                            backgroundColor: isCompleted ? trackColor.border : "#f5f5f5",
-                            color: isCompleted ? "#ffffff" : "#888888",
+                            backgroundColor: isCompleted ? trackColor.border : locked ? "#e8e8e8" : "#f5f5f5",
+                            color: isCompleted ? "#ffffff" : locked ? "#aaaaaa" : "#888888",
                             fontSize: "12px", fontWeight: 700, flexShrink: 0,
+                            marginTop: "1px",
                           }}>
-                            {isCompleted ? <CheckCircle size={14} /> : index + 1}
+                            {isCompleted ? (
+                              <CheckCircle size={14} />
+                            ) : locked ? (
+                              <Lock size={12} />
+                            ) : (
+                              index + 1
+                            )}
                           </span>
                           <h3 style={{
-                            fontSize: "16px", fontWeight: 700, color: "#101b37",
+                            fontSize: "16px", fontWeight: 700,
+                            color: locked ? "#aaaaaa" : "#101b37",
                             fontFamily: "var(--font-headline)", flex: 1, minWidth: 0,
+                            lineHeight: 1.35,
                           }}>
                             {module.title}
                           </h3>
                         </div>
 
-                        <p style={{ fontSize: "14px", color: "#888888", marginBottom: "12px", lineHeight: 1.5 }}>
+                        <p style={{
+                          fontSize: "14px",
+                          color: locked ? "#b0b0b0" : "#888888",
+                          marginBottom: "12px",
+                          lineHeight: 1.5,
+                        }}>
                           {module.description || "Explore this module to continue your learning journey."}
                         </p>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px", flexWrap: "wrap", rowGap: "6px" }}>
                           <span style={{ fontSize: "12px", fontWeight: 600, color: "#b0b0b0" }}>
                             {module.unitCount} {module.unitCount === 1 ? "Unit" : "Units"}
                           </span>
@@ -285,27 +341,38 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                               {module.estimatedReadMinutes} min read
                             </span>
                           )}
+                          {locked && (
+                            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 600, color: "#b0b0b0" }}>
+                              <Lock size={11} />
+                              Locked
+                            </span>
+                          )}
                         </div>
 
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                            <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Progress</span>
-                            <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{progress}%</span>
+                        {!locked && (
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                              <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Progress</span>
+                              <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{progress}%</span>
+                            </div>
+                            <Progress value={progress} color={trackColor.border} />
                           </div>
-                          <Progress value={progress} color={trackColor.border} />
-                        </div>
+                        )}
                       </div>
 
-                      <div style={{ marginLeft: "16px", flexShrink: 0 }}>
+                      <div style={{ flexShrink: 0, display: "flex", width: isMobile ? "100%" : "auto" }}>
                         <Button
                           variant={isCompleted ? "outlined" : "primary"}
                           size="sm"
+                          disabled={locked}
                           onClick={(e) => {
                             e.stopPropagation();
-                            onPlayClick?.(module);
+                            if (!locked) onPlayClick?.(module);
                           }}
                         >
-                          {isCompleted ? (
+                          {locked ? (
+                            <><Lock size={14} />Locked</>
+                          ) : isCompleted ? (
                             <><CheckCircle size={14} />Completed</>
                           ) : (
                             <><Play size={14} />{progress > 0 ? "Continue" : "Start"}</>
