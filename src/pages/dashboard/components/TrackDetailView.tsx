@@ -16,6 +16,7 @@ function unwrap<T>(res: any): T {
 
 const MOBILE_BP = 768;
 const DESCRIPTION_WORD_LIMIT = 50;
+const MODULE_ACCENT_COLOR = "rgb(0,100,0)";
 
 interface ExpandableTextProps {
   text: string;
@@ -52,7 +53,7 @@ function ExpandableText({ text, wordLimit = DESCRIPTION_WORD_LIMIT, style, linkC
               margin: 0,
               cursor: "pointer",
               fontSize: "inherit",
-              fontWeight: 700,
+              fontWeight: 500,
               color: linkColor,
               textDecoration: "underline",
               textUnderlineOffset: "2px",
@@ -351,7 +352,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                         <span style={{
                           display: "inline-flex", alignItems: "center", justifyContent: "center",
                           height: "28px", width: "28px", minWidth: "28px", borderRadius: "50%",
-                          backgroundColor: isCompleted ? trackColor.border : locked ? "#e8e8e8" : "#f5f5f5",
+                          backgroundColor: isCompleted ? MODULE_ACCENT_COLOR : locked ? "#e8e8e8" : "#f5f5f5",
                           color: isCompleted ? "#ffffff" : locked ? "#aaaaaa" : "#888888",
                           fontSize: "12px", fontWeight: 700, flexShrink: 0,
                           marginTop: "1px",
@@ -371,7 +372,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                             display: "block",
                             fontSize: "11px",
                             fontWeight: 700,
-                            color: locked ? "#b0b0b0" : trackColor.border,
+                            color: locked ? "#b0b0b0" : MODULE_ACCENT_COLOR,
                             textTransform: "uppercase",
                             letterSpacing: "0.05em",
                             marginBottom: "4px",
@@ -391,7 +392,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
 
                           <ExpandableText
                             text={module.description || "Explore this module to continue your learning journey."}
-                            linkColor={locked ? "#b0b0b0" : trackColor.border}
+                            linkColor={locked ? "#b0b0b0" : MODULE_ACCENT_COLOR}
                             style={{
                               fontSize: "14px",
                               color: locked ? "#b0b0b0" : "#888888",
@@ -423,7 +424,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                                 <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Progress</span>
                                 <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{progress}%</span>
                               </div>
-                              <Progress value={progress} color={trackColor.border} />
+                              <Progress value={progress} color={MODULE_ACCENT_COLOR} />
                             </div>
                           )}
                         </div>
@@ -436,14 +437,14 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                           disabled={locked}
                           style={
                             isCompleted
-                              ? { color: trackColor.border, borderColor: trackColor.border }
-                              : { backgroundColor: trackColor.border, borderColor: trackColor.border }
+                              ? { color: MODULE_ACCENT_COLOR, borderColor: MODULE_ACCENT_COLOR }
+                              : { backgroundColor: MODULE_ACCENT_COLOR, borderColor: MODULE_ACCENT_COLOR }
                           }
                           onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
                             if (locked) return;
                             const btn = e.currentTarget;
                             if (isCompleted) {
-                              btn.style.backgroundColor = trackColor.border;
+                              btn.style.backgroundColor = MODULE_ACCENT_COLOR;
                               btn.style.color = "#ffffff";
                             } else {
                               btn.style.filter = "brightness(1.1)";
@@ -454,7 +455,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                             const btn = e.currentTarget;
                             if (isCompleted) {
                               btn.style.backgroundColor = "transparent";
-                              btn.style.color = trackColor.border;
+                              btn.style.color = MODULE_ACCENT_COLOR;
                             } else {
                               btn.style.filter = "brightness(1)";
                             }
