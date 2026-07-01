@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   ChevronRight,
   ChevronLeft,
@@ -84,6 +84,16 @@ export default function UnitViewer({
   );
   const [moduleProgressPercent, setModuleProgressPercent] = useState(0);
   const [marking, setMarking] = useState(false);
+
+  // The unit-content scroll container. Since the same DOM node is reused
+  // across unit switches (only `activeUnit` changes), the browser keeps
+  // whatever scroll position the previous unit was left at — so without
+  // this, clicking "Next" can drop you in the middle of the new unit.
+  const contentScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    contentScrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
+  }, [selectedUnitId]);
 
   const refreshModuleProgress = useCallback(async () => {
     try {
@@ -640,6 +650,7 @@ export default function UnitViewer({
             // all scroll together instead of the header/nav being pinned,
             // matching the pattern used in Overview.tsx.
             <div
+              ref={contentScrollRef}
               style={{
                 flex: 1,
                 display: "flex",
