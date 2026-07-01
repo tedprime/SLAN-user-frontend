@@ -632,17 +632,33 @@ export default function UnitViewer({
             flexDirection: "column",
             minWidth: 0,
             minHeight: 0,
+            overflow: "hidden",
           }}
         >
           {activeUnit ? (
-            <>
-              {/* Unit header */}
+            // Single scroll container — unit header, content, and bottom nav
+            // all scroll together instead of the header/nav being pinned,
+            // matching the pattern used in Overview.tsx.
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                overflowY: "auto",
+                overflowX: "hidden",
+                minHeight: 0,
+                backgroundColor: "#fafafa",
+                scrollBehavior: "smooth",
+                WebkitOverflowScrolling: "touch",
+                overscrollBehavior: "contain",
+              }}
+            >
+              {/* Unit header — scrolls with the page, not pinned above scroll area */}
               <div
                 style={{
                   padding: isMobile ? "16px" : "24px 32px",
                   borderBottom: "1px solid #e0e0e0",
                   backgroundColor: "#ffffff",
-                  flexShrink: 0,
                 }}
               >
                 <div style={{ maxWidth: "800px" }}>
@@ -692,15 +708,10 @@ export default function UnitViewer({
                 </div>
               </div>
 
-              {/* Unit content (scrollable) */}
+              {/* Unit content — no longer its own scroll region, just regular content */}
               <div
                 style={{
-                  flex: 1,
-                  overflowY: "auto",
                   padding: isMobile ? "20px 16px" : "32px",
-                  minHeight: 0,
-                  WebkitOverflowScrolling: "touch",
-                  overscrollBehavior: "contain",
                 }}
               >
                 <div style={{ maxWidth: "800px" }}>
@@ -789,13 +800,12 @@ export default function UnitViewer({
                 </div>
               </div>
 
-              {/* Bottom nav */}
+              {/* Bottom nav — scrolls with the page too, no longer pinned */}
               <div
                 style={{
                   padding: isMobile ? "12px 16px" : "16px 32px",
                   borderTop: "1px solid #e0e0e0",
                   backgroundColor: "#ffffff",
-                  flexShrink: 0,
                 }}
               >
                 <div
@@ -857,7 +867,10 @@ export default function UnitViewer({
                   </Button>
                 </div>
               </div>
-            </>
+
+              {/* Bottom padding so nav isn't flush against the edge */}
+              <div style={{ height: "16px" }} />
+            </div>
           ) : (
             <div
               style={{
