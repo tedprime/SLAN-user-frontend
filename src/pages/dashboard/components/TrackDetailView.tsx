@@ -15,6 +15,56 @@ function unwrap<T>(res: any): T {
 }
 
 const MOBILE_BP = 768;
+const DESCRIPTION_WORD_LIMIT = 50;
+
+interface ExpandableTextProps {
+  text: string;
+  wordLimit?: number;
+  style?: React.CSSProperties;
+  linkColor: string;
+}
+
+function ExpandableText({ text, wordLimit = DESCRIPTION_WORD_LIMIT, style, linkColor }: ExpandableTextProps) {
+  const [expanded, setExpanded] = useState(false);
+  const words = text.trim().split(/\s+/);
+  const canTruncate = words.length > wordLimit;
+  const displayText = !canTruncate || expanded
+    ? text
+    : words.slice(0, wordLimit).join(" ") + "…";
+
+  return (
+    <p style={style}>
+      {displayText}
+      {canTruncate && (
+        <>
+          {" "}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded((v) => !v);
+            }}
+            style={{
+              display: "inline",
+              background: "none",
+              border: "none",
+              padding: 0,
+              margin: 0,
+              cursor: "pointer",
+              fontSize: "inherit",
+              fontWeight: 700,
+              color: linkColor,
+              textDecoration: "underline",
+              textUnderlineOffset: "2px",
+            }}
+          >
+            {expanded ? "Show less" : "Show more"}
+          </button>
+        </>
+      )}
+    </p>
+  );
+}
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BP);
@@ -176,9 +226,11 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
             {track.title}
           </h1>
 
-          <p style={{ fontSize: "15px", color: "#666666", marginBottom: "20px", maxWidth: "640px", lineHeight: 1.6 }}>
-            {track.description || "Master the skills in this track through structured modules and interactive units."}
-          </p>
+          <ExpandableText
+            text={track.description || "Master the skills in this track through structured modules and interactive units."}
+            linkColor={trackColor.border}
+            style={{ fontSize: "15px", color: "#666666", marginBottom: "20px", maxWidth: "640px", lineHeight: 1.6 }}
+          />
 
           <div style={{ display: "flex", alignItems: "center", gap: "24px", fontSize: "14px", color: "#888888", flexWrap: "wrap" }}>
             <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -337,14 +389,16 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                             {module.title}
                           </h3>
 
-                          <p style={{
-                            fontSize: "14px",
-                            color: locked ? "#b0b0b0" : "#888888",
-                            marginBottom: "12px",
-                            lineHeight: 1.5,
-                          }}>
-                            {module.description || "Explore this module to continue your learning journey."}
-                          </p>
+                          <ExpandableText
+                            text={module.description || "Explore this module to continue your learning journey."}
+                            linkColor={locked ? "#b0b0b0" : trackColor.border}
+                            style={{
+                              fontSize: "14px",
+                              color: locked ? "#b0b0b0" : "#888888",
+                              marginBottom: "12px",
+                              lineHeight: 1.5,
+                            }}
+                          />
 
                           <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px", flexWrap: "wrap", rowGap: "6px" }}>
                             <span style={{ fontSize: "12px", fontWeight: 600, color: "#b0b0b0" }}>
