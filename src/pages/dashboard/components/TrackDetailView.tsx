@@ -139,14 +139,14 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
         <div className="flex items-center gap-2" style={{ fontSize: "14px" }}>
           <button
             onClick={onBack}
-            style={{ color: "#888888", background: "none", border: "none", cursor: "pointer", fontSize: "14px" }}
+            style={{ color: "#888888", background: "none", border: "none", cursor: "pointer", fontSize: "14px", textTransform: "uppercase" }}
             onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
           >
             {course.title}
           </button>
           <ChevronRight size={16} style={{ color: "#b0b0b0" }} />
-          <span style={{ color: "#101b37", fontWeight: 600 }}>
+          <span style={{ color: "#101b37", fontWeight: 600, textTransform: "uppercase" }}>
             {track.title}
           </span>
         </div>
@@ -171,7 +171,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
           <h1 style={{
             fontSize: "28px", fontWeight: 800, color: "#101b37",
             fontFamily: "var(--font-headline)", letterSpacing: "-0.02em",
-            marginBottom: "12px", lineHeight: 1.2,
+            marginBottom: "12px", lineHeight: 1.2, textTransform: "uppercase",
           }}>
             {track.title}
           </h1>

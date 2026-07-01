@@ -379,7 +379,7 @@ export default function DashboardSidebar({
                   >
                     <span style={{ display: "flex", alignItems: "center", gap: "9px", overflow: "hidden", flex: 1, minWidth: 0 }}>
                       <BookOpen size={15} style={{ flexShrink: 0, color: isCourseActive ? "#006400" : "#aaaaaa" }} />
-                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{course.title}</span>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textTransform: "uppercase" }}>{course.title}</span>
                     </span>
                     <span style={{ flexShrink: 0, color: "#cccccc", marginLeft: "6px" }}>
                       {isCourseExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -426,7 +426,7 @@ export default function DashboardSidebar({
                             >
                               <span style={{ display: "flex", alignItems: "center", gap: "7px", overflow: "hidden", flex: 1, minWidth: 0 }}>
                                 <Layers size={12} style={{ flexShrink: 0, color: isTrackActive ? "#006400" : "#cccccc" }} />
-                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{track.title}</span>
+                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textTransform: "uppercase" }}>{track.title}</span>
                               </span>
                               <span style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0, marginLeft: "4px" }}>
                                 {isTrackComplete && <CheckCircle size={11} style={{ color: "#10b981" }} />}
@@ -442,8 +442,12 @@ export default function DashboardSidebar({
                                 {modules.length === 0 && (
                                   <div style={{ padding: "5px 12px 5px 60px", fontSize: "11px", color: "#cccccc" }}>No modules yet.</div>
                                 )}
-                                {modules.map((mod) => {
-                                  const isModExpanded = expandedModuleIds.has(mod.id);
+                                {modules.map((mod, modIndex) => {
+                                  // A module is locked unless it's the first in the track, or the
+                                  // module directly before it has been fully completed — mirrors
+                                  // the lock logic in TrackDetailView.tsx.
+                                  const locked = modIndex > 0 && !isModuleComplete(modules[modIndex - 1]);
+                                  const isModExpanded = expandedModuleIds.has(mod.id) && !locked;
                                   const units = moduleUnits[mod.id] ?? [];
                                   const isLoadingUnits = loadingModules.has(mod.id);
                                   const isModuleActive = activeNav === `unit:${course.id}:${track.id}:${mod.id}`;
@@ -458,40 +462,46 @@ export default function DashboardSidebar({
                                           margin: "1px 8px", width: "calc(100% - 16px)",
                                           borderRadius: "7px",
                                           backgroundColor: isModuleActive ? "rgba(0,100,0,0.06)" : "transparent",
+                                          opacity: locked ? 0.55 : 1,
                                         }}
                                       >
                                         <button
-                                          onClick={() => handleModuleNavigate(mod, course.id, track.id)}
-                                          title={mod.title}
+                                          onClick={() => { if (!locked) handleModuleNavigate(mod, course.id, track.id); }}
+                                          disabled={locked}
+                                          title={locked ? "Complete the previous module to unlock" : mod.title}
                                           className="flex items-center text-left flex-1"
                                           style={{
                                             padding: "6px 0 6px 56px", fontSize: "12px", fontWeight: isModuleActive ? 600 : 400,
                                             transition: "color 0.15s", overflow: "hidden", minWidth: 0,
                                             backgroundColor: "transparent",
-                                            color: isModuleActive ? "#006400" : "#888888",
-                                            border: "none", cursor: "pointer", gap: "7px",
+                                            color: locked ? "#bbbbbb" : isModuleActive ? "#006400" : "#888888",
+                                            border: "none", cursor: locked ? "not-allowed" : "pointer", gap: "7px",
                                             borderRadius: "7px 0 0 7px",
                                           }}
-                                          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
-                                          onMouseLeave={(e) => { if (!isModuleActive) (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
+                                          onMouseEnter={(e) => { if (!locked) (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
+                                          onMouseLeave={(e) => { if (!locked && !isModuleActive) (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
                                         >
-                                          <BookOpen size={11} style={{ flexShrink: 0, color: isModuleActive ? "#006400" : "#dddddd" }} />
+                                          {locked
+                                            ? <Lock size={11} style={{ flexShrink: 0, color: "#cccccc" }} />
+                                            : <BookOpen size={11} style={{ flexShrink: 0, color: isModuleActive ? "#006400" : "#dddddd" }} />}
                                           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{mod.title}</span>
-                                          {moduleComplete && <CheckCircle size={10} style={{ color: "#10b981", flexShrink: 0 }} />}
+                                          {moduleComplete && !locked && <CheckCircle size={10} style={{ color: "#10b981", flexShrink: 0 }} />}
                                         </button>
-                                        <button
-                                          onClick={() => toggleModule(mod.id)}
-                                          title={isModExpanded ? "Collapse units" : "Expand units"}
-                                          style={{
-                                            background: "transparent", border: "none", cursor: "pointer",
-                                            padding: "6px 8px", display: "flex", alignItems: "center", flexShrink: 0,
-                                            borderRadius: "0 7px 7px 0",
-                                          }}
-                                        >
-                                          {isLoadingUnits
-                                            ? <div style={{ width: "9px", height: "9px", border: "2px solid #e0e0e0", borderTopColor: "#006400", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                                            : isModExpanded ? <ChevronDown size={11} style={{ color: "#cccccc" }} /> : <ChevronRight size={11} style={{ color: "#cccccc" }} />}
-                                        </button>
+                                        {!locked && (
+                                          <button
+                                            onClick={() => toggleModule(mod.id)}
+                                            title={isModExpanded ? "Collapse units" : "Expand units"}
+                                            style={{
+                                              background: "transparent", border: "none", cursor: "pointer",
+                                              padding: "6px 8px", display: "flex", alignItems: "center", flexShrink: 0,
+                                              borderRadius: "0 7px 7px 0",
+                                            }}
+                                          >
+                                            {isLoadingUnits
+                                              ? <div style={{ width: "9px", height: "9px", border: "2px solid #e0e0e0", borderTopColor: "#006400", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                                              : isModExpanded ? <ChevronDown size={11} style={{ color: "#cccccc" }} /> : <ChevronRight size={11} style={{ color: "#cccccc" }} />}
+                                          </button>
+                                        )}
                                       </div>
 
                                       <Collapsible open={isModExpanded && !isLoadingUnits}>

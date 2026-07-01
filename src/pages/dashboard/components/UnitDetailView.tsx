@@ -639,6 +639,7 @@ export default function UnitViewer({
               fontSize: "13px",
               padding: 0,
               flexShrink: 0,
+              textTransform: "uppercase",
             }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLButtonElement).style.color = "#006400";
