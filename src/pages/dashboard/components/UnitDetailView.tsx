@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
 import {
   ChevronRight,
   ChevronLeft,
@@ -84,6 +84,12 @@ export default function UnitViewer({
   );
   const [moduleProgressPercent, setModuleProgressPercent] = useState(0);
   const [marking, setMarking] = useState(false);
+
+  // Measures the "Mark complete" button so it can smoothly slide from the
+  // right edge to dead-center once the Next button appears, instead of
+  // just popping into its new spot.
+  const markCompleteWrapRef = useRef<HTMLDivElement>(null);
+  const [markCompleteHalfWidth, setMarkCompleteHalfWidth] = useState(0);
 
   // The unit-content scroll container. Since the same DOM node is reused
   // across unit switches (only `activeUnit` changes), the browser keeps
@@ -171,6 +177,12 @@ export default function UnitViewer({
     selectedUnitId !== null && completedUnitIds.has(selectedUnitId);
   const canGoNext =
     isCurrentUnitCompleted && (!isLastUnitInModule || !!nextModule);
+
+  useLayoutEffect(() => {
+    if (markCompleteWrapRef.current) {
+      setMarkCompleteHalfWidth(markCompleteWrapRef.current.offsetWidth / 2);
+    }
+  }, [isCurrentUnitCompleted, marking, isMobile, selectedUnitId]);
 
   const goPrevious = () => {
     if (canGoPrevious) setSelectedUnitId(units[currentIndex - 1].id);
@@ -676,6 +688,7 @@ export default function UnitViewer({
                   <p
                     style={{
                       fontSize: "13px",
+                      fontWeight: "bold",
                       color: "#888888",
                       marginBottom: "8px",
                     }}
@@ -821,6 +834,7 @@ export default function UnitViewer({
               >
                 <div
                   style={{
+                    position: "relative",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
@@ -838,34 +852,23 @@ export default function UnitViewer({
                     {!isMobile && "Previous"}
                   </Button>
 
-                  <Button
-                    variant={isCurrentUnitCompleted ? "outlined" : "primary"}
-                    size="sm"
-                    onClick={handleMarkComplete}
-                    disabled={isCurrentUnitCompleted || marking}
+                  {/* Reserves the Next button's normal flow slot on the right,
+                      but stays invisible/non-interactive until the unit is
+                      completed. This keeps the row's width/height stable so
+                      Mark Complete has a fixed "off" position to animate from. */}
+                  <div
+                    style={{
+                      opacity: canGoNext ? 1 : 0,
+                      transform: canGoNext ? "translateX(0)" : "translateX(12px)",
+                      transition: "opacity 0.35s ease, transform 0.35s ease",
+                      pointerEvents: canGoNext ? "auto" : "none",
+                    }}
                   >
-                    {isCurrentUnitCompleted ? (
-                      <>
-                        <CheckCircle size={14} />
-                        {!isMobile && "Completed"}
-                      </>
-                    ) : (
-                      <>
-                        <Check size={14} />
-                        {marking
-                          ? "Saving…"
-                          : isMobile
-                            ? "Complete"
-                            : "Mark complete"}
-                      </>
-                    )}
-                  </Button>
-
-                  {canGoNext && (
                     <Button
                       variant="primary"
                       size="sm"
                       onClick={goNext}
+                      disabled={!canGoNext}
                     >
                       {isLastUnitInModule && nextModule
                         ? isMobile
@@ -876,7 +879,46 @@ export default function UnitViewer({
                           : "Next"}
                       <ChevronRight size={14} />
                     </Button>
-                  )}
+                  </div>
+
+                  {/* Absolutely positioned so it can glide from the right edge
+                      (overlapping the still-invisible Next button) to dead
+                      center once canGoNext flips true. */}
+                  <div
+                    ref={markCompleteWrapRef}
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      right: canGoNext
+                        ? `calc(50% - ${markCompleteHalfWidth}px)`
+                        : "0px",
+                      transform: "translateY(-50%)",
+                      transition: "right 0.35s ease",
+                    }}
+                  >
+                    <Button
+                      variant={isCurrentUnitCompleted ? "outlined" : "primary"}
+                      size="sm"
+                      onClick={handleMarkComplete}
+                      disabled={isCurrentUnitCompleted || marking}
+                    >
+                      {isCurrentUnitCompleted ? (
+                        <>
+                          <CheckCircle size={14} />
+                          {!isMobile && "Completed"}
+                        </>
+                      ) : (
+                        <>
+                          <Check size={14} />
+                          {marking
+                            ? "Saving…"
+                            : isMobile
+                              ? "Complete"
+                              : "Mark complete"}
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
 
