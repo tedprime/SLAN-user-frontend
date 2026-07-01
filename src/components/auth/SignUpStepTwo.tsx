@@ -284,12 +284,11 @@ export default function SignUpStepTwo({
               onChange={(e) => setCurrentRole(e.target.value)}
               className="w-full px-4 py-3 rounded-sm border border-neutral-300 bg-neutral-100 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-neutral-800 text-sm font-500 font-body outline-none transition-all"
             >
-              <option value="teacher">Teacher</option>
-              <option value="principal">Principal</option>
-              <option value="vice_principal">Vice Principal</option>
-              <option value="head_teacher">Head Teacher</option>
-              <option value="proprietor">School Proprietor</option>
-              <option value="aspiring_head">Aspiring School Head</option>
+              <option value="principal_head_teacher">Principal / Head Teacher</option>
+              <option value="vice_assistant_head">Vice / Assistant School Head</option>
+              <option value="school_head_cadre">School Head Cadre</option>
+              <option value="education_officer">Education Officer</option>
+              <option value="school_proprietor">School Proprietor</option>
             </select>
           </div>
           <div className="space-y-1.5">
