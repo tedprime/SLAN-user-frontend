@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   ChevronRight,
   ChevronLeft,
@@ -12,19 +12,13 @@ import {
 } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import Progress from "../../../components/ui/Progress";
-import { AssessmentView } from "../../../components/ui/AssessmentView";
 import { courseService } from "../../../services/courseService";
 import { progressService } from "../../../services/progressService";
-import { assessmentService } from "../../../services/assessmentService";
 import type {
   ModuleSummary,
   UnitSummary,
   UnitContent,
 } from "../../../services/types/course.types";
-import type {
-  Assessment,
-  AssessmentResult,
-} from "../../../services/types/assessment.types";
 
 interface UnitViewerProps {
   courseId: number;
@@ -56,73 +50,6 @@ function useIsMobile() {
     return () => mq.removeEventListener("change", handler);
   }, []);
   return isMobile;
-}
-
-// Shared "Resources" box — used on the unit-content screen and again on the
-// assessment screen so video/PDF links stay reachable while taking a quiz.
-function UnitResources({
-  videoUrl,
-  pdfUrl,
-}: {
-  videoUrl?: string | null;
-  pdfUrl?: string | null;
-}) {
-  const hasResources = !!videoUrl || !!pdfUrl;
-
-  const linkStyle: CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    fontSize: "13px",
-    color: "#006400",
-    textDecoration: "none",
-  };
-
-  return (
-    <div
-      style={{
-        marginTop: "32px",
-        padding: "20px",
-        backgroundColor: "#f5f5f5",
-        borderRadius: "12px",
-        border: "1px solid #e8e8e8",
-      }}
-    >
-      <h4
-        style={{
-          fontSize: "14px",
-          fontWeight: 700,
-          color: "#101b37",
-          marginBottom: "12px",
-          fontFamily: "var(--font-headline)",
-        }}
-      >
-        Resources
-      </h4>
-      <div className="space-y-2">
-        {hasResources ? (
-          <>
-            {videoUrl && (
-              <a href={videoUrl} target="_blank" rel="noopener noreferrer" style={linkStyle}>
-                <BookOpen size={14} />
-                Watch video
-              </a>
-            )}
-            {pdfUrl && (
-              <a href={pdfUrl} target="_blank" rel="noopener noreferrer" style={linkStyle}>
-                <BookOpen size={14} />
-                Download PDF
-              </a>
-            )}
-          </>
-        ) : (
-          <p style={{ fontSize: "13px", color: "#888888" }}>
-            No resources for this unit.
-          </p>
-        )}
-      </div>
-    </div>
-  );
 }
 
 export default function UnitViewer({
@@ -157,11 +84,6 @@ export default function UnitViewer({
   );
   const [moduleProgressPercent, setModuleProgressPercent] = useState(0);
   const [marking, setMarking] = useState(false);
-
-  // Unit assessment: fetched per-unit, shown after "Mark Complete".
-  const [unitAssessment, setUnitAssessment] = useState<Assessment | null>(null);
-  const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null);
-  const [showAssessment, setShowAssessment] = useState(false);
 
   // The unit-content scroll container. Since the same DOM node is reused
   // across unit switches (only `activeUnit` changes), the browser keeps
@@ -233,37 +155,6 @@ export default function UnitViewer({
     };
   }, [selectedUnitId, units]);
 
-  // Reset assessment state when the active unit changes, done during
-  // render (not in an effect) so it doesn't trigger an extra cascading
-  // render pass. This is React's recommended pattern for "adjusting state
-  // when a prop changes": https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
-  const [resolvedForUnitId, setResolvedForUnitId] = useState<number | null>(null);
-  if ((activeUnit?.id ?? null) !== resolvedForUnitId) {
-    setResolvedForUnitId(activeUnit?.id ?? null);
-    setUnitAssessment(null);
-    setAssessmentResult(null);
-    setShowAssessment(false);
-  }
-
-  // Fetches the new unit's assessment (and any prior result) once the
-  // render-time reset above has settled on this unit.
-  useEffect(() => {
-    if (!activeUnit) return;
-    let cancelled = false;
-    (async () => {
-      const assessment = await assessmentService.getUnitAssessment(activeUnit.slug);
-      if (cancelled) return;
-      setUnitAssessment(assessment);
-      if (assessment) {
-        const priorResult = await assessmentService.getAssessmentResult(assessment.id);
-        if (!cancelled) setAssessmentResult(priorResult);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeUnit]);
-
   const currentIndex = units.findIndex((u) => u.id === selectedUnitId);
   const canGoPrevious = currentIndex > 0;
   const isLastUnitInModule = currentIndex === units.length - 1;
@@ -278,11 +169,8 @@ export default function UnitViewer({
       : null;
   const isCurrentUnitCompleted =
     selectedUnitId !== null && completedUnitIds.has(selectedUnitId);
-  const assessmentCleared = !unitAssessment || !!assessmentResult?.passed;
   const canGoNext =
-    isCurrentUnitCompleted &&
-    assessmentCleared &&
-    (!isLastUnitInModule || !!nextModule);
+    isCurrentUnitCompleted && (!isLastUnitInModule || !!nextModule);
 
   const goPrevious = () => {
     if (canGoPrevious) setSelectedUnitId(units[currentIndex - 1].id);
@@ -320,10 +208,6 @@ export default function UnitViewer({
         /* keep optimistic state */
       }
       onProgressChange?.();
-
-      if (unitAssessment && !assessmentResult?.passed) {
-        setShowAssessment(true);
-      }
     } catch {
       setCompletedUnitIds((prev) => {
         const next = new Set(prev);
@@ -639,7 +523,6 @@ export default function UnitViewer({
               fontSize: "13px",
               padding: 0,
               flexShrink: 0,
-              textTransform: "uppercase",
             }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLButtonElement).style.color = "#006400";
@@ -678,34 +561,16 @@ export default function UnitViewer({
           <ChevronSep size={14} style={{ color: "#d1d1d1", flexShrink: 0 }} />
           <span
             style={{
-              fontWeight: showAssessment ? 500 : 600,
-              color: showAssessment ? "#888888" : "#101b37",
+              fontWeight: 600,
+              color: "#101b37",
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
               minWidth: 0,
-              flexShrink: showAssessment ? 0 : 1,
             }}
           >
             {module.title}
           </span>
-          {showAssessment && (
-            <>
-              <ChevronSep size={14} style={{ color: "#d1d1d1", flexShrink: 0 }} />
-              <span
-                style={{
-                  fontWeight: 600,
-                  color: "#101b37",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  minWidth: 0,
-                }}
-              >
-                Unit Assessment
-              </span>
-            </>
-          )}
         </div>
       </div>
 
@@ -780,37 +645,7 @@ export default function UnitViewer({
             overflow: "hidden",
           }}
         >
-          {activeUnit && showAssessment && unitAssessment ? (
-            <div
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                overflowY: "auto",
-                overflowX: "hidden",
-                minHeight: 0,
-                backgroundColor: "#fafafa",
-                scrollBehavior: "smooth",
-                WebkitOverflowScrolling: "touch",
-                overscrollBehavior: "contain",
-              }}
-            >
-              <AssessmentView
-                assessment={unitAssessment}
-                onComplete={(result) => {
-                  setAssessmentResult(result);
-                  setShowAssessment(false);
-                  // Passing is the only way onComplete fires (see
-                  // AssessmentView), so it's always safe to advance here.
-                  goNext();
-                }}
-                onSkip={() => setShowAssessment(false)}
-              />
-              <div style={{ maxWidth: "600px", margin: "0 auto", padding: "0 24px" }}>
-                <UnitResources videoUrl={activeUnit.videoUrl} pdfUrl={activeUnit.pdfUrl} />
-              </div>
-            </div>
-          ) : activeUnit ? (
+          {activeUnit ? (
             // Single scroll container — unit header, content, and bottom nav
             // all scroll together instead of the header/nav being pinned,
             // matching the pattern used in Overview.tsx.
@@ -912,7 +747,67 @@ export default function UnitViewer({
                     </p>
                   )}
 
-                  <UnitResources videoUrl={activeUnit.videoUrl} pdfUrl={activeUnit.pdfUrl} />
+                  {(activeUnit.videoUrl || activeUnit.pdfUrl) && (
+                    <div
+                      style={{
+                        marginTop: "32px",
+                        padding: "20px",
+                        backgroundColor: "#f5f5f5",
+                        borderRadius: "12px",
+                        border: "1px solid #e8e8e8",
+                      }}
+                    >
+                      <h4
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: 700,
+                          color: "#101b37",
+                          marginBottom: "12px",
+                          fontFamily: "var(--font-headline)",
+                        }}
+                      >
+                        Resources
+                      </h4>
+                      <div className="space-y-2">
+                        {activeUnit.videoUrl && (
+                          
+                            <a href={activeUnit.videoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              fontSize: "13px",
+                              color: "#006400",
+                              textDecoration: "none",
+                            }}
+                          >
+                            <BookOpen size={14} />
+                            Watch video
+                          </a>
+                        )}
+                        {activeUnit.pdfUrl && (
+                          
+                           <a href={activeUnit.pdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              fontSize: "13px",
+                              color: "#006400",
+                              textDecoration: "none",
+                            }}
+                          >
+                            <BookOpen size={14} />
+                            Download PDF
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -966,32 +861,21 @@ export default function UnitViewer({
                     )}
                   </Button>
 
-                  {isCurrentUnitCompleted && unitAssessment && !assessmentResult?.passed ? (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => setShowAssessment(true)}
-                    >
-                      {assessmentResult ? "Retake Assessment" : "Take Assessment"}
-                      <ChevronRight size={14} />
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={goNext}
-                      disabled={!canGoNext}
-                    >
-                      {isLastUnitInModule && nextModule
-                        ? isMobile
-                          ? "Next mod."
-                          : "Next Module"
-                        : isMobile
-                          ? "Next"
-                          : "Next"}
-                      <ChevronRight size={14} />
-                    </Button>
-                  )}
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={goNext}
+                    disabled={!canGoNext}
+                  >
+                    {isLastUnitInModule && nextModule
+                      ? isMobile
+                        ? "Next mod."
+                        : "Next Module"
+                      : isMobile
+                        ? "Next"
+                        : "Next"}
+                    <ChevronRight size={14} />
+                  </Button>
                 </div>
               </div>
 

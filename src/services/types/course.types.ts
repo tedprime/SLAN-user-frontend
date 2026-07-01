@@ -1,5 +1,3 @@
-import type { Assessment } from "./assessment.types";
-
 // ── Track summary (nested in GET /courses, or flat in GET /courses/{id}/tracks) ──
 // With a Bearer token: progressPercent and completedUnits are personalised.
 // Without a token: both are 0.
@@ -45,11 +43,6 @@ export interface UnitSummary {
 // ── Full unit content (GET /units/{slug}) — requires Bearer token ─────────────
 export interface UnitContent extends UnitSummary {
   content?: string; // rich content body
-  // Optional pass-through if the backend ever embeds the assessment directly
-  // in the unit payload. The dedicated GET /units/{slug}/assessment endpoint
-  // (see assessmentService) is the primary source of truth — this field is
-  // just future-proofing and is not required for the flow to work.
-  assessment?: Assessment;
 }
 
 // ── Course (GET /courses) ─────────────────────────────────────────────────────
