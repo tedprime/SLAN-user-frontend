@@ -70,8 +70,6 @@ export default function UnitViewer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  // sidebarOpen: on desktop default open, on mobile default closed.
-  // We store the user's explicit choice per breakpoint so rotation resets it.
   const [desktopOpen, setDesktopOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const sidebarOpen = isMobile ? mobileOpen : desktopOpen;
@@ -211,7 +209,6 @@ export default function UnitViewer({
     }
   };
 
-  // When a unit is selected on mobile, close the drawer so the content is visible.
   const handleUnitSelect = (unitId: number) => {
     setSelectedUnitId(unitId);
     if (isMobile) setSidebarOpen(false);
@@ -313,7 +310,6 @@ export default function UnitViewer({
         >
           Units
         </h3>
-        {/* Close button — shown on mobile inside the drawer */}
         {isMobile && (
           <button
             onClick={() => setSidebarOpen(false)}
@@ -342,7 +338,8 @@ export default function UnitViewer({
           overflowY: "auto",
           padding: "8px",
           minHeight: 0,
-          height: 0,
+          WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
         }}
       >
         {units.map((unit, index) => {
@@ -393,6 +390,7 @@ export default function UnitViewer({
                   justifyContent: "center",
                   height: "24px",
                   width: "24px",
+                  minWidth: "24px",
                   borderRadius: "50%",
                   flexShrink: 0,
                   backgroundColor: isCompleted
@@ -479,7 +477,6 @@ export default function UnitViewer({
         display: "flex",
         flexDirection: "column",
         minHeight: 0,
-        height: 0,
         backgroundColor: "#fafafa",
       }}
     >
@@ -494,13 +491,9 @@ export default function UnitViewer({
           gap: "6px",
           fontSize: "13px",
           flexShrink: 0,
-          // On mobile the breadcrumb truncates; the Units toggle sits on the right.
           minWidth: 0,
         }}
       >
-        {/* Units toggle button — always visible, opens/closes the sidebar */}
-
-        {/* Breadcrumb — truncates gracefully on mobile */}
         <div
           style={{
             display: "flex",
@@ -577,7 +570,6 @@ export default function UnitViewer({
           flex: 1,
           display: "flex",
           minHeight: 0,
-          height: 0,
           overflow: "hidden",
           position: "relative",
         }}
@@ -585,7 +577,6 @@ export default function UnitViewer({
         {/* ── MOBILE: sidebar as a slide-over drawer ── */}
         {isMobile && (
           <>
-            {/* Backdrop */}
             {sidebarOpen && (
               <div
                 onClick={() => setSidebarOpen(false)}
@@ -598,7 +589,6 @@ export default function UnitViewer({
                 }}
               />
             )}
-            {/* Drawer */}
             <div
               style={{
                 position: "absolute",
@@ -626,7 +616,6 @@ export default function UnitViewer({
               flexShrink: 0,
               overflow: "hidden",
               display: "flex",
-              // Animate width open/closed
               width: sidebarOpen ? "300px" : "0px",
               transition: "width 0.25s ease",
             }}
@@ -643,7 +632,6 @@ export default function UnitViewer({
             flexDirection: "column",
             minWidth: 0,
             minHeight: 0,
-            height: 0,
           }}
         >
           {activeUnit ? (
@@ -711,7 +699,8 @@ export default function UnitViewer({
                   overflowY: "auto",
                   padding: isMobile ? "20px 16px" : "32px",
                   minHeight: 0,
-                  height: 0,
+                  WebkitOverflowScrolling: "touch",
+                  overscrollBehavior: "contain",
                 }}
               >
                 <div style={{ maxWidth: "800px" }}>
@@ -759,8 +748,8 @@ export default function UnitViewer({
                       </h4>
                       <div className="space-y-2">
                         {activeUnit.videoUrl && (
-                          <a
-                            href={activeUnit.videoUrl}
+                          
+                            <a href={activeUnit.videoUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
@@ -777,8 +766,8 @@ export default function UnitViewer({
                           </a>
                         )}
                         {activeUnit.pdfUrl && (
-                          <a
-                            href={activeUnit.pdfUrl}
+                          
+                           <a href={activeUnit.pdfUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
