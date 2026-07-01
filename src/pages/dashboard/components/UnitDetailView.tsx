@@ -120,6 +120,12 @@ export default function UnitViewer({
     (async () => {
       setLoading(true);
       setError(false);
+      // Reset selection so the guard below picks unitList[0] of the *new*
+      // module once it loads, rather than keeping a stale unit id left over
+      // from the previous module (which caused currentIndex to resolve to
+      // -1 and the header to show "Unit 0 of N" until a manual refresh).
+      setSelectedUnitId(null);
+      setActiveUnit(null);
       try {
         const [res] = await Promise.all([
           courseService.getModuleUnits(module.id),
@@ -688,7 +694,6 @@ export default function UnitViewer({
                   <p
                     style={{
                       fontSize: "13px",
-                      fontWeight: "bold",
                       color: "#888888",
                       marginBottom: "8px",
                     }}
