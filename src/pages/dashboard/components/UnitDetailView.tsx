@@ -861,21 +861,22 @@ export default function UnitViewer({
                     )}
                   </Button>
 
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={goNext}
-                    disabled={!canGoNext}
-                  >
-                    {isLastUnitInModule && nextModule
-                      ? isMobile
-                        ? "Next mod."
-                        : "Next Module"
-                      : isMobile
-                        ? "Next"
-                        : "Next"}
-                    <ChevronRight size={14} />
-                  </Button>
+                  {canGoNext && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={goNext}
+                    >
+                      {isLastUnitInModule && nextModule
+                        ? isMobile
+                          ? "Next mod."
+                          : "Next Module"
+                        : isMobile
+                          ? "Next"
+                          : "Next"}
+                      <ChevronRight size={14} />
+                    </Button>
+                  )}
                 </div>
               </div>
 
