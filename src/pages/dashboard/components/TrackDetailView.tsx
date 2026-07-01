@@ -381,12 +381,30 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                           size="sm"
                           disabled={locked}
                           style={
-                            locked
-                              ? undefined
-                              : isCompleted
+                            isCompleted
                               ? { color: trackColor.border, borderColor: trackColor.border }
                               : { backgroundColor: trackColor.border, borderColor: trackColor.border }
                           }
+                          onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                            if (locked) return;
+                            const btn = e.currentTarget;
+                            if (isCompleted) {
+                              btn.style.backgroundColor = trackColor.border;
+                              btn.style.color = "#ffffff";
+                            } else {
+                              btn.style.filter = "brightness(1.1)";
+                            }
+                          }}
+                          onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                            if (locked) return;
+                            const btn = e.currentTarget;
+                            if (isCompleted) {
+                              btn.style.backgroundColor = "transparent";
+                              btn.style.color = trackColor.border;
+                            } else {
+                              btn.style.filter = "brightness(1)";
+                            }
+                          }}
                           onClick={(e) => {
                             e.stopPropagation();
                             if (!locked) onPlayClick?.(module);

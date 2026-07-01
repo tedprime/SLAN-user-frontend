@@ -34,6 +34,8 @@ interface ButtonBaseProps {
   className?: string;
   disabled?: boolean;
   style?: React.CSSProperties;
+  onMouseEnter?: React.MouseEventHandler<HTMLButtonElement | HTMLAnchorElement>;
+  onMouseLeave?: React.MouseEventHandler<HTMLButtonElement | HTMLAnchorElement>;
 }
 
 interface ButtonAsAnchorProps extends ButtonBaseProps {
@@ -60,6 +62,8 @@ export default function Button({
   disabled = false,
   type = "button",
   style,
+  onMouseEnter,
+  onMouseLeave,
 }: ButtonProps) {
   const base =
     "inline-flex items-center gap-2 font-body font-600 transition-all duration-200 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2";
@@ -73,6 +77,8 @@ export default function Button({
       <a
         href={href}
         onClick={onClick as React.MouseEventHandler<HTMLAnchorElement>}
+        onMouseEnter={onMouseEnter as React.MouseEventHandler<HTMLAnchorElement>}
+        onMouseLeave={onMouseLeave as React.MouseEventHandler<HTMLAnchorElement>}
         className={classes}
         style={style}
       >
@@ -85,6 +91,8 @@ export default function Button({
     <button
       type={type as ButtonType}
       onClick={onClick as React.MouseEventHandler<HTMLButtonElement>}
+      onMouseEnter={onMouseEnter as React.MouseEventHandler<HTMLButtonElement>}
+      onMouseLeave={onMouseLeave as React.MouseEventHandler<HTMLButtonElement>}
       disabled={disabled}
       className={classes}
       style={style}
