@@ -250,11 +250,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
               <p style={{ fontSize: "13px", color: "#b0b0b0", marginTop: "4px" }}>Check back later for new content</p>
             </div>
           ) : (
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
-              gap: "16px",
-            }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {modules.map((module: ModuleSummary, index: number) => {
                 const progress = getModuleProgress(module);
                 const isCompleted = isModuleCompleted(module);
@@ -384,6 +380,13 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                           variant={isCompleted ? "outlined" : "primary"}
                           size="sm"
                           disabled={locked}
+                          style={
+                            locked
+                              ? undefined
+                              : isCompleted
+                              ? { color: trackColor.border, borderColor: trackColor.border }
+                              : { backgroundColor: trackColor.border, borderColor: trackColor.border }
+                          }
                           onClick={(e) => {
                             e.stopPropagation();
                             if (!locked) onPlayClick?.(module);
