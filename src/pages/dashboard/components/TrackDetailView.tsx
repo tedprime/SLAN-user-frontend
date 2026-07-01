@@ -250,7 +250,11 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
               <p style={{ fontSize: "13px", color: "#b0b0b0", marginTop: "4px" }}>Check back later for new content</p>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
+              gap: "16px",
+            }}>
               {modules.map((module: ModuleSummary, index: number) => {
                 const progress = getModuleProgress(module);
                 const isCompleted = isModuleCompleted(module);
@@ -315,6 +319,18 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
 
                         {/* Everything below shares this column, so it lines up under the title — not under the badge */}
                         <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{
+                            display: "block",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            color: locked ? "#b0b0b0" : trackColor.border,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                            marginBottom: "4px",
+                          }}>
+                            Module {index + 1}
+                          </span>
+
                           <h3 style={{
                             fontSize: "16px", fontWeight: 700,
                             color: locked ? "#aaaaaa" : "#101b37",
