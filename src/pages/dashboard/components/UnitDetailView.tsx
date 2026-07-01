@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
 import {
   ChevronRight,
   ChevronLeft,
@@ -56,6 +56,73 @@ function useIsMobile() {
     return () => mq.removeEventListener("change", handler);
   }, []);
   return isMobile;
+}
+
+// Shared "Resources" box — used on the unit-content screen and again on the
+// assessment screen so video/PDF links stay reachable while taking a quiz.
+function UnitResources({
+  videoUrl,
+  pdfUrl,
+}: {
+  videoUrl?: string | null;
+  pdfUrl?: string | null;
+}) {
+  const hasResources = !!videoUrl || !!pdfUrl;
+
+  const linkStyle: CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    fontSize: "13px",
+    color: "#006400",
+    textDecoration: "none",
+  };
+
+  return (
+    <div
+      style={{
+        marginTop: "32px",
+        padding: "20px",
+        backgroundColor: "#f5f5f5",
+        borderRadius: "12px",
+        border: "1px solid #e8e8e8",
+      }}
+    >
+      <h4
+        style={{
+          fontSize: "14px",
+          fontWeight: 700,
+          color: "#101b37",
+          marginBottom: "12px",
+          fontFamily: "var(--font-headline)",
+        }}
+      >
+        Resources
+      </h4>
+      <div className="space-y-2">
+        {hasResources ? (
+          <>
+            {videoUrl && (
+              <a href={videoUrl} target="_blank" rel="noopener noreferrer" style={linkStyle}>
+                <BookOpen size={14} />
+                Watch video
+              </a>
+            )}
+            {pdfUrl && (
+              <a href={pdfUrl} target="_blank" rel="noopener noreferrer" style={linkStyle}>
+                <BookOpen size={14} />
+                Download PDF
+              </a>
+            )}
+          </>
+        ) : (
+          <p style={{ fontSize: "13px", color: "#888888" }}>
+            No resources for this unit.
+          </p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function UnitViewer({
@@ -166,14 +233,21 @@ export default function UnitViewer({
     };
   }, [selectedUnitId, units]);
 
-  // Reset assessment state immediately on unit switch so stale
-  // pass/fail state from the previous unit can't leak into this one
-  // while the new unit's assessment is still loading.
-  useEffect(() => {
+  // Reset assessment state when the active unit changes, done during
+  // render (not in an effect) so it doesn't trigger an extra cascading
+  // render pass. This is React's recommended pattern for "adjusting state
+  // when a prop changes": https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [resolvedForUnitId, setResolvedForUnitId] = useState<number | null>(null);
+  if ((activeUnit?.id ?? null) !== resolvedForUnitId) {
+    setResolvedForUnitId(activeUnit?.id ?? null);
     setUnitAssessment(null);
     setAssessmentResult(null);
     setShowAssessment(false);
+  }
 
+  // Fetches the new unit's assessment (and any prior result) once the
+  // render-time reset above has settled on this unit.
+  useEffect(() => {
     if (!activeUnit) return;
     let cancelled = false;
     (async () => {
@@ -731,6 +805,9 @@ export default function UnitViewer({
                 }}
                 onSkip={() => setShowAssessment(false)}
               />
+              <div style={{ maxWidth: "600px", margin: "0 auto", padding: "0 24px" }}>
+                <UnitResources videoUrl={activeUnit.videoUrl} pdfUrl={activeUnit.pdfUrl} />
+              </div>
             </div>
           ) : activeUnit ? (
             // Single scroll container — unit header, content, and bottom nav
@@ -834,67 +911,7 @@ export default function UnitViewer({
                     </p>
                   )}
 
-                  {(activeUnit.videoUrl || activeUnit.pdfUrl) && (
-                    <div
-                      style={{
-                        marginTop: "32px",
-                        padding: "20px",
-                        backgroundColor: "#f5f5f5",
-                        borderRadius: "12px",
-                        border: "1px solid #e8e8e8",
-                      }}
-                    >
-                      <h4
-                        style={{
-                          fontSize: "14px",
-                          fontWeight: 700,
-                          color: "#101b37",
-                          marginBottom: "12px",
-                          fontFamily: "var(--font-headline)",
-                        }}
-                      >
-                        Resources
-                      </h4>
-                      <div className="space-y-2">
-                        {activeUnit.videoUrl && (
-                          
-                            <a href={activeUnit.videoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px",
-                              fontSize: "13px",
-                              color: "#006400",
-                              textDecoration: "none",
-                            }}
-                          >
-                            <BookOpen size={14} />
-                            Watch video
-                          </a>
-                        )}
-                        {activeUnit.pdfUrl && (
-                          
-                           <a href={activeUnit.pdfUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px",
-                              fontSize: "13px",
-                              color: "#006400",
-                              textDecoration: "none",
-                            }}
-                          >
-                            <BookOpen size={14} />
-                            Download PDF
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  <UnitResources videoUrl={activeUnit.videoUrl} pdfUrl={activeUnit.pdfUrl} />
                 </div>
               </div>
 
