@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ChevronDown, Lock, BookOpen, Clock, Layers } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import Progress from "../../../components/ui/Progress";
@@ -11,6 +11,19 @@ import {
 } from "../../../components/ui/DropdownMenu";
 
 const SORT_OPTIONS = ["Progress", "Title (A-Z)", "Recently Added"];
+
+const MOBILE_BP = 768;
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BP);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BP - 1}px)`);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
 
 const TRACK_COLORS = [
   { border: "#10b981", fill: "#10b981" },
@@ -28,6 +41,7 @@ interface CourseTracksViewProps {
 }
 
 export default function CourseTracksView({ course, onTrackClick }: CourseTracksViewProps) {
+  const isMobile = useIsMobile();
   const [sortBy, setSortBy] = useState("Progress");
 
   const tracks = useMemo(() => {
@@ -169,7 +183,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
               gap: "24px",
               alignItems: "stretch",
             }}
@@ -304,4 +318,4 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
       </div>
     </div>
   );
-          }
+}
