@@ -257,16 +257,16 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
                           <span style={{
                             display: "inline-flex", alignItems: "center", justifyContent: "center",
-                            height: "28px", width: "28px", borderRadius: "50%",
+                            height: "28px", width: "28px", minWidth: "28px", borderRadius: "50%",
                             backgroundColor: isCompleted ? trackColor.border : "#f5f5f5",
                             color: isCompleted ? "#ffffff" : "#888888",
-                            fontSize: "12px", fontWeight: 700,
+                            fontSize: "12px", fontWeight: 700, flexShrink: 0,
                           }}>
                             {isCompleted ? <CheckCircle size={14} /> : index + 1}
                           </span>
                           <h3 style={{
                             fontSize: "16px", fontWeight: 700, color: "#101b37",
-                            fontFamily: "var(--font-headline)",
+                            fontFamily: "var(--font-headline)", flex: 1, minWidth: 0,
                           }}>
                             {module.title}
                           </h3>
@@ -287,7 +287,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                           )}
                         </div>
 
-                        <div style={{ maxWidth: "400px" }}>
+                        <div>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
                             <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Progress</span>
                             <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{progress}%</span>
@@ -342,4 +342,4 @@ function getTrackColor(trackId: number): { border: string; bg: string } {
 
 function getTrackIndex(course: Course, track: CourseTrack): number {
   return course.tracks.findIndex((t) => t.id === track.id);
-                       }
+}
