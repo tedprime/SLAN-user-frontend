@@ -12,13 +12,19 @@ import {
 } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import Progress from "../../../components/ui/Progress";
+import { AssessmentView } from "../../../components/ui/AssessmentView";
 import { courseService } from "../../../services/courseService";
 import { progressService } from "../../../services/progressService";
+import { assessmentService } from "../../../services/assessmentService";
 import type {
   ModuleSummary,
   UnitSummary,
   UnitContent,
 } from "../../../services/types/course.types";
+import type {
+  Assessment,
+  AssessmentResult,
+} from "../../../services/types/assessment.types";
 
 interface UnitViewerProps {
   courseId: number;
@@ -84,6 +90,11 @@ export default function UnitViewer({
   );
   const [moduleProgressPercent, setModuleProgressPercent] = useState(0);
   const [marking, setMarking] = useState(false);
+
+  // Unit assessment: fetched per-unit, shown after "Mark Complete".
+  const [unitAssessment, setUnitAssessment] = useState<Assessment | null>(null);
+  const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null);
+  const [showAssessment, setShowAssessment] = useState(false);
 
   // The unit-content scroll container. Since the same DOM node is reused
   // across unit switches (only `activeUnit` changes), the browser keeps
@@ -155,6 +166,30 @@ export default function UnitViewer({
     };
   }, [selectedUnitId, units]);
 
+  // Reset assessment state immediately on unit switch so stale
+  // pass/fail state from the previous unit can't leak into this one
+  // while the new unit's assessment is still loading.
+  useEffect(() => {
+    setUnitAssessment(null);
+    setAssessmentResult(null);
+    setShowAssessment(false);
+
+    if (!activeUnit) return;
+    let cancelled = false;
+    (async () => {
+      const assessment = await assessmentService.getUnitAssessment(activeUnit.slug);
+      if (cancelled) return;
+      setUnitAssessment(assessment);
+      if (assessment) {
+        const priorResult = await assessmentService.getAssessmentResult(assessment.id);
+        if (!cancelled) setAssessmentResult(priorResult);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeUnit]);
+
   const currentIndex = units.findIndex((u) => u.id === selectedUnitId);
   const canGoPrevious = currentIndex > 0;
   const isLastUnitInModule = currentIndex === units.length - 1;
@@ -169,8 +204,11 @@ export default function UnitViewer({
       : null;
   const isCurrentUnitCompleted =
     selectedUnitId !== null && completedUnitIds.has(selectedUnitId);
+  const assessmentCleared = !unitAssessment || !!assessmentResult?.passed;
   const canGoNext =
-    isCurrentUnitCompleted && (!isLastUnitInModule || !!nextModule);
+    isCurrentUnitCompleted &&
+    assessmentCleared &&
+    (!isLastUnitInModule || !!nextModule);
 
   const goPrevious = () => {
     if (canGoPrevious) setSelectedUnitId(units[currentIndex - 1].id);
@@ -208,6 +246,10 @@ export default function UnitViewer({
         /* keep optimistic state */
       }
       onProgressChange?.();
+
+      if (unitAssessment && !assessmentResult?.passed) {
+        setShowAssessment(true);
+      }
     } catch {
       setCompletedUnitIds((prev) => {
         const next = new Set(prev);
@@ -561,16 +603,34 @@ export default function UnitViewer({
           <ChevronSep size={14} style={{ color: "#d1d1d1", flexShrink: 0 }} />
           <span
             style={{
-              fontWeight: 600,
-              color: "#101b37",
+              fontWeight: showAssessment ? 500 : 600,
+              color: showAssessment ? "#888888" : "#101b37",
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
               minWidth: 0,
+              flexShrink: showAssessment ? 0 : 1,
             }}
           >
             {module.title}
           </span>
+          {showAssessment && (
+            <>
+              <ChevronSep size={14} style={{ color: "#d1d1d1", flexShrink: 0 }} />
+              <span
+                style={{
+                  fontWeight: 600,
+                  color: "#101b37",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  minWidth: 0,
+                }}
+              >
+                Unit Assessment
+              </span>
+            </>
+          )}
         </div>
       </div>
 
@@ -645,7 +705,34 @@ export default function UnitViewer({
             overflow: "hidden",
           }}
         >
-          {activeUnit ? (
+          {activeUnit && showAssessment && unitAssessment ? (
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                overflowY: "auto",
+                overflowX: "hidden",
+                minHeight: 0,
+                backgroundColor: "#fafafa",
+                scrollBehavior: "smooth",
+                WebkitOverflowScrolling: "touch",
+                overscrollBehavior: "contain",
+              }}
+            >
+              <AssessmentView
+                assessment={unitAssessment}
+                onComplete={(result) => {
+                  setAssessmentResult(result);
+                  setShowAssessment(false);
+                  // Passing is the only way onComplete fires (see
+                  // AssessmentView), so it's always safe to advance here.
+                  goNext();
+                }}
+                onSkip={() => setShowAssessment(false)}
+              />
+            </div>
+          ) : activeUnit ? (
             // Single scroll container — unit header, content, and bottom nav
             // all scroll together instead of the header/nav being pinned,
             // matching the pattern used in Overview.tsx.
@@ -861,21 +948,32 @@ export default function UnitViewer({
                     )}
                   </Button>
 
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={goNext}
-                    disabled={!canGoNext}
-                  >
-                    {isLastUnitInModule && nextModule
-                      ? isMobile
-                        ? "Next mod."
-                        : "Next Module"
-                      : isMobile
-                        ? "Next"
-                        : "Next"}
-                    <ChevronRight size={14} />
-                  </Button>
+                  {isCurrentUnitCompleted && unitAssessment && !assessmentResult?.passed ? (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => setShowAssessment(true)}
+                    >
+                      {assessmentResult ? "Retake Assessment" : "Take Assessment"}
+                      <ChevronRight size={14} />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={goNext}
+                      disabled={!canGoNext}
+                    >
+                      {isLastUnitInModule && nextModule
+                        ? isMobile
+                          ? "Next mod."
+                          : "Next Module"
+                        : isMobile
+                          ? "Next"
+                          : "Next"}
+                      <ChevronRight size={14} />
+                    </Button>
+                  )}
                 </div>
               </div>
 
