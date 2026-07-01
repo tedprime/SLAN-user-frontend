@@ -295,69 +295,72 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                         gap: isMobile ? "16px" : "20px",
                       }}
                     >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "8px" }}>
-                          <span style={{
-                            display: "inline-flex", alignItems: "center", justifyContent: "center",
-                            height: "28px", width: "28px", minWidth: "28px", borderRadius: "50%",
-                            backgroundColor: isCompleted ? trackColor.border : locked ? "#e8e8e8" : "#f5f5f5",
-                            color: isCompleted ? "#ffffff" : locked ? "#aaaaaa" : "#888888",
-                            fontSize: "12px", fontWeight: 700, flexShrink: 0,
-                            marginTop: "1px",
-                          }}>
-                            {isCompleted ? (
-                              <CheckCircle size={14} />
-                            ) : locked ? (
-                              <Lock size={12} />
-                            ) : (
-                              index + 1
-                            )}
-                          </span>
+                      <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          height: "28px", width: "28px", minWidth: "28px", borderRadius: "50%",
+                          backgroundColor: isCompleted ? trackColor.border : locked ? "#e8e8e8" : "#f5f5f5",
+                          color: isCompleted ? "#ffffff" : locked ? "#aaaaaa" : "#888888",
+                          fontSize: "12px", fontWeight: 700, flexShrink: 0,
+                          marginTop: "1px",
+                        }}>
+                          {isCompleted ? (
+                            <CheckCircle size={14} />
+                          ) : locked ? (
+                            <Lock size={12} />
+                          ) : (
+                            index + 1
+                          )}
+                        </span>
+
+                        {/* Everything below shares this column, so it lines up under the title — not under the badge */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <h3 style={{
                             fontSize: "16px", fontWeight: 700,
                             color: locked ? "#aaaaaa" : "#101b37",
-                            fontFamily: "var(--font-headline)", flex: 1, minWidth: 0,
+                            fontFamily: "var(--font-headline)",
                             lineHeight: 1.35,
+                            marginBottom: "8px",
                           }}>
                             {module.title}
                           </h3>
-                        </div>
 
-                        <p style={{
-                          fontSize: "14px",
-                          color: locked ? "#b0b0b0" : "#888888",
-                          marginBottom: "12px",
-                          lineHeight: 1.5,
-                        }}>
-                          {module.description || "Explore this module to continue your learning journey."}
-                        </p>
+                          <p style={{
+                            fontSize: "14px",
+                            color: locked ? "#b0b0b0" : "#888888",
+                            marginBottom: "12px",
+                            lineHeight: 1.5,
+                          }}>
+                            {module.description || "Explore this module to continue your learning journey."}
+                          </p>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px", flexWrap: "wrap", rowGap: "6px" }}>
-                          <span style={{ fontSize: "12px", fontWeight: 600, color: "#b0b0b0" }}>
-                            {module.unitCount} {module.unitCount === 1 ? "Unit" : "Units"}
-                          </span>
-                          {module.estimatedReadMinutes > 0 && (
+                          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px", flexWrap: "wrap", rowGap: "6px" }}>
                             <span style={{ fontSize: "12px", fontWeight: 600, color: "#b0b0b0" }}>
-                              {module.estimatedReadMinutes} min read
+                              {module.unitCount} {module.unitCount === 1 ? "Unit" : "Units"}
                             </span>
-                          )}
-                          {locked && (
-                            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 600, color: "#b0b0b0" }}>
-                              <Lock size={11} />
-                              Locked
-                            </span>
+                            {module.estimatedReadMinutes > 0 && (
+                              <span style={{ fontSize: "12px", fontWeight: 600, color: "#b0b0b0" }}>
+                                {module.estimatedReadMinutes} min read
+                              </span>
+                            )}
+                            {locked && (
+                              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 600, color: "#b0b0b0" }}>
+                                <Lock size={11} />
+                                Locked
+                              </span>
+                            )}
+                          </div>
+
+                          {!locked && (
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                                <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Progress</span>
+                                <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{progress}%</span>
+                              </div>
+                              <Progress value={progress} color={trackColor.border} />
+                            </div>
                           )}
                         </div>
-
-                        {!locked && (
-                          <div>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                              <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Progress</span>
-                              <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{progress}%</span>
-                            </div>
-                            <Progress value={progress} color={trackColor.border} />
-                          </div>
-                        )}
                       </div>
 
                       <div style={{ flexShrink: 0, display: "flex", width: isMobile ? "100%" : "auto" }}>
