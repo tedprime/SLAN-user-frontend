@@ -33,6 +33,7 @@ interface ButtonBaseProps {
   size?: ButtonSize;
   className?: string;
   disabled?: boolean;
+  style?: React.CSSProperties;
 }
 
 interface ButtonAsAnchorProps extends ButtonBaseProps {
@@ -58,6 +59,7 @@ export default function Button({
   className = "",
   disabled = false,
   type = "button",
+  style,
 }: ButtonProps) {
   const base =
     "inline-flex items-center gap-2 font-body font-600 transition-all duration-200 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2";
@@ -72,6 +74,7 @@ export default function Button({
         href={href}
         onClick={onClick as React.MouseEventHandler<HTMLAnchorElement>}
         className={classes}
+        style={style}
       >
         {children}
       </a>
@@ -84,6 +87,7 @@ export default function Button({
       onClick={onClick as React.MouseEventHandler<HTMLButtonElement>}
       disabled={disabled}
       className={classes}
+      style={style}
     >
       {children}
     </button>
