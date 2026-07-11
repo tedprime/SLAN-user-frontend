@@ -9,6 +9,7 @@ import {
   Check,
   Lock,
   X,
+  ClipboardCheck,
 } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import Progress from "../../../components/ui/Progress";
@@ -31,6 +32,9 @@ interface UnitViewerProps {
   onBackToTrack?: () => void;
   onProgressChange?: () => void;
   onNextModule?: (module: ModuleSummary) => void;
+  /** Called when the learner completes the last unit of a module and
+   * clicks through to that module's assessment. */
+  onTakeAssessment?: (module: ModuleSummary) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -54,13 +58,12 @@ function useIsMobile() {
 
 export default function UnitViewer({
   module,
-  allModules,
   courseName,
   trackName,
   onBack,
   onBackToTrack,
   onProgressChange,
-  onNextModule,
+  onTakeAssessment,
 }: UnitViewerProps) {
   const isMobile = useIsMobile();
 
@@ -170,19 +173,11 @@ export default function UnitViewer({
   const currentIndex = units.findIndex((u) => u.id === selectedUnitId);
   const canGoPrevious = currentIndex > 0;
   const isLastUnitInModule = currentIndex === units.length - 1;
-  const currentModuleIndex = allModules
-    ? allModules.findIndex((m) => m.id === module.id)
-    : -1;
-  const nextModule =
-    allModules &&
-    currentModuleIndex >= 0 &&
-    currentModuleIndex < allModules.length - 1
-      ? allModules[currentModuleIndex + 1]
-      : null;
   const isCurrentUnitCompleted =
     selectedUnitId !== null && completedUnitIds.has(selectedUnitId);
-  const canGoNext =
-    isCurrentUnitCompleted && (!isLastUnitInModule || !!nextModule);
+  // Completing the last unit always unlocks the next step — either the
+  // next unit, or (on the final unit) that module's assessment.
+  const canGoNext = isCurrentUnitCompleted;
 
   useLayoutEffect(() => {
     if (markCompleteWrapRef.current) {
@@ -196,8 +191,8 @@ export default function UnitViewer({
   const goNext = () => {
     if (!isLastUnitInModule) {
       setSelectedUnitId(units[currentIndex + 1].id);
-    } else if (nextModule) {
-      onNextModule?.(nextModule);
+    } else {
+      onTakeAssessment?.(module);
     }
   };
 
@@ -875,14 +870,17 @@ export default function UnitViewer({
                       onClick={goNext}
                       disabled={!canGoNext}
                     >
-                      {isLastUnitInModule && nextModule
-                        ? isMobile
-                          ? "Next mod."
-                          : "Next Module"
-                        : isMobile
-                          ? "Next"
-                          : "Next"}
-                      <ChevronRight size={14} />
+                      {isLastUnitInModule ? (
+                        <>
+                          <ClipboardCheck size={14} />
+                          {isMobile ? "Assessment" : "Take Assessment"}
+                        </>
+                      ) : (
+                        <>
+                          Next
+                          <ChevronRight size={14} />
+                        </>
+                      )}
                     </Button>
                   </div>
 

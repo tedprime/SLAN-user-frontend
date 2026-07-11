@@ -5,6 +5,7 @@ import Overview from "./components/Overview";
 import CourseTracksView from "./components/CourseTracksView";
 import TrackDetailView from "./components/TrackDetailView";
 import UnitViewer from "./components/UnitDetailView";
+import AssessmentView from "./components/AssessmentView";
 import { courseService } from "../../services/courseService";
 import type { Course, ModuleSummary } from "../../services/types/course.types";
 
@@ -85,8 +86,28 @@ export default function UserDashboard() {
       return { type: "unit" as const, course, track };
     }
 
+    if (activeNav.startsWith("assessment:")) {
+      const parts = activeNav.split(":");
+      const courseId = parseInt(parts[1], 10);
+      const trackId = parseInt(parts[2], 10);
+      const moduleId = parseInt(parts[3], 10);
+      const course = courses.find((c) => c.id === courseId);
+      const track = course?.tracks.find((t) => t.id === trackId);
+
+      if (!course || !track) return { type: "overview" as const };
+
+      const mod =
+        selectedModule && selectedModule.id === moduleId
+          ? selectedModule
+          : (trackModules[trackId]?.find((m) => m.id === moduleId) ?? null);
+
+      if (!mod) return { type: "loading" as const };
+
+      return { type: "assessment" as const, course, track, module: mod };
+    }
+
     return { type: "overview" as const };
-  }, [activeNav, courses, selectedModule]);
+  }, [activeNav, courses, selectedModule, trackModules]);
 
   // --- THE OFFENDING EFFECT WAS COMPLETELY REMOVED FROM HERE ---
 
@@ -119,6 +140,36 @@ export default function UserDashboard() {
     console.log("Module clicked:", module.id);
   };
 
+  const handleTakeAssessment = (module: ModuleSummary) => {
+    if (viewState.type === "unit" && viewState.course && viewState.track) {
+      setSelectedModule(module);
+      setActiveNav(`assessment:${viewState.course.id}:${viewState.track.id}:${module.id}`);
+    }
+  };
+
+  // After a passed (or exited) assessment: advance to the next module's
+  // first unit if one exists, otherwise drop back to the track view.
+  const handleAssessmentFinish = () => {
+    if (viewState.type !== "assessment" || !viewState.course || !viewState.track) return;
+    const mods = trackModules[viewState.track.id] || [];
+    const idx = mods.findIndex((m) => m.id === viewState.module.id);
+    const next = idx >= 0 && idx < mods.length - 1 ? mods[idx + 1] : null;
+    if (next) {
+      handleModuleNavigate(next, viewState.course.id, viewState.track.id);
+    } else {
+      setActiveNav(`track:${viewState.course.id}:${viewState.track.id}`);
+    }
+    handleProgressChange();
+  };
+
+  const handleAssessmentExit = () => {
+    if (viewState.type === "assessment" && viewState.course && viewState.track) {
+      setActiveNav(`track:${viewState.course.id}:${viewState.track.id}`);
+    } else {
+      setActiveNav("overview");
+    }
+  };
+
   const handleModulesLoaded = useCallback((trackId: number, mods: ModuleSummary[]) => {
     setTrackModules((prev) => {
       if (prev[trackId] === mods) return prev;
@@ -126,9 +177,11 @@ export default function UserDashboard() {
     });
   }, []);
 
-  // Resolves modules if we land on a unit URL directly
+  // Resolves modules if we land on a unit or assessment URL directly
   useEffect(() => {
-    if (!activeNav.startsWith("unit:") || selectedModule) return;
+    const needsModule =
+      activeNav.startsWith("unit:") || activeNav.startsWith("assessment:");
+    if (!needsModule || selectedModule) return;
     if (courses.length === 0) return;
 
     const parts = activeNav.split(":");
@@ -165,6 +218,19 @@ export default function UserDashboard() {
 
     return () => { cancelled = true; };
   }, [activeNav, selectedModule, courses, trackModules, handleModulesLoaded]);
+
+  if (viewState.type === "assessment") {
+    return (
+      <AssessmentView
+        moduleId={viewState.module.id}
+        moduleTitle={viewState.module.title}
+        courseName={viewState.course.title}
+        trackName={viewState.track.title}
+        onExit={handleAssessmentExit}
+        onFinish={handleAssessmentFinish}
+      />
+    );
+  }
 
   return (
     <div style={{
@@ -251,6 +317,7 @@ export default function UserDashboard() {
                   handleModuleNavigate(nextMod, viewState.course.id, viewState.track.id);
                 }
               }}
+              onTakeAssessment={handleTakeAssessment}
             />
           )}
         </main>
