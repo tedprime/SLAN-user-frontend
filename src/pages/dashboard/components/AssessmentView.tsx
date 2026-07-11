@@ -42,6 +42,8 @@ import type {
 interface AssessmentViewProps {
   moduleId: number;
   moduleTitle: string;
+  /** Position of this module within its track (1-based), used in the exam header. */
+  moduleNumber?: number;
   courseName: string;
   trackName: string;
   /** Close without finishing — e.g. the X icon or "Save & Exit". */
@@ -104,6 +106,7 @@ type Phase = "loading" | "error" | "none" | "intro" | "taking" | "submitting" | 
 export default function AssessmentView({
   moduleId,
   moduleTitle,
+  moduleNumber,
   courseName,
   trackName,
   onExit,
@@ -463,7 +466,10 @@ export default function AssessmentView({
             >
               {courseName}
             </p>
-            <p style={{ fontSize: "12px", color: "#888888" }}>{trackName} • Assessment</p>
+            <p style={{ fontSize: "12px", color: "#888888", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+              {trackName}
+              {moduleNumber ? ` • Module ${moduleNumber}` : ""} • Assessment
+            </p>
           </div>
         </div>
 

@@ -35,6 +35,9 @@ interface UnitViewerProps {
   /** Called when the learner completes the last unit of a module and
    * clicks through to that module's assessment. */
   onTakeAssessment?: (module: ModuleSummary) => void;
+  /** Land on the module's last unit instead of its first — used when
+   * returning here from an exited/finished assessment. */
+  startAtLastUnit?: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,6 +67,7 @@ export default function UnitViewer({
   onBackToTrack,
   onProgressChange,
   onTakeAssessment,
+  startAtLastUnit,
 }: UnitViewerProps) {
   const isMobile = useIsMobile();
 
@@ -137,9 +141,12 @@ export default function UnitViewer({
         const unitList = Array.isArray(res?.units) ? res.units : [];
         if (!cancelled) {
           setUnits(unitList);
-          setSelectedUnitId((prev) =>
-            prev === null && unitList.length > 0 ? unitList[0].id : prev,
-          );
+          setSelectedUnitId((prev) => {
+            if (prev !== null || unitList.length === 0) return prev;
+            return startAtLastUnit
+              ? unitList[unitList.length - 1].id
+              : unitList[0].id;
+          });
         }
       } catch {
         if (!cancelled) setError(true);
@@ -150,7 +157,7 @@ export default function UnitViewer({
     return () => {
       cancelled = true;
     };
-  }, [module.id, refreshModuleProgress]);
+  }, [module.id, refreshModuleProgress, startAtLastUnit]);
 
   useEffect(() => {
     if (!selectedUnitId) return;

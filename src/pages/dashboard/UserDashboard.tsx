@@ -87,7 +87,7 @@ export default function UserDashboard() {
         return { type: "loading" as const };
       }
 
-      return { type: "unit" as const, course, track };
+      return { type: "unit" as const, course, track, startAtLastUnit: parts[4] === "last" };
     }
 
     if (activeNav.startsWith("assessment:")) {
@@ -168,7 +168,8 @@ export default function UserDashboard() {
 
   const handleAssessmentExit = () => {
     if (viewState.type === "assessment" && viewState.course && viewState.track) {
-      setActiveNav(`track:${viewState.course.id}:${viewState.track.id}`);
+      setSelectedModule(viewState.module);
+      setActiveNav(`unit:${viewState.course.id}:${viewState.track.id}:${viewState.module.id}:last`);
     } else {
       setActiveNav("overview");
     }
@@ -244,12 +245,14 @@ export default function UserDashboard() {
         />
       )}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
-        <DashboardHeader
-          activeNav={activeNav}
-          searchVal={searchVal}
-          onSearchChange={setSearchVal}
-          onMenuClick={handleToggleSidebar}
-        />
+        {!assessmentExamActive && (
+          <DashboardHeader
+            activeNav={activeNav}
+            searchVal={searchVal}
+            onSearchChange={setSearchVal}
+            onMenuClick={handleToggleSidebar}
+          />
+        )}
         <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
           {viewState.type === "loading" && (
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#fafafa", minHeight: 0 }}>
@@ -298,6 +301,7 @@ export default function UserDashboard() {
               allModules={trackModules[viewState.track.id]}
               courseName={viewState.course.title}
               trackName={viewState.track.title}
+              startAtLastUnit={viewState.startAtLastUnit}
               onBack={handleBackToCourse}
               onBackToTrack={() => {
                 if (viewState.type === "unit" && viewState.course && viewState.track) {
@@ -318,6 +322,9 @@ export default function UserDashboard() {
             <AssessmentView
               moduleId={viewState.module.id}
               moduleTitle={viewState.module.title}
+              moduleNumber={
+                (trackModules[viewState.track.id]?.findIndex((m) => m.id === viewState.module.id) ?? -1) + 1 || undefined
+              }
               courseName={viewState.course.title}
               trackName={viewState.track.title}
               onExit={handleAssessmentExit}
