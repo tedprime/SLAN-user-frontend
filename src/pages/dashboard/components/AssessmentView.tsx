@@ -115,7 +115,7 @@ export default function AssessmentView({
     setPhase("submitting");
     setSubmitError(false);
     const payload: AssessmentSubmitPayload = {
-      answers: assessment.questions.map((q) => ({
+      answers: (Array.isArray(assessment.questions) ? assessment.questions : []).map((q) => ({
         questionId: q.id,
         selectedOptionId: answers[q.id] ?? null,
       })),
@@ -201,8 +201,26 @@ export default function AssessmentView({
   }
 
   // ── Taking phase ────────────────────────────────────────────────────
-  const question = assessment.questions[currentIndex];
-  const total = assessment.questions.length;
+  const questions = Array.isArray(assessment.questions) ? assessment.questions : [];
+
+  if (questions.length === 0) {
+    return (
+      <FullScreenMessage>
+        <p style={{ fontSize: "16px", fontWeight: 600, color: "#101b37", marginBottom: "4px" }}>
+          This assessment has no questions yet
+        </p>
+        <p style={{ fontSize: "13px", color: "#888888", marginBottom: "8px" }}>
+          Check back once it's been configured.
+        </p>
+        <Button variant="outlined" size="sm" onClick={onExit}>
+          Back
+        </Button>
+      </FullScreenMessage>
+    );
+  }
+
+  const question = questions[currentIndex];
+  const total = questions.length;
   const isLastQuestion = currentIndex === total - 1;
   const percentComplete = Math.round(((currentIndex + 1) / total) * 100);
   const isMarked = markedForReview.has(question.id);
@@ -409,7 +427,7 @@ export default function AssessmentView({
             </p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {question.options.map((option) => {
+              {(Array.isArray(question.options) ? question.options : []).map((option) => {
                 const isSelected = answers[question.id] === option.id;
                 return (
                   <button
@@ -736,7 +754,7 @@ function ResultsScreen({
           </h2>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "32px" }}>
-            {result.review.map((item, index) => (
+            {(Array.isArray(result.review) ? result.review : []).map((item, index) => (
               <div
                 key={item.questionId}
                 style={{
