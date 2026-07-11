@@ -2,6 +2,15 @@
 //
 // Full-screen takeover (no sidebar/header) rendered directly by
 // UserDashboard.tsx when activeNav starts with "assessment:".
+//
+// Rewritten to match the real Swagger-backed contract in
+// assessmentService.ts / assessment.types.ts:
+//   1. GET  /modules/{moduleId}/assessment   -> config only (no questions)
+//   2. GET  /attempts?...                    -> past attempts (for attempts-used)
+//   3. POST /attempts/start                  -> begins an attempt, returns questions
+//   4. PATCH /attempts/{attemptId}/save      -> best-effort autosave
+//   5. POST /attempts/{attemptId}/submit     -> score only, no breakdown
+//   6. GET  /attempts/{attemptId}/result     -> full per-question breakdown
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   X,
@@ -12,15 +21,19 @@ import {
   XCircle,
   Bookmark,
   Award,
-  TrendingUp,
   ClipboardCheck,
+  PlayCircle,
 } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import { assessmentService } from "../../../services/assessmentService";
 import type {
-  ModuleAssessment,
-  AssessmentResult,
-  AssessmentSubmitPayload,
+  AssessmentConfig,
+  AssessmentType,
+  AttemptSummary,
+  AttemptStart,
+  AttemptAnswerInput,
+  SubmitAttemptResult,
+  AttemptResult,
 } from "../../../services/types/assessment.types";
 
 interface AssessmentViewProps {
@@ -33,6 +46,10 @@ interface AssessmentViewProps {
   /** "Finish & Continue" from the results screen. */
   onFinish: () => void;
 }
+
+// This view is always rendered for a module-level assessment. Track- and
+// course-level assessments would reuse the same UI with a different type.
+const ASSESSMENT_TYPE: AssessmentType = "module_assessment";
 
 const MOBILE_BP = 768;
 
@@ -54,14 +71,26 @@ function formatTime(totalSeconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-function getGradeLabel(score: number, passed: boolean): string {
+function getGradeLabel(percentage: number, passed: boolean): string {
   if (!passed) return "Not Yet Passed";
-  if (score >= 90) return "Distinction";
-  if (score >= 75) return "Merit";
+  if (percentage >= 90) return "Distinction";
+  if (percentage >= 75) return "Merit";
   return "Pass";
 }
 
-type Phase = "loading" | "error" | "taking" | "submitting" | "results";
+function secondsUntil(isoDate: string): number {
+  const diffMs = new Date(isoDate).getTime() - Date.now();
+  return Math.max(0, Math.floor(diffMs / 1000));
+}
+
+function buildAnswersPayload(answers: Record<number, string>): AttemptAnswerInput[] {
+  // Omit unanswered questions entirely, per the API contract (they score 0).
+  return Object.entries(answers)
+    .filter(([, value]) => value !== undefined && value !== null && value.trim() !== "")
+    .map(([questionId, answer]) => ({ questionId: Number(questionId), answer }));
+}
+
+type Phase = "loading" | "error" | "none" | "intro" | "taking" | "submitting" | "results";
 
 export default function AssessmentView({
   moduleId,
@@ -74,62 +103,134 @@ export default function AssessmentView({
   const isMobile = useIsMobile();
 
   const [phase, setPhase] = useState<Phase>("loading");
-  const [assessment, setAssessment] = useState<ModuleAssessment | null>(null);
+  const [config, setConfig] = useState<AssessmentConfig | null>(null);
+  const [pastAttempts, setPastAttempts] = useState<AttemptSummary[]>([]);
+
+  const [attempt, setAttempt] = useState<AttemptStart | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string | null>>({});
+  const [answers, setAnswers] = useState<Record<number, string>>({});
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
-  const [result, setResult] = useState<AssessmentResult | null>(null);
+
+  const [submitResult, setSubmitResult] = useState<SubmitAttemptResult | null>(null);
+  const [attemptResult, setAttemptResult] = useState<AttemptResult | null>(null);
   const [submitError, setSubmitError] = useState(false);
+  const [startError, setStartError] = useState(false);
 
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
   const elapsedRef = useRef(0);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadAssessment = useCallback(async () => {
+  // ── Load config + past attempts ────────────────────────────────────
+  const loadIntro = useCallback(async () => {
     setPhase("loading");
+    setStartError(false);
     try {
-      const data = await assessmentService.getModuleAssessment(moduleId);
-      setAssessment(data);
-      setAnswers({});
-      setMarkedForReview(new Set());
-      setCurrentIndex(0);
-      setResult(null);
-      setSubmitError(false);
-      elapsedRef.current = 0;
-      setSecondsRemaining(data.timeLimitMinutes > 0 ? data.timeLimitMinutes * 60 : null);
-      setPhase("taking");
+      const cfg = await assessmentService.getModuleAssessmentConfig(moduleId);
+      setConfig(cfg);
+      if (!cfg) {
+        setPhase("none");
+        return;
+      }
+      try {
+        const attempts = await assessmentService.listAttempts(ASSESSMENT_TYPE, cfg.id);
+        setPastAttempts(Array.isArray(attempts) ? attempts : []);
+      } catch {
+        // Non-fatal — attempts history just won't show.
+        setPastAttempts([]);
+      }
+      setPhase("intro");
     } catch {
       setPhase("error");
     }
   }, [moduleId]);
 
   useEffect(() => {
-    // Fetch-on-mount/moduleId-change. loadAssessment sets phase
-    // synchronously before its first await (to show a loading state
-    // immediately) — intentional, not an accidental cascade.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadAssessment();
-  }, [loadAssessment]);
+    loadIntro();
+  }, [loadIntro]);
 
+  // ── Start a new attempt ─────────────────────────────────────────────
+  const handleStart = useCallback(async () => {
+    if (!config) return;
+    setStartError(false);
+    setPhase("loading");
+    try {
+      const started = await assessmentService.startAttempt({
+        assessmentType: ASSESSMENT_TYPE,
+        assessmentId: config.id,
+      });
+      setAttempt(started);
+      setAnswers({});
+      setMarkedForReview(new Set());
+      setCurrentIndex(0);
+      setSubmitResult(null);
+      setAttemptResult(null);
+      setSubmitError(false);
+      elapsedRef.current = 0;
+      setSecondsRemaining(
+        started.expiresAt
+          ? secondsUntil(started.expiresAt)
+          : started.timeLimitMinutes > 0
+            ? started.timeLimitMinutes * 60
+            : null
+      );
+      setPhase("taking");
+    } catch {
+      setStartError(true);
+      setPhase("intro");
+    }
+  }, [config]);
+
+  // ── Submit the attempt ──────────────────────────────────────────────
   const handleSubmit = useCallback(async () => {
-    if (!assessment) return;
+    if (!attempt) return;
     setPhase("submitting");
     setSubmitError(false);
-    const payload: AssessmentSubmitPayload = {
-      answers: (Array.isArray(assessment.questions) ? assessment.questions : []).map((q) => ({
-        questionId: q.id,
-        selectedOptionId: answers[q.id] ?? null,
-      })),
-      timeTakenSeconds: elapsedRef.current,
-    };
     try {
-      const res = await assessmentService.submitAssessment(moduleId, payload);
-      setResult(res);
+      const res = await assessmentService.submitAttempt(attempt.attemptId, {
+        answers: buildAnswersPayload(answers),
+      });
+      setSubmitResult(res);
+      // Full per-question breakdown is a separate call — best effort, the
+      // results screen still works with just the summary if this fails.
+      try {
+        const full = await assessmentService.getAttemptResult(attempt.attemptId);
+        setAttemptResult(full);
+      } catch {
+        setAttemptResult(null);
+      }
+      // Refresh attempts-used count so a retry offer reflects reality.
+      if (config) {
+        try {
+          const attempts = await assessmentService.listAttempts(ASSESSMENT_TYPE, config.id);
+          setPastAttempts(Array.isArray(attempts) ? attempts : []);
+        } catch {
+          // ignore
+        }
+      }
       setPhase("results");
     } catch {
       setSubmitError(true);
       setPhase("taking");
     }
-  }, [assessment, answers, moduleId]);
+  }, [attempt, answers, config]);
+
+  // ── Best-effort autosave, debounced on answer changes ───────────────
+  useEffect(() => {
+    if (phase !== "taking" || !attempt) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      assessmentService
+        .saveAttempt(attempt.attemptId, { answers: buildAnswersPayload(answers) })
+        .catch(() => {
+          // Autosave failures are non-critical, swallow per service contract.
+        });
+    }, 1500);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers, phase, attempt]);
 
   // Ticking clock while the assessment is in progress.
   useEffect(() => {
@@ -149,6 +250,10 @@ export default function AssessmentView({
     }
   }, [secondsRemaining, phase, handleSubmit]);
 
+  const attemptsUsed = pastAttempts.length;
+  const maxAttempts = config?.maxAttempts ?? 0;
+  const attemptsExhausted = maxAttempts > 0 && attemptsUsed >= maxAttempts;
+
   if (phase === "loading") {
     return (
       <FullScreenMessage>
@@ -158,14 +263,30 @@ export default function AssessmentView({
     );
   }
 
-  if (phase === "error" || !assessment) {
+  if (phase === "none") {
+    return (
+      <FullScreenMessage>
+        <p style={{ fontSize: "16px", fontWeight: 600, color: "#101b37", marginBottom: "4px" }}>
+          No assessment configured
+        </p>
+        <p style={{ fontSize: "13px", color: "#888888", marginBottom: "8px" }}>
+          This module doesn't have an assessment yet.
+        </p>
+        <Button variant="outlined" size="sm" onClick={onExit}>
+          Back
+        </Button>
+      </FullScreenMessage>
+    );
+  }
+
+  if (phase === "error" || !config) {
     return (
       <FullScreenMessage>
         <p style={{ fontSize: "16px", fontWeight: 600, color: "#d32f2f", marginBottom: "8px" }}>
           Failed to load assessment
         </p>
         <div style={{ display: "flex", gap: "8px" }}>
-          <Button variant="primary" size="sm" onClick={loadAssessment}>
+          <Button variant="primary" size="sm" onClick={loadIntro}>
             Retry
           </Button>
           <Button variant="outlined" size="sm" onClick={onExit}>
@@ -173,6 +294,23 @@ export default function AssessmentView({
           </Button>
         </div>
       </FullScreenMessage>
+    );
+  }
+
+  if (phase === "intro") {
+    return (
+      <IntroScreen
+        isMobile={isMobile}
+        config={config}
+        moduleTitle={moduleTitle}
+        courseName={courseName}
+        trackName={trackName}
+        attemptsUsed={attemptsUsed}
+        attemptsExhausted={attemptsExhausted}
+        startError={startError}
+        onStart={handleStart}
+        onExit={onExit}
+      />
     );
   }
 
@@ -185,23 +323,32 @@ export default function AssessmentView({
     );
   }
 
-  if (phase === "results" && result) {
+  if (phase === "results" && submitResult) {
     return (
       <ResultsScreen
         isMobile={isMobile}
         moduleTitle={moduleTitle}
-        result={result}
+        submitResult={submitResult}
+        attemptResult={attemptResult}
         onExit={onExit}
         onFinish={onFinish}
         onRetry={
-          !result.passed && result.attemptsUsed < result.maxAttempts ? loadAssessment : undefined
+          !submitResult.passed && !attemptsExhausted ? () => loadIntro() : undefined
         }
       />
     );
   }
 
   // ── Taking phase ────────────────────────────────────────────────────
-  const questions = Array.isArray(assessment.questions) ? assessment.questions : [];
+  if (!attempt) {
+    return (
+      <FullScreenMessage>
+        <Spinner />
+      </FullScreenMessage>
+    );
+  }
+
+  const questions = Array.isArray(attempt.questions) ? attempt.questions : [];
 
   if (questions.length === 0) {
     return (
@@ -369,7 +516,7 @@ export default function AssessmentView({
                 letterSpacing: "-0.02em",
               }}
             >
-              {assessment.title || moduleTitle}
+              {config.title || moduleTitle}
             </h1>
             <span style={{ fontSize: "13px", fontWeight: 700, color: "#888888", whiteSpace: "nowrap" }}>
               {percentComplete}% Complete
@@ -423,61 +570,83 @@ export default function AssessmentView({
             }}
           >
             <p style={{ fontSize: "16px", fontWeight: 600, color: "#101b37", lineHeight: 1.5, marginBottom: "24px" }}>
-              {question.text}
+              {question.questionText}
             </p>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {(Array.isArray(question.options) ? question.options : []).map((option) => {
-                const isSelected = answers[question.id] === option.id;
-                return (
-                  <button
-                    key={option.id}
-                    onClick={() =>
-                      setAnswers((prev) => ({ ...prev, [question.id]: option.id }))
-                    }
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                      textAlign: "left",
-                      padding: "16px",
-                      borderRadius: "10px",
-                      border: `1px solid ${isSelected ? "#006400" : "#e0e0e0"}`,
-                      backgroundColor: isSelected ? "rgba(0,100,0,0.04)" : "#ffffff",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <span
+            {question.questionType === "short_answer" ? (
+              <textarea
+                value={answers[question.id] ?? ""}
+                onChange={(e) =>
+                  setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))
+                }
+                placeholder="Type your answer..."
+                rows={4}
+                style={{
+                  width: "100%",
+                  padding: "14px 16px",
+                  borderRadius: "10px",
+                  border: "1px solid #e0e0e0",
+                  fontSize: "14px",
+                  color: "#101b37",
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                  outline: "none",
+                }}
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {(Array.isArray(question.options) ? question.options : []).map((option) => {
+                  const isSelected = answers[question.id] === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      onClick={() =>
+                        setAnswers((prev) => ({ ...prev, [question.id]: option.id }))
+                      }
                       style={{
-                        width: "18px",
-                        height: "18px",
-                        minWidth: "18px",
-                        borderRadius: "50%",
-                        border: `2px solid ${isSelected ? "#006400" : "#d1d1d1"}`,
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
+                        gap: "12px",
+                        textAlign: "left",
+                        padding: "16px",
+                        borderRadius: "10px",
+                        border: `1px solid ${isSelected ? "#006400" : "#e0e0e0"}`,
+                        backgroundColor: isSelected ? "rgba(0,100,0,0.04)" : "#ffffff",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
                       }}
                     >
-                      {isSelected && (
-                        <span
-                          style={{
-                            width: "9px",
-                            height: "9px",
-                            borderRadius: "50%",
-                            backgroundColor: "#006400",
-                          }}
-                        />
-                      )}
-                    </span>
-                    <span style={{ fontSize: "14px", color: "#444444", lineHeight: 1.5 }}>
-                      {option.text}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+                      <span
+                        style={{
+                          width: "18px",
+                          height: "18px",
+                          minWidth: "18px",
+                          borderRadius: "50%",
+                          border: `2px solid ${isSelected ? "#006400" : "#d1d1d1"}`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {isSelected && (
+                          <span
+                            style={{
+                              width: "9px",
+                              height: "9px",
+                              borderRadius: "50%",
+                              backgroundColor: "#006400",
+                            }}
+                          />
+                        )}
+                      </span>
+                      <span style={{ fontSize: "14px", color: "#444444", lineHeight: 1.5 }}>
+                        {option.text}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -552,26 +721,164 @@ export default function AssessmentView({
   );
 }
 
+// ── Intro screen ─────────────────────────────────────────────────────
+// New screen required by the real contract: config comes back without
+// questions, so the person needs an explicit "Start Assessment" step
+// (which is also when maxAttempts / isActive can be enforced by the API).
+
+function IntroScreen({
+  isMobile,
+  config,
+  moduleTitle,
+  courseName,
+  trackName,
+  attemptsUsed,
+  attemptsExhausted,
+  startError,
+  onStart,
+  onExit,
+}: {
+  isMobile: boolean;
+  config: AssessmentConfig;
+  moduleTitle: string;
+  courseName: string;
+  trackName: string;
+  attemptsUsed: number;
+  attemptsExhausted: boolean;
+  startError: boolean;
+  onStart: () => void;
+  onExit: () => void;
+}) {
+  const disabled = !config.isActive || attemptsExhausted;
+
+  return (
+    <FullScreenMessage>
+      <div style={{ maxWidth: "480px", width: "100%", padding: isMobile ? "0 16px" : "0" }}>
+        <button
+          onClick={onExit}
+          aria-label="Close"
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "#888888",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            fontSize: "13px",
+            marginBottom: "20px",
+          }}
+        >
+          <ChevronLeft size={14} /> Back
+        </button>
+
+        <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px" }}>
+          {courseName} • {trackName}
+        </p>
+        <h1
+          style={{
+            fontSize: isMobile ? "22px" : "26px",
+            fontWeight: 800,
+            color: "#101b37",
+            fontFamily: "var(--font-headline)",
+            marginBottom: "10px",
+          }}
+        >
+          {config.title || moduleTitle}
+        </h1>
+        {config.description && (
+          <p style={{ fontSize: "14px", color: "#666666", lineHeight: 1.6, marginBottom: "20px" }}>
+            {config.description}
+          </p>
+        )}
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gap: "10px",
+            marginBottom: "24px",
+          }}
+        >
+          <InfoPill label="Questions" value={String(config.questionCount)} />
+          <InfoPill
+            label="Time Limit"
+            value={config.timeLimitMinutes > 0 ? `${config.timeLimitMinutes} min` : "None"}
+          />
+          <InfoPill label="Pass Mark" value={`${config.passMarkPercent}%`} />
+          <InfoPill
+            label="Attempts"
+            value={
+              config.maxAttempts > 0 ? `${attemptsUsed} / ${config.maxAttempts}` : `${attemptsUsed} used`
+            }
+          />
+        </div>
+
+        {!config.isActive && (
+          <p style={{ fontSize: "13px", color: "#d32f2f", marginBottom: "16px" }}>
+            This assessment isn't currently open.
+          </p>
+        )}
+        {config.isActive && attemptsExhausted && (
+          <p style={{ fontSize: "13px", color: "#d32f2f", marginBottom: "16px" }}>
+            You've used all your attempts for this assessment.
+          </p>
+        )}
+        {startError && (
+          <p style={{ fontSize: "13px", color: "#d32f2f", marginBottom: "16px" }}>
+            Couldn't start the assessment. Please try again.
+          </p>
+        )}
+
+        <Button variant="primary" size="md" onClick={onStart} disabled={disabled}>
+          <PlayCircle size={16} />
+          Start Assessment
+        </Button>
+      </div>
+    </FullScreenMessage>
+  );
+}
+
+function InfoPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        backgroundColor: "#ffffff",
+        border: "1px solid #e8e8e8",
+        borderRadius: "10px",
+        padding: "12px 14px",
+      }}
+    >
+      <p style={{ fontSize: "11px", color: "#888888", marginBottom: "2px" }}>{label}</p>
+      <p style={{ fontSize: "14px", fontWeight: 700, color: "#101b37" }}>{value}</p>
+    </div>
+  );
+}
+
 // ── Results screen ─────────────────────────────────────────────────────
 
 function ResultsScreen({
   isMobile,
   moduleTitle,
-  result,
+  submitResult,
+  attemptResult,
   onExit,
   onFinish,
   onRetry,
 }: {
   isMobile: boolean;
   moduleTitle: string;
-  result: AssessmentResult;
+  submitResult: SubmitAttemptResult;
+  attemptResult: AttemptResult | null;
   onExit: () => void;
   onFinish: () => void;
   onRetry?: () => void;
 }) {
-  const gradeLabel = getGradeLabel(result.score, result.passed);
-  const incorrectCount = result.totalQuestions - result.correctCount;
-  const ringColor = result.passed ? "#10b981" : "#d32f2f";
+  const gradeLabel = getGradeLabel(submitResult.percentage, submitResult.passed);
+  const ringColor = submitResult.passed ? "#10b981" : "#d32f2f";
+  const review = attemptResult?.answers ?? [];
+  const correctCount = review.filter((a) => a.isCorrect).length;
+  const incorrectCount = review.length - correctCount;
 
   return (
     <div style={{ height: "100dvh", width: "100vw", display: "flex", flexDirection: "column", backgroundColor: "#fafafa" }}>
@@ -603,7 +910,7 @@ function ResultsScreen({
               padding: isMobile ? "28px 20px" : "40px",
               textAlign: "center",
               marginBottom: "24px",
-              background: result.passed
+              background: submitResult.passed
                 ? "linear-gradient(135deg, #006400, #003300)"
                 : "linear-gradient(135deg, #444444, #1a1a1a)",
             }}
@@ -622,7 +929,7 @@ function ResultsScreen({
                 marginBottom: "16px",
               }}
             >
-              Assessment {result.passed ? "Complete" : "Not Passed"}
+              Assessment {submitResult.passed ? "Complete" : "Not Passed"}
             </span>
             <h1
               style={{
@@ -636,9 +943,10 @@ function ResultsScreen({
               {moduleTitle}
             </h1>
             <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.85)", maxWidth: "560px", margin: "0 auto", lineHeight: 1.6 }}>
-              {result.passed
+              {submitResult.passed
                 ? "Nice work! Your score clears the pass mark for this module."
-                : `You didn't quite reach the ${result.passMarkPercent}% pass mark this time. Review the answers below and try again.`}
+                : submitResult.message ||
+                  `You didn't quite reach the ${submitResult.passMarkPercent}% pass mark this time. Review the answers below and try again.`}
             </p>
           </div>
 
@@ -669,7 +977,7 @@ function ResultsScreen({
                   width: "140px",
                   height: "140px",
                   borderRadius: "50%",
-                  background: `conic-gradient(${ringColor} ${result.score * 3.6}deg, #e8e8e8 0deg)`,
+                  background: `conic-gradient(${ringColor} ${submitResult.percentage * 3.6}deg, #e8e8e8 0deg)`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -689,7 +997,7 @@ function ResultsScreen({
                   }}
                 >
                   <span style={{ fontSize: "26px", fontWeight: 800, color: "#101b37" }}>
-                    {result.score}%
+                    {Math.round(submitResult.percentage)}%
                   </span>
                   <span style={{ fontSize: "10px", fontWeight: 700, color: "#888888", letterSpacing: "0.05em" }}>
                     SCORE
@@ -700,142 +1008,145 @@ function ResultsScreen({
                 {gradeLabel}
               </p>
               <p style={{ fontSize: "12px", color: "#888888" }}>
-                Required to pass: {result.passMarkPercent}%
+                Required to pass: {submitResult.passMarkPercent}%
               </p>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <StatBox
                 icon={<CheckCircle2 size={16} style={{ color: "#10b981" }} />}
-                label="Correct Answers"
-                value={`${result.correctCount} / ${result.totalQuestions}`}
+                label="Points Scored"
+                value={`${submitResult.score} / ${submitResult.totalPoints}`}
               />
-              <StatBox
-                icon={<XCircle size={16} style={{ color: "#d32f2f" }} />}
-                label="Incorrect Answers"
-                value={`${incorrectCount} / ${result.totalQuestions}`}
-              />
-              <StatBox
-                icon={<Clock size={16} style={{ color: "#3b82f6" }} />}
-                label="Time Taken"
-                value={formatTime(result.timeTakenSeconds)}
-              />
-              {typeof result.percentile === "number" ? (
+              {attemptResult ? (
                 <StatBox
-                  icon={<TrendingUp size={16} style={{ color: "#8b5cf6" }} />}
-                  label="Percentile"
-                  value={`Top ${100 - result.percentile}%`}
+                  icon={<XCircle size={16} style={{ color: "#d32f2f" }} />}
+                  label="Correct / Incorrect"
+                  value={`${correctCount} / ${incorrectCount}`}
                 />
               ) : (
                 <StatBox
                   icon={<Award size={16} style={{ color: "#8b5cf6" }} />}
-                  label="Attempts Used"
-                  value={`${result.attemptsUsed} / ${result.maxAttempts}`}
+                  label="Status"
+                  value={submitResult.passed ? "Passed" : "Not Passed"}
                 />
               )}
+              <StatBox
+                icon={<Clock size={16} style={{ color: "#3b82f6" }} />}
+                label="Attempt"
+                value={`#${submitResult.attemptId}`}
+              />
+              <StatBox
+                icon={<Award size={16} style={{ color: "#8b5cf6" }} />}
+                label="Result"
+                value={submitResult.expired ? "Time Expired" : "Submitted"}
+              />
             </div>
           </div>
 
-          {/* Review answers */}
-          <h2
-            style={{
-              fontSize: "16px",
-              fontWeight: 800,
-              color: "#101b37",
-              fontFamily: "var(--font-headline)",
-              marginBottom: "12px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
-            <ClipboardCheck size={18} />
-            Review Answers
-          </h2>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "32px" }}>
-            {(Array.isArray(result.review) ? result.review : []).map((item, index) => (
-              <div
-                key={item.questionId}
+          {/* Review answers — only available once the full breakdown loads */}
+          {review.length > 0 && (
+            <>
+              <h2
                 style={{
-                  backgroundColor: "#ffffff",
-                  border: "1px solid #e8e8e8",
-                  borderRadius: "12px",
-                  padding: "20px",
+                  fontSize: "16px",
+                  fontWeight: 800,
+                  color: "#101b37",
+                  fontFamily: "var(--font-headline)",
+                  marginBottom: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", minWidth: 0 }}>
-                    <span
-                      style={{
-                        width: "22px",
-                        height: "22px",
-                        minWidth: "22px",
-                        borderRadius: "50%",
-                        backgroundColor: item.isCorrect ? "#10b981" : "#d32f2f",
-                        color: "#ffffff",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      {index + 1}
-                    </span>
-                    <p style={{ fontSize: "14px", fontWeight: 700, color: "#101b37", lineHeight: 1.5 }}>
-                      {item.questionText}
-                    </p>
-                  </div>
-                  <span
-                    style={{
-                      flexShrink: 0,
-                      fontSize: "10px",
-                      fontWeight: 700,
-                      letterSpacing: "0.05em",
-                      textTransform: "uppercase",
-                      padding: "4px 10px",
-                      borderRadius: "9999px",
-                      color: item.isCorrect ? "#0a7a3d" : "#d32f2f",
-                      backgroundColor: item.isCorrect ? "rgba(16,185,129,0.1)" : "rgba(211,47,47,0.08)",
-                    }}
-                  >
-                    {item.isCorrect ? "Correct" : "Incorrect"}
-                  </span>
-                </div>
+                <ClipboardCheck size={18} />
+                Review Answers
+              </h2>
 
-                <p style={{ fontSize: "13px", color: "#666666", marginTop: "12px", marginLeft: "34px" }}>
-                  Your Answer: {item.selectedOptionText || "No answer"}
-                </p>
-                {!item.isCorrect && (
-                  <p style={{ fontSize: "13px", color: "#10b981", fontWeight: 600, marginTop: "4px", marginLeft: "34px" }}>
-                    Correct Answer: {item.correctOptionText}
-                  </p>
-                )}
-
-                {item.feedback && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "32px" }}>
+                {review.map((item, index) => (
                   <div
+                    key={item.questionId}
                     style={{
-                      marginTop: "12px",
-                      marginLeft: "34px",
-                      padding: "12px 16px",
-                      backgroundColor: "#f5f5f5",
-                      borderRadius: "8px",
-                      borderLeft: `3px solid ${item.isCorrect ? "#10b981" : "#d32f2f"}`,
+                      backgroundColor: "#ffffff",
+                      border: "1px solid #e8e8e8",
+                      borderRadius: "12px",
+                      padding: "20px",
                     }}
                   >
-                    <p style={{ fontSize: "12px", fontWeight: 700, color: item.isCorrect ? "#0a7a3d" : "#d32f2f", marginBottom: "4px" }}>
-                      {item.isCorrect ? "Feedback" : "Concept Review"}
-                    </p>
-                    <p style={{ fontSize: "13px", color: "#666666", lineHeight: 1.5 }}>{item.feedback}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px" }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", minWidth: 0 }}>
+                        <span
+                          style={{
+                            width: "22px",
+                            height: "22px",
+                            minWidth: "22px",
+                            borderRadius: "50%",
+                            backgroundColor: item.isCorrect ? "#10b981" : "#d32f2f",
+                            color: "#ffffff",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          {index + 1}
+                        </span>
+                        <p style={{ fontSize: "14px", fontWeight: 700, color: "#101b37", lineHeight: 1.5 }}>
+                          {item.questionText}
+                        </p>
+                      </div>
+                      <span
+                        style={{
+                          flexShrink: 0,
+                          fontSize: "10px",
+                          fontWeight: 700,
+                          letterSpacing: "0.05em",
+                          textTransform: "uppercase",
+                          padding: "4px 10px",
+                          borderRadius: "9999px",
+                          color: item.isCorrect ? "#0a7a3d" : "#d32f2f",
+                          backgroundColor: item.isCorrect ? "rgba(16,185,129,0.1)" : "rgba(211,47,47,0.08)",
+                        }}
+                      >
+                        {item.isCorrect ? "Correct" : "Incorrect"}
+                      </span>
+                    </div>
 
-          {/* Actions — module assessments don't issue a certificate,
-              only track/course assessments do. */}
+                    <p style={{ fontSize: "13px", color: "#666666", marginTop: "12px", marginLeft: "34px" }}>
+                      Your Answer: {item.yourAnswerText || "No answer"}
+                    </p>
+                    {!item.isCorrect && (
+                      <p style={{ fontSize: "13px", color: "#10b981", fontWeight: 600, marginTop: "4px", marginLeft: "34px" }}>
+                        Correct Answer: {item.correctAnswerText}
+                      </p>
+                    )}
+
+                    {item.explanation && (
+                      <div
+                        style={{
+                          marginTop: "12px",
+                          marginLeft: "34px",
+                          padding: "12px 16px",
+                          backgroundColor: "#f5f5f5",
+                          borderRadius: "8px",
+                          borderLeft: `3px solid ${item.isCorrect ? "#10b981" : "#d32f2f"}`,
+                        }}
+                      >
+                        <p style={{ fontSize: "12px", fontWeight: 700, color: item.isCorrect ? "#0a7a3d" : "#d32f2f", marginBottom: "4px" }}>
+                          {item.isCorrect ? "Feedback" : "Concept Review"}
+                        </p>
+                        <p style={{ fontSize: "13px", color: "#666666", lineHeight: 1.5 }}>{item.explanation}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Actions */}
           <div
             style={{
               display: "flex",
@@ -849,9 +1160,9 @@ function ResultsScreen({
                 Retry Assessment
               </Button>
             )}
-            {(result.passed || !onRetry) && (
+            {(submitResult.passed || !onRetry) && (
               <Button variant="primary" size="md" onClick={onFinish}>
-                {result.passed ? "Finish & Continue" : "Back to Track"}
+                {submitResult.passed ? "Finish & Continue" : "Back to Track"}
                 <ChevronRight size={14} />
               </Button>
             )}

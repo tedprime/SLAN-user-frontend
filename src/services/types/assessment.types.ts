@@ -1,84 +1,158 @@
 // Target path in your project: src/services/types/assessment.types.ts
 //
-// Shapes are inferred from the admin config schema you shared
-// (title, description, passMarkPercent, maxAttempts, timeLimitMinutes,
-// isActive) plus a student-facing question/answer/result layer on top.
-// Adjust field names here once the real student-facing endpoints are
-// finalized — everything else (service + UI) reads through these types,
-// so a mismatch is a one-file fix.
+// Matches the real Swagger contract:
+//   GET  /modules/{moduleId}/assessment   — config only (no questions)
+//   GET  /tracks/{trackId}/assessment     — same shape, track-level
+//   GET  /courses/{courseId}/assessment   — same shape, course-level
+//   GET  /attempts?assessmentType&assessmentId — past attempts
+//   POST /attempts/start                  — begins an attempt, returns questions
+//   PATCH /attempts/{attemptId}/save      — autosave mid-attempt
+//   POST /attempts/{attemptId}/submit     — grades the attempt
+//   GET  /attempts/{attemptId}/result     — full per-question breakdown
 
-// ── Taking the assessment ──────────────────────────────────────────────
-// GET /modules/{moduleId}/assessment — questions only, never correct answers.
+export type AssessmentType =
+  | "module_assessment"
+  | "track_assessment"
+  | "course_assessment";
 
-export interface AssessmentOption {
-  id: string;
-  text: string;
-}
+// ── Config (shown before starting an attempt) ──────────────────────────
 
-export interface AssessmentQuestion {
+export interface AssessmentConfig {
   id: number;
-  text: string;
-  options: AssessmentOption[];
-}
-
-export interface ModuleAssessment {
-  id: number;
-  moduleId: number;
+  moduleId?: number;
   title: string;
   description: string;
   passMarkPercent: number;
   maxAttempts: number;
-  timeLimitMinutes: number; // 0 = no time limit
-  attemptsUsed: number;
-  questions: AssessmentQuestion[];
+  timeLimitMinutes: number;
+  isActive: boolean;
+  questionCount: number;
 }
 
-// ── Submitting ──────────────────────────────────────────────────────────
-// POST /modules/{moduleId}/assessment/submit
-
-export interface AssessmentAnswer {
-  questionId: number;
-  selectedOptionId: string | null;
+export interface AssessmentConfigResponse {
+  success: boolean;
+  data: AssessmentConfig;
 }
 
-export interface AssessmentSubmitPayload {
-  answers: AssessmentAnswer[];
-  timeTakenSeconds: number;
+// ── Past attempts (GET /attempts?assessmentType=&assessmentId=) ───────
+
+export interface AttemptSummary {
+  attemptId: number;
+  status: string; // "completed" | "in_progress" | ...
+  score: number;
+  percentage: number;
+  passed: boolean;
 }
 
-export interface AssessmentReviewItem {
-  questionId: number;
+export interface AttemptListResponse {
+  success: boolean;
+  data: AttemptSummary[];
+}
+
+// ── Starting an attempt (POST /attempts/start) ─────────────────────────
+
+export interface StartAttemptPayload {
+  assessmentType: AssessmentType;
+  assessmentId: number; // the assessment's own id (config.id), not moduleId
+}
+
+export interface AttemptOption {
+  id: string;
+  text: string;
+}
+
+export type QuestionType = "multiple_choice" | "true_false" | "short_answer";
+
+export interface AttemptQuestion {
+  id: number;
   questionText: string;
-  selectedOptionId: string | null;
-  selectedOptionText: string | null;
-  correctOptionId: string;
-  correctOptionText: string;
-  isCorrect: boolean;
-  feedback?: string;
+  questionType: QuestionType;
+  options: AttemptOption[]; // empty for short_answer
+  points: number;
 }
 
-export interface AssessmentResult {
-  score: number; // percent, 0-100
-  correctCount: number;
+export interface AttemptStart {
+  attemptId: number;
+  assessmentType: AssessmentType;
+  assessmentId: number;
+  startedAt: string;
+  expiresAt: string;
+  timeLimitMinutes: number;
   totalQuestions: number;
+  questions: AttemptQuestion[];
+}
+
+export interface AttemptStartResponse {
+  success: boolean;
+  data: AttemptStart;
+}
+
+// ── Answering ───────────────────────────────────────────────────────────
+// For multiple_choice / true_false: `answer` is the option UUID.
+// For short_answer: `answer` is plain text.
+// Omit an entry entirely to skip a question (scores 0 for it).
+
+export interface AttemptAnswerInput {
+  questionId: number;
+  answer: string;
+}
+
+// ── Autosave (PATCH /attempts/{attemptId}/save) ────────────────────────
+
+export interface SaveAttemptPayload {
+  answers: AttemptAnswerInput[];
+}
+
+export interface SaveAttemptResult {
+  saved: number;
+  expiresAt: string;
+}
+
+// ── Submit (POST /attempts/{attemptId}/submit) ─────────────────────────
+// Score only — no per-question breakdown. Fetch that separately via
+// getAttemptResult().
+
+export interface SubmitAttemptPayload {
+  answers: AttemptAnswerInput[];
+}
+
+export interface SubmitAttemptResult {
+  attemptId: number;
+  expired: boolean;
+  score: number;
+  totalPoints: number;
+  percentage: number;
   passed: boolean;
   passMarkPercent: number;
-  timeTakenSeconds: number;
-  percentile?: number;
-  attemptsUsed: number;
-  maxAttempts: number;
-  review: AssessmentReviewItem[];
+  message: string;
 }
 
-// ── Envelopes (defensive — mirrors the wrapped/unwrapped handling
-// already used in courseService.ts) ───────────────────────────────────
+// ── Full result (GET /attempts/{attemptId}/result) ─────────────────────
 
-export interface ModuleAssessmentResponse {
-  success: boolean;
-  data: ModuleAssessment;
+export interface AttemptResultAnswer {
+  questionId: number;
+  questionText: string;
+  questionType: string;
+  options: AttemptOption[];
+  yourAnswer: string | null;
+  yourAnswerText: string | null;
+  correctAnswerText: string;
+  isCorrect: boolean;
+  pointsAwarded: number;
+  explanation?: string;
 }
 
-export interface AssessmentResultResponse {
+export interface AttemptResult {
+  attemptId: number;
+  status: string;
+  score: number;
+  totalPoints: number;
+  percentage: number;
+  passed: boolean;
+  answers: AttemptResultAnswer[];
+}
+
+export interface AttemptResultResponse {
   success: boolean;
-  data: AssessmentResult;
+  data: AttemptResult;
 }
