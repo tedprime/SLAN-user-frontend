@@ -31,6 +31,10 @@ export default function UserDashboard() {
   const [progressVersion, setProgressVersion] = useState(0);
   const handleProgressChange = () => setProgressVersion((v) => v + 1);
 
+  // True while an assessment attempt (taking/submitting/results) is active.
+  // The sidebar hides for those phases; the intro screen keeps it visible.
+  const [assessmentExamActive, setAssessmentExamActive] = useState(false);
+
   // Sync activeNav changes to sessionStorage safely
   useEffect(() => {
     sessionStorage.setItem(STORAGE_KEY, activeNav);
@@ -219,19 +223,6 @@ export default function UserDashboard() {
     return () => { cancelled = true; };
   }, [activeNav, selectedModule, courses, trackModules, handleModulesLoaded]);
 
-  if (viewState.type === "assessment") {
-    return (
-      <AssessmentView
-        moduleId={viewState.module.id}
-        moduleTitle={viewState.module.title}
-        courseName={viewState.course.title}
-        trackName={viewState.track.title}
-        onExit={handleAssessmentExit}
-        onFinish={handleAssessmentFinish}
-      />
-    );
-  }
-
   return (
     <div style={{
       display: "flex",
@@ -241,15 +232,17 @@ export default function UserDashboard() {
       overflow: "hidden",
       backgroundColor: "#fafafa",
     }}>
-      <DashboardSidebar
-        activeNav={activeNav}
-        onNavChange={setActiveNav}
-        isOpen={sidebarOpen}
-        onToggle={handleToggleSidebar}
-        onCoursesLoaded={setCourses}
-        onModuleNavigate={handleModuleNavigate}
-        progressVersion={progressVersion}
-      />
+      {!assessmentExamActive && (
+        <DashboardSidebar
+          activeNav={activeNav}
+          onNavChange={setActiveNav}
+          isOpen={sidebarOpen}
+          onToggle={handleToggleSidebar}
+          onCoursesLoaded={setCourses}
+          onModuleNavigate={handleModuleNavigate}
+          progressVersion={progressVersion}
+        />
+      )}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
         <DashboardHeader
           activeNav={activeNav}
@@ -318,6 +311,18 @@ export default function UserDashboard() {
                 }
               }}
               onTakeAssessment={handleTakeAssessment}
+            />
+          )}
+
+          {viewState.type === "assessment" && viewState.course && viewState.track && viewState.module && (
+            <AssessmentView
+              moduleId={viewState.module.id}
+              moduleTitle={viewState.module.title}
+              courseName={viewState.course.title}
+              trackName={viewState.track.title}
+              onExit={handleAssessmentExit}
+              onFinish={handleAssessmentFinish}
+              onExamActiveChange={setAssessmentExamActive}
             />
           )}
         </main>

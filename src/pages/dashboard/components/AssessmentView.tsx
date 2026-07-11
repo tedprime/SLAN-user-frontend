@@ -23,6 +23,9 @@ import {
   Award,
   ClipboardCheck,
   PlayCircle,
+  Layers,
+  Target,
+  RotateCcw,
 } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import { assessmentService } from "../../../services/assessmentService";
@@ -45,6 +48,12 @@ interface AssessmentViewProps {
   onExit: () => void;
   /** "Finish & Continue" from the results screen. */
   onFinish: () => void;
+  /**
+   * Fired whenever the exam-taking phases (taking/submitting/results) begin
+   * or end, so the parent dashboard can hide its sidebar for those phases
+   * and keep the sidebar visible on the intro screen.
+   */
+  onExamActiveChange?: (active: boolean) => void;
 }
 
 // This view is always rendered for a module-level assessment. Track- and
@@ -99,6 +108,7 @@ export default function AssessmentView({
   trackName,
   onExit,
   onFinish,
+  onExamActiveChange,
 }: AssessmentViewProps) {
   const isMobile = useIsMobile();
 
@@ -250,6 +260,21 @@ export default function AssessmentView({
     }
   }, [secondsRemaining, phase, handleSubmit]);
 
+  // Sidebar stays visible on the intro screen (and while the config is
+  // loading/erroring); once the person actually starts the attempt, the
+  // dashboard sidebar hides so only the top header remains.
+  useEffect(() => {
+    const examActive = phase === "taking" || phase === "submitting" || phase === "results";
+    onExamActiveChange?.(examActive);
+  }, [phase, onExamActiveChange]);
+
+  useEffect(() => {
+    return () => {
+      onExamActiveChange?.(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const attemptsUsed = pastAttempts.length;
   const maxAttempts = config?.maxAttempts ?? 0;
   const attemptsExhausted = maxAttempts > 0 && attemptsUsed >= maxAttempts;
@@ -384,12 +409,14 @@ export default function AssessmentView({
   return (
     <div
       style={{
-        height: "100dvh",
-        width: "100vw",
+        height: "100%",
+        width: "100%",
+        flex: 1,
         display: "flex",
         flexDirection: "column",
         backgroundColor: "#fafafa",
         overflow: "hidden",
+        minHeight: 0,
       }}
     >
       {/* Top bar */}
@@ -752,90 +779,157 @@ function IntroScreen({
   const disabled = !config.isActive || attemptsExhausted;
 
   return (
-    <FullScreenMessage>
-      <div style={{ maxWidth: "480px", width: "100%", padding: isMobile ? "0 16px" : "0" }}>
-        <button
-          onClick={onExit}
-          aria-label="Close"
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "#888888",
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-            fontSize: "13px",
-            marginBottom: "20px",
-          }}
-        >
-          <ChevronLeft size={14} /> Back
-        </button>
+    // Single scroll container — breadcrumb, hero, and info card all scroll
+    // together, matching the pattern used in TrackDetailView.tsx.
+    <div
+      style={{
+        flex: 1,
+        overflowY: "auto",
+        overflowX: "hidden",
+        minHeight: 0,
+        backgroundColor: "#fafafa",
+        scrollBehavior: "smooth",
+        WebkitOverflowScrolling: "touch",
+        overscrollBehavior: "contain",
+      }}
+    >
+      {/* Breadcrumb */}
+      <div style={{ padding: "16px 20px", borderBottom: "1px solid #e0e0e0", backgroundColor: "#ffffff" }}>
+        <div className="flex items-center gap-2" style={{ fontSize: "14px" }}>
+          <button
+            onClick={onExit}
+            style={{ color: "#888888", background: "none", border: "none", cursor: "pointer", fontSize: "14px", textTransform: "uppercase" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#006400"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#888888"; }}
+          >
+            {courseName}
+          </button>
+          <ChevronRight size={16} style={{ color: "#b0b0b0" }} />
+          <span style={{ color: "#101b37", fontWeight: 600, textTransform: "uppercase" }}>
+            {trackName}
+          </span>
+        </div>
+      </div>
 
-        <p style={{ fontSize: "12px", color: "#888888", marginBottom: "4px" }}>
-          {courseName} • {trackName}
-        </p>
-        <h1
-          style={{
-            fontSize: isMobile ? "22px" : "26px",
-            fontWeight: 800,
-            color: "#101b37",
-            fontFamily: "var(--font-headline)",
-            marginBottom: "10px",
-          }}
-        >
-          {config.title || moduleTitle}
-        </h1>
-        {config.description && (
-          <p style={{ fontSize: "14px", color: "#666666", lineHeight: 1.6, marginBottom: "20px" }}>
-            {config.description}
-          </p>
-        )}
+      {/* Hero */}
+      <div
+        style={{
+          borderBottom: "1px solid #e0e0e0",
+          background: "linear-gradient(135deg, rgba(0,100,0,0.08) 0%, rgba(255,255,255,0.5) 100%)",
+          padding: isMobile ? "24px 20px" : "32px 32px",
+        }}
+      >
+        <div style={{ maxWidth: "820px" }}>
+          <span
+            style={{
+              display: "inline-block",
+              fontSize: "11px",
+              fontWeight: 700,
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+              color: "#006400",
+              backgroundColor: "rgba(0,100,0,0.08)",
+              padding: "5px 12px",
+              borderRadius: "9999px",
+              marginBottom: "14px",
+            }}
+          >
+            Assessment
+          </span>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: "10px",
-            marginBottom: "24px",
-          }}
-        >
-          <InfoPill label="Questions" value={String(config.questionCount)} />
-          <InfoPill
-            label="Time Limit"
-            value={config.timeLimitMinutes > 0 ? `${config.timeLimitMinutes} min` : "None"}
-          />
-          <InfoPill label="Pass Mark" value={`${config.passMarkPercent}%`} />
-          <InfoPill
-            label="Attempts"
-            value={
-              config.maxAttempts > 0 ? `${attemptsUsed} / ${config.maxAttempts}` : `${attemptsUsed} used`
-            }
-          />
+          <h1
+            style={{
+              fontSize: isMobile ? "22px" : "28px",
+              fontWeight: 800,
+              color: "#101b37",
+              fontFamily: "var(--font-headline)",
+              letterSpacing: "-0.02em",
+              marginBottom: "12px",
+              lineHeight: 1.25,
+            }}
+          >
+            {config.title || moduleTitle}
+          </h1>
+
+          {config.description && (
+            <p style={{ fontSize: "14px", color: "#666666", lineHeight: 1.6, maxWidth: "640px", marginBottom: "20px" }}>
+              {config.description}
+            </p>
+          )}
+
+          <div style={{ display: "flex", alignItems: "center", gap: "24px", fontSize: "14px", color: "#888888", flexWrap: "wrap" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Layers size={16} style={{ color: "#006400" }} />
+              <span style={{ fontWeight: 600 }}>{config.questionCount} Questions</span>
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Clock size={16} style={{ color: "#006400" }} />
+              <span style={{ fontWeight: 600 }}>
+                {config.timeLimitMinutes > 0 ? `${config.timeLimitMinutes} min` : "No time limit"}
+              </span>
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Target size={16} style={{ color: "#006400" }} />
+              <span style={{ fontWeight: 600 }}>{config.passMarkPercent}% to pass</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Details + start action — regular content, not its own scroll region */}
+      <div style={{ padding: isMobile ? "24px 20px" : "32px" }}>
+        <div style={{ maxWidth: "820px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+              gap: "12px",
+              marginBottom: "24px",
+            }}
+          >
+            <InfoPill label="Questions" value={String(config.questionCount)} />
+            <InfoPill
+              label="Time Limit"
+              value={config.timeLimitMinutes > 0 ? `${config.timeLimitMinutes} min` : "None"}
+            />
+            <InfoPill label="Pass Mark" value={`${config.passMarkPercent}%`} />
+            <InfoPill
+              label="Attempts"
+              value={
+                config.maxAttempts > 0 ? `${attemptsUsed} / ${config.maxAttempts}` : `${attemptsUsed} used`
+              }
+            />
+          </div>
+
+          {!config.isActive && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#d32f2f", marginBottom: "16px" }}>
+              <XCircle size={15} />
+              This assessment isn't currently open.
+            </div>
+          )}
+          {config.isActive && attemptsExhausted && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#d32f2f", marginBottom: "16px" }}>
+              <RotateCcw size={15} />
+              You've used all your attempts for this assessment.
+            </div>
+          )}
+          {startError && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#d32f2f", marginBottom: "16px" }}>
+              <XCircle size={15} />
+              Couldn't start the assessment. Please try again.
+            </div>
+          )}
+
+          <Button variant="primary" size="md" onClick={onStart} disabled={disabled}>
+            <PlayCircle size={16} />
+            Start Assessment
+          </Button>
         </div>
 
-        {!config.isActive && (
-          <p style={{ fontSize: "13px", color: "#d32f2f", marginBottom: "16px" }}>
-            This assessment isn't currently open.
-          </p>
-        )}
-        {config.isActive && attemptsExhausted && (
-          <p style={{ fontSize: "13px", color: "#d32f2f", marginBottom: "16px" }}>
-            You've used all your attempts for this assessment.
-          </p>
-        )}
-        {startError && (
-          <p style={{ fontSize: "13px", color: "#d32f2f", marginBottom: "16px" }}>
-            Couldn't start the assessment. Please try again.
-          </p>
-        )}
-
-        <Button variant="primary" size="md" onClick={onStart} disabled={disabled}>
-          <PlayCircle size={16} />
-          Start Assessment
-        </Button>
+        {/* Bottom padding so content isn't flush against edge on mobile */}
+        <div style={{ height: "32px" }} />
       </div>
-    </FullScreenMessage>
+    </div>
   );
 }
 
@@ -881,7 +975,7 @@ function ResultsScreen({
   const incorrectCount = review.length - correctCount;
 
   return (
-    <div style={{ height: "100dvh", width: "100vw", display: "flex", flexDirection: "column", backgroundColor: "#fafafa" }}>
+    <div style={{ height: "100%", width: "100%", flex: 1, display: "flex", flexDirection: "column", backgroundColor: "#fafafa", minHeight: 0, overflow: "hidden" }}>
       <div
         style={{
           flexShrink: 0,
@@ -1189,14 +1283,16 @@ function FullScreenMessage({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        height: "100dvh",
-        width: "100vw",
+        height: "100%",
+        width: "100%",
+        flex: 1,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         gap: "12px",
         backgroundColor: "#fafafa",
+        minHeight: 0,
       }}
     >
       {children}
