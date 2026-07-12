@@ -212,10 +212,10 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
             transition: opacity 0.3s ease;
           }
           .slan-track-card:hover .slan-track-photo {
-            opacity: 0.3;
+            opacity: 0.75;
           }
           .slan-track-card:hover .slan-track-gradient {
-            opacity: 0.92;
+            opacity: 0.45;
           }
         `}</style>
         {tracks.length === 0 ? (
@@ -347,7 +347,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                       display: "flex",
                       flexDirection: "column",
                       flex: 1,
-                      padding: "20px",
+                      padding: "18px",
                       borderTop: `3px solid ${color.border}`,
                     }}
                   >
@@ -358,7 +358,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                         color: "#101b37",
                         fontFamily: "var(--font-headline)",
                         letterSpacing: "-0.01em",
-                        marginBottom: "8px",
+                        marginBottom: "6px",
                         lineHeight: 1.3,
                         minHeight: "47px",
                         display: "-webkit-box",
@@ -374,7 +374,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                       style={{
                         fontSize: "14px",
                         color: "#888888",
-                        marginBottom: "16px",
+                        marginBottom: "10px",
                         lineHeight: 1.5,
                         display: "-webkit-box",
                         WebkitLineClamp: 2,
@@ -386,7 +386,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                       {track.shortDescription || "Explore this track to build your skills."}
                     </p>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: "16px", fontSize: "12px", color: "#b0b0b0", marginBottom: "20px", flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "16px", fontSize: "12px", color: "#b0b0b0", marginBottom: "14px", flexWrap: "wrap" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                         <Layers size={13} />
                         <span>{moduleCount} Modules</span>
@@ -401,7 +401,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                       </span>
                     </div>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "auto" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "auto" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>
                           Progress
