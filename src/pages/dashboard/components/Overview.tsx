@@ -207,7 +207,9 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
               marginBottom: "28px",
             }}
           >
-            <div style={{ minWidth: 0, padding: "1rem 0" }}>
+            <div style={{ minWidth: 0, padding: "1rem 0",
+              margin: "2rem 0"
+             }}>
               <h3
                 style={{
                   fontSize: "16px",
