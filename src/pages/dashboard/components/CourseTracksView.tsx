@@ -208,6 +208,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
             transition: opacity 0.3s ease;
           }
           .slan-track-gradient {
+            opacity: 0;
             transition: opacity 0.3s ease;
           }
           .slan-track-card:hover .slan-track-photo {
@@ -292,7 +293,6 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                         position: "absolute",
                         inset: 0,
                         background: gradient,
-                        opacity: 0.55,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
