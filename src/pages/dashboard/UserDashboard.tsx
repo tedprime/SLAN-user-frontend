@@ -40,6 +40,47 @@ export default function UserDashboard() {
     sessionStorage.setItem(STORAGE_KEY, activeNav);
   }, [activeNav]);
 
+  // ── Make in-app navigation visible to the browser's back/forward ──
+  // Previously every view change was just setActiveNav + sessionStorage,
+  // invisible to real browser history. That meant pressing back on
+  // /dashboard skipped straight past all in-app views to whatever real
+  // navigation happened before /dashboard loaded (e.g. the Google OAuth
+  // redirect chain), landing back on Google's sign-in page.
+  //
+  // Fix: every navigation pushes a history entry carrying the target
+  // activeNav. Back/forward then walks through those entries first,
+  // updating activeNav via popstate, before ever reaching real
+  // navigation outside the app.
+  const navigateTo = useCallback((nav: string, replace = false) => {
+    setActiveNav(nav);
+    if (replace) {
+      window.history.replaceState({ activeNav: nav }, "", window.location.pathname);
+    } else {
+      window.history.pushState({ activeNav: nav }, "", window.location.pathname);
+    }
+  }, []);
+
+  // Seed the current history entry with state on mount so the first
+  // popstate back to it has something to read.
+  useEffect(() => {
+    window.history.replaceState({ activeNav }, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      const nav = e.state?.activeNav;
+      if (typeof nav === "string") {
+        setActiveNav(nav);
+      }
+      // If e.state is missing (user has walked back past the app's own
+      // entries), let the browser continue its default behavior —
+      // that's genuinely "leave the app," which is correct.
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   const handleToggleSidebar = () => {
     setSidebarOpen((prev) => {
       const next = !prev;
@@ -117,27 +158,27 @@ export default function UserDashboard() {
 
   const handleTrackClick = (trackId: number, courseId?: number) => {
     const cid = courseId || (viewState.type === "course" ? viewState.course?.id : undefined);
-    if (cid) setActiveNav(`track:${cid}:${trackId}`);
+    if (cid) navigateTo(`track:${cid}:${trackId}`);
   };
 
   const handleBackToCourse = () => {
     if ((viewState.type === "track" || viewState.type === "unit") && viewState.course) {
-      setActiveNav(`course:${viewState.course.id}`);
+      navigateTo(`course:${viewState.course.id}`);
     } else {
-      setActiveNav("overview");
+      navigateTo("overview");
     }
   };
 
   const handlePlayClick = (module: ModuleSummary) => {
     if (viewState.type === "track" && viewState.track) {
       setSelectedModule(module);
-      setActiveNav(`unit:${viewState.course?.id}:${viewState.track.id}:${module.id}`);
+      navigateTo(`unit:${viewState.course?.id}:${viewState.track.id}:${module.id}`);
     }
   };
 
   const handleModuleNavigate = (module: ModuleSummary, courseId: number, trackId: number) => {
     setSelectedModule(module);
-    setActiveNav(`unit:${courseId}:${trackId}:${module.id}`);
+    navigateTo(`unit:${courseId}:${trackId}:${module.id}`);
   };
 
   const handleModuleClick = (module: ModuleSummary) => {
@@ -147,7 +188,7 @@ export default function UserDashboard() {
   const handleTakeAssessment = (module: ModuleSummary) => {
     if (viewState.type === "unit" && viewState.course && viewState.track) {
       setSelectedModule(module);
-      setActiveNav(`assessment:${viewState.course.id}:${viewState.track.id}:${module.id}`);
+      navigateTo(`assessment:${viewState.course.id}:${viewState.track.id}:${module.id}`);
     }
   };
 
@@ -161,7 +202,7 @@ export default function UserDashboard() {
     if (next) {
       handleModuleNavigate(next, viewState.course.id, viewState.track.id);
     } else {
-      setActiveNav(`track:${viewState.course.id}:${viewState.track.id}`);
+      navigateTo(`track:${viewState.course.id}:${viewState.track.id}`);
     }
     handleProgressChange();
   };
@@ -169,9 +210,9 @@ export default function UserDashboard() {
   const handleAssessmentExit = () => {
     if (viewState.type === "assessment" && viewState.course && viewState.track) {
       setSelectedModule(viewState.module);
-      setActiveNav(`unit:${viewState.course.id}:${viewState.track.id}:${viewState.module.id}:last`);
+      navigateTo(`unit:${viewState.course.id}:${viewState.track.id}:${viewState.module.id}:last`);
     } else {
-      setActiveNav("overview");
+      navigateTo("overview");
     }
   };
 
@@ -214,15 +255,15 @@ export default function UserDashboard() {
         if (found) {
           setSelectedModule(found);
         } else {
-          setActiveNav(`track:${courseId}:${trackId}`);
+          navigateTo(`track:${courseId}:${trackId}`, true);
         }
       } catch {
-        if (!cancelled) setActiveNav(`track:${courseId}:${trackId}`);
+        if (!cancelled) navigateTo(`track:${courseId}:${trackId}`, true);
       }
     })();
 
     return () => { cancelled = true; };
-  }, [activeNav, selectedModule, courses, trackModules, handleModulesLoaded]);
+  }, [activeNav, selectedModule, courses, trackModules, handleModulesLoaded, navigateTo]);
 
   return (
     <div style={{
@@ -236,7 +277,7 @@ export default function UserDashboard() {
       {!assessmentExamActive && (
         <DashboardSidebar
           activeNav={activeNav}
-          onNavChange={setActiveNav}
+          onNavChange={navigateTo}
           isOpen={sidebarOpen}
           onToggle={handleToggleSidebar}
           onCoursesLoaded={setCourses}
@@ -269,8 +310,8 @@ export default function UserDashboard() {
 
           {viewState.type === "overview" && (
             <Overview
-              onCourseClick={(courseId) => setActiveNav(`course:${courseId}`)}
-              onResumeClick={(courseId, trackId) => setActiveNav(`track:${courseId}:${trackId}`)}
+              onCourseClick={(courseId) => navigateTo(`course:${courseId}`)}
+              onResumeClick={(courseId, trackId) => navigateTo(`track:${courseId}:${trackId}`)}
             />
           )}
 
@@ -304,7 +345,7 @@ export default function UserDashboard() {
               onBack={handleBackToCourse}
               onBackToTrack={() => {
                 if (viewState.type === "unit" && viewState.course && viewState.track) {
-                  setActiveNav(`track:${viewState.course.id}:${viewState.track.id}`);
+                  navigateTo(`track:${viewState.course.id}:${viewState.track.id}`);
                 }
               }}
               onProgressChange={handleProgressChange}

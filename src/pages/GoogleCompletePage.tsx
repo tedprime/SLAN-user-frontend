@@ -88,8 +88,12 @@ function Toast({
 
 // ── Main Page ───────────────────────────────────────────────────────────────
 export default function GoogleCompletePage() {
-  const navigateTo = (path: string) => {
-    window.history.pushState({}, "", path);
+  const navigateTo = (path: string, replace = false) => {
+    if (replace) {
+      window.history.replaceState({}, "", path);
+    } else {
+      window.history.pushState({}, "", path);
+    }
     window.dispatchEvent(new Event("popstate"));
   };
 
@@ -139,7 +143,7 @@ export default function GoogleCompletePage() {
     setTokens({ accessToken, refreshToken });
     if (normalizedUser) setUser(normalizedUser);
 
-    navigateTo("/dashboard");
+    navigateTo("/dashboard", true);
   } else if (incomingTempToken) {
     try {
       const decoded = jwtDecode<GoogleTempTokenPayload>(incomingTempToken);
@@ -180,7 +184,7 @@ export default function GoogleCompletePage() {
     const t = setTimeout(() => {
       setShowToast(false);
       const dest = toastMsg.includes("log in instead") ? "/login" : "/signup";
-      navigateTo(dest);
+      navigateTo(dest, true);
     }, 5000);
     return () => clearTimeout(t);
   }, [status, toastMsg]);
@@ -237,7 +241,7 @@ export default function GoogleCompletePage() {
       setUser(normalizedUser);
 
       // Google signup complete — go straight to dashboard, no OTP needed
-      navigateTo("/dashboard");
+      navigateTo("/dashboard", true);
     } catch (err) {
       const e = err as { message?: string };
       setErrorMsg(e?.message || "Couldn't finish setting up your account. Please try again.");
