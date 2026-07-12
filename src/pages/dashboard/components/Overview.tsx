@@ -15,11 +15,6 @@ const COURSE_GRADIENTS = [
   "linear-gradient(135deg, #090f1f 0%, #268d26 100%)",
 ];
 
-// How long the "press and go" fade takes before the actual navigation
-// callback fires — long enough to read as intentional, short enough to
-// not feel laggy.
-const NAV_TRANSITION_MS = 160;
-
 interface OverviewProps {
   /** A course card (or the empty-state CTA) was clicked. */
   onCourseClick?: (courseId: number) => void;
@@ -31,11 +26,6 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-
-  // Which element (if any) is mid-transition out to another page — used to
-  // fade/scale it down briefly before the actual navigation fires, so
-  // clicking doesn't feel like an abrupt hard cut.
-  const [leavingId, setLeavingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,11 +45,6 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
     })();
     return () => { cancelled = true; };
   }, []);
-
-  const navigateWithTransition = (id: string, action: () => void) => {
-    setLeavingId(id);
-    window.setTimeout(action, NAV_TRANSITION_MS);
-  };
 
   const user = useMemo(() => getUser(), []);
   const firstName = user?.fullName?.split(" ")[0] || "Leader";
@@ -137,24 +122,17 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
     );
   }
 
-  const resumeLeaving = resumeTarget !== null && leavingId === "resume";
-
   return (
     // Single scroll container — hero + content scroll together so the
     // page always starts at the top and scrolls naturally to the bottom.
-    // animate-fade-in-up (input.css) plays on every fresh mount, i.e.
-    // every time navigation brings this page back into view.
-    <div
-      className="animate-fade-in-up"
-      style={{
-        flex: 1,
-        overflowY: "auto",
-        overflowX: "hidden",
-        minHeight: 0,
-        backgroundColor: "#fafafa",
-        scrollBehavior: "smooth",
-      }}
-    >
+    <div style={{
+      flex: 1,
+      overflowY: "auto",
+      overflowX: "hidden",
+      minHeight: 0,
+      backgroundColor: "#fafafa",
+      scrollBehavior: "smooth",
+    }}>
       {/* Hero — dark navy → primary green gradient, matches the app's
          tertiary/primary theme tokens rather than a one-off color. */}
       <div
@@ -162,14 +140,14 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
           position: "relative",
           overflow: "hidden",
           background: "linear-gradient(135deg, #101b37 0%, #0d3d1a 55%, #006400 100%)",
-          padding: "56px 20px 64px",
+          padding: "70px 20px 70px",
         }}
       >
         {/* Faint decorative rings, purely CSS — no external art needed */}
         <div aria-hidden style={{ position: "absolute", top: "-70px", right: "-50px", width: "260px", height: "260px", borderRadius: "50%", border: "1px solid rgba(255,255,255,0.08)" }} />
         <div aria-hidden style={{ position: "absolute", bottom: "-90px", right: "60px", width: "180px", height: "180px", borderRadius: "50%", border: "1px solid rgba(255,255,255,0.06)" }} />
 
-        <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "24px", flexWrap: "wrap", maxWidth: "1200px", margin: "0 auto" }}>
+        <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", maxWidth: "1200px", margin: "0 auto" }}>
           <div>
             <h1
               style={{
@@ -178,7 +156,7 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
                 color: "#ffffff",
                 fontFamily: "var(--font-headline)",
                 letterSpacing: "-0.02em",
-                marginBottom: "8px",
+                marginBottom: "6px",
               }}
             >
               {greeting}, {firstName}
@@ -211,7 +189,7 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
       </div>
 
       {/* Content — sits entirely below the hero, no overlap */}
-      <div style={{ padding: "32px 20px 0", maxWidth: "1200px", margin: "0 auto" }}>
+      <div style={{ padding: "24px 20px 0", maxWidth: "1200px", margin: "0 auto" }}>
         {resumeTarget && (
           <div
             style={{
@@ -219,20 +197,18 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
               border: "1px solid #e8e8e8",
               borderLeft: "4px solid #d4af37",
               borderRadius: "12px",
-              padding: "20px 24px",
+              margin: "2rem 0",
+              padding: "18px 22px",
               boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               gap: "16px",
               flexWrap: "wrap",
-              marginBottom: "32px",
-              opacity: resumeLeaving ? 0.5 : 1,
-              transform: resumeLeaving ? "scale(0.98)" : "scale(1)",
-              transition: `opacity ${NAV_TRANSITION_MS}ms ease, transform ${NAV_TRANSITION_MS}ms ease`,
+              marginBottom: "28px",
             }}
           >
-            <div style={{ minWidth: 0 }}>
+            <div style={{ minWidth: 0, padding: "1rem 0" }}>
               <h3
                 style={{
                   fontSize: "16px",
@@ -251,34 +227,29 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
             <Button
               variant="primary"
               size="md"
-              onClick={() =>
-                navigateWithTransition("resume", () =>
-                  onResumeClick?.(resumeTarget.courseId, resumeTarget.trackId)
-                )
-              }
+              onClick={() => onResumeClick?.(resumeTarget.courseId, resumeTarget.trackId)}
             >
               Continue <ArrowRight size={16} />
             </Button>
           </div>
         )}
 
-        <div style={{ marginBottom: "24px" }}>
-          <h2
-            style={{
-              fontSize: "23px",
-              fontWeight: 800,
-              color: "#101b37",
-              fontFamily: "var(--font-headline)",
-              letterSpacing: "-0.01em",
-              marginBottom: "6px",
-            }}
-          >
-            Available Courses
-          </h2>
-          <p style={{ fontSize: "13px", color: "#888888", fontFamily: "var(--font-body)" }}>
-            Explore our curated collection of leadership development programs.
-          </p>
-        </div>
+        <h2
+          style={{
+            fontSize: "23px",
+            fontWeight: 800,
+            color: "#101b37",
+            fontFamily: "var(--font-headline)",
+            letterSpacing: "-0.01em",
+            marginTop: "16px",
+            marginBottom: "4px",
+          }}
+        >
+          Available Courses
+        </h2>
+        <p style={{ fontSize: "13px", color: "#888888", fontFamily: "var(--font-body)", marginBottom: "18px" }}>
+          Explore our curated collection of leadership development programs.
+        </p>
 
         {courses.length === 0 ? (
           <div style={{ minHeight: "200px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", backgroundColor: "#ffffff", border: "1px solid #e8e8e8", borderRadius: "12px" }}>
@@ -290,7 +261,7 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-              gap: "24px",
+              gap: "20px",
             }}
           >
             {courses.map((course, index) => (
@@ -298,17 +269,14 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
                 key={course.id}
                 course={course}
                 gradient={COURSE_GRADIENTS[index % COURSE_GRADIENTS.length]}
-                isLeaving={leavingId === `course-${course.id}`}
-                onClick={() =>
-                  navigateWithTransition(`course-${course.id}`, () => onCourseClick?.(course.id))
-                }
+                onClick={() => onCourseClick?.(course.id)}
               />
             ))}
           </div>
         )}
 
         {/* Bottom padding so last card isn't flush against edge on mobile */}
-        <div style={{ height: "40px" }} />
+        <div style={{ height: "32px" }} />
       </div>
     </div>
   );
@@ -317,12 +285,10 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
 function CourseCard({
   course,
   gradient,
-  isLeaving,
   onClick,
 }: {
   course: Course;
   gradient: string;
-  isLeaving?: boolean;
   onClick?: () => void;
 }) {
   const tracks = Array.isArray(course.tracks) ? course.tracks : [];
@@ -345,9 +311,6 @@ function CourseCard({
         boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
         display: "flex",
         flexDirection: "column",
-        opacity: isLeaving ? 0.5 : 1,
-        transform: isLeaving ? "scale(0.97)" : undefined,
-        transition: `opacity ${NAV_TRANSITION_MS}ms ease, transform ${NAV_TRANSITION_MS}ms ease`,
       }}
     >
       <div
@@ -362,7 +325,7 @@ function CourseCard({
         <BookOpen size={30} style={{ color: "rgba(255,255,255,0.85)" }} />
       </div>
 
-      <div style={{ padding: "20px", display: "flex", flexDirection: "column", flex: 1 }}>
+      <div style={{ padding: "18px", display: "flex", flexDirection: "column", flex: 1 }}>
         <h3
           style={{
             fontSize: "16px",
@@ -370,7 +333,7 @@ function CourseCard({
             color: "#101b37",
             fontFamily: "var(--font-headline)",
             letterSpacing: "-0.01em",
-            marginBottom: "8px",
+            marginBottom: "6px",
             lineHeight: 1.3,
           }}
         >
@@ -382,7 +345,7 @@ function CourseCard({
             color: "#888888",
             fontFamily: "var(--font-body)",
             lineHeight: 1.5,
-            marginBottom: "16px",
+            marginBottom: "14px",
             flex: 1,
             display: "-webkit-box",
             WebkitLineClamp: 2,
@@ -393,7 +356,7 @@ function CourseCard({
           {course.shortDescription || course.description}
         </p>
 
-        <p style={{ fontSize: "12px", color: "#b0b0b0", fontFamily: "var(--font-body)", marginBottom: "14px" }}>
+        <p style={{ fontSize: "12px", color: "#b0b0b0", fontFamily: "var(--font-body)", marginBottom: "12px" }}>
           {trackCount} tracks • {totalUnits} units
         </p>
 
