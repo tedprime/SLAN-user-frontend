@@ -13,16 +13,23 @@ import {
 const SORT_OPTIONS = ["Progress", "Title (A-Z)", "Recently Added"];
 
 const MOBILE_BP = 768;
+const DESKTOP_BP = 1200;
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < MOBILE_BP);
+// 1 column mobile, 2 tablet, 3 desktop — hard cap at 3 columns.
+function useGridColumns() {
+  const getColumns = () => {
+    const w = window.innerWidth;
+    if (w < MOBILE_BP) return 1;
+    if (w < DESKTOP_BP) return 2;
+    return 3;
+  };
+  const [columns, setColumns] = useState(getColumns);
   useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${MOBILE_BP - 1}px)`);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
+    const handler = () => setColumns(getColumns());
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
   }, []);
-  return isMobile;
+  return columns;
 }
 
 const TRACK_COLORS = [
@@ -35,13 +42,24 @@ const TRACK_COLORS = [
   { border: "#6366f1", fill: "#6366f1" },
 ];
 
+// Card image-section gradients, matched 1-to-1 with TRACK_COLORS by index.
+const TRACK_GRADIENTS = [
+  "linear-gradient(135deg, #064e3b 0%, #10b981 100%)",
+  "linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)",
+  "linear-gradient(135deg, #4c1d95 0%, #8b5cf6 100%)",
+  "linear-gradient(135deg, #78350f 0%, #f59e0b 100%)",
+  "linear-gradient(135deg, #881337 0%, #f43f5e 100%)",
+  "linear-gradient(135deg, #164e63 0%, #06b6d4 100%)",
+  "linear-gradient(135deg, #312e81 0%, #6366f1 100%)",
+];
+
 interface CourseTracksViewProps {
   course: Course;
   onTrackClick?: (trackId: number) => void;
 }
 
 export default function CourseTracksView({ course, onTrackClick }: CourseTracksViewProps) {
-  const isMobile = useIsMobile();
+  const columns = useGridColumns();
   const [sortBy, setSortBy] = useState("Progress");
 
   const tracks = useMemo(() => {
@@ -66,6 +84,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
   }, [course.tracks, sortBy]);
 
   const getTrackColor = (index: number) => TRACK_COLORS[index % TRACK_COLORS.length];
+  const getTrackGradient = (index: number) => TRACK_GRADIENTS[index % TRACK_GRADIENTS.length];
 
   return (
     // Single scroll container — header, filter bar, and grid all scroll
@@ -183,13 +202,14 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
+              gridTemplateColumns: `repeat(${columns}, 1fr)`,
               gap: "24px",
               alignItems: "stretch",
             }}
           >
             {tracks.map((track: CourseTrack, index: number) => {
               const color = getTrackColor(index);
+              const gradient = getTrackGradient(index);
               const progress = track.progressPercent ?? 0;
               const moduleCount = track.moduleCount ?? 0;
               const unitCount = track.unitCount ?? 0;
@@ -206,106 +226,147 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                     height: "100%",
                     backgroundColor: "#ffffff",
                     border: "1px solid #e8e8e8",
-                    borderLeftWidth: "4px",
-                    borderLeftColor: color.border,
                     borderRadius: "12px",
-                    padding: "24px",
+                    overflow: "hidden",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                     transition: "all 0.2s ease",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "rgba(0,100,0,0.02)";
                     e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)";
                     e.currentTarget.style.transform = "translateY(-2px)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "#ffffff";
                     e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
                     e.currentTarget.style.transform = "translateY(0)";
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "12px" }}>
+                  {/* Image section */}
+                  <div
+                    style={{
+                      position: "relative",
+                      height: "140px",
+                      flexShrink: 0,
+                      background: track.thumbnail
+                        ? `url(${track.thumbnail}) center/cover no-repeat`
+                        : gradient,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <BookOpen size={32} style={{ color: "rgba(255,255,255,0.85)" }} />
+
                     <span
                       style={{
+                        position: "absolute",
+                        top: "12px",
+                        left: "12px",
                         display: "inline-flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        height: "32px",
-                        width: "32px",
+                        height: "28px",
+                        width: "28px",
                         borderRadius: "50%",
-                        backgroundColor: "#f5f5f5",
-                        color: "#888888",
-                        fontSize: "13px",
+                        backgroundColor: "rgba(255,255,255,0.9)",
+                        color: "#101b37",
+                        fontSize: "12px",
                         fontWeight: 700,
                       }}
                     >
                       {index + 1}
                     </span>
+
                     {!track.isFree && (
-                      <Lock size={14} style={{ color: "#d4af37", marginTop: "4px" }} />
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: "12px",
+                          right: "12px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          height: "28px",
+                          width: "28px",
+                          borderRadius: "50%",
+                          backgroundColor: "rgba(255,255,255,0.9)",
+                        }}
+                      >
+                        <Lock size={13} style={{ color: "#d4af37" }} />
+                      </span>
                     )}
                   </div>
 
-                  <h3
+                  {/* Details section */}
+                  <div
                     style={{
-                      fontSize: "18px",
-                      fontWeight: 800,
-                      color: "#101b37",
-                      fontFamily: "var(--font-headline)",
-                      letterSpacing: "-0.01em",
-                      marginBottom: "8px",
-                      lineHeight: 1.3,
-                      minHeight: "47px",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
+                      display: "flex",
+                      flexDirection: "column",
+                      flex: 1,
+                      padding: "20px",
+                      borderTop: `3px solid ${color.border}`,
                     }}
                   >
-                    {track.title}
-                  </h3>
+                    <h3
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: 800,
+                        color: "#101b37",
+                        fontFamily: "var(--font-headline)",
+                        letterSpacing: "-0.01em",
+                        marginBottom: "8px",
+                        lineHeight: 1.3,
+                        minHeight: "47px",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {track.title}
+                    </h3>
 
-                  <p
-                    style={{
-                      fontSize: "14px",
-                      color: "#888888",
-                      marginBottom: "16px",
-                      lineHeight: 1.5,
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                      minHeight: "42px",
-                    }}
-                  >
-                    {track.shortDescription || "Explore this track to build your skills."}
-                  </p>
+                    <p
+                      style={{
+                        fontSize: "14px",
+                        color: "#888888",
+                        marginBottom: "16px",
+                        lineHeight: 1.5,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        minHeight: "42px",
+                      }}
+                    >
+                      {track.shortDescription || "Explore this track to build your skills."}
+                    </p>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px", fontSize: "12px", color: "#b0b0b0", marginBottom: "20px", flexWrap: "wrap" }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Layers size={13} />
-                      <span>{moduleCount} Modules</span>
-                    </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <BookOpen size={13} />
-                      <span>{unitCount} Units</span>
-                    </span>
-                    <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Clock size={13} />
-                      <span>{estimatedHours}h</span>
-                    </span>
-                  </div>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "auto" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>
-                        Progress
+                    <div style={{ display: "flex", alignItems: "center", gap: "16px", fontSize: "12px", color: "#b0b0b0", marginBottom: "20px", flexWrap: "wrap" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <Layers size={13} />
+                        <span>{moduleCount} Modules</span>
                       </span>
-                      <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>
-                        {progress}%
+                      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <BookOpen size={13} />
+                        <span>{unitCount} Units</span>
+                      </span>
+                      <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <Clock size={13} />
+                        <span>{estimatedHours}h</span>
                       </span>
                     </div>
-                    <Progress value={progress} color={color.fill} />
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "auto" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>
+                          Progress
+                        </span>
+                        <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>
+                          {progress}%
+                        </span>
+                      </div>
+                      <Progress value={progress} color={color.fill} />
+                    </div>
                   </div>
                 </div>
               );
