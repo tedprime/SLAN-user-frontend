@@ -140,7 +140,7 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
           position: "relative",
           overflow: "hidden",
           background: "linear-gradient(135deg, #101b37 0%, #0d3d1a 55%, #006400 100%)",
-          padding: resumeTarget ? "32px 20px 72px" : "32px 20px 40px",
+          padding: "44px 20px 56px",
         }}
       >
         {/* Faint decorative rings, purely CSS — no external art needed */}
@@ -188,8 +188,7 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
         </div>
       </div>
 
-      {/* Content — normal flow; only the resume card (when present) pulls
-         up to overlap the hero, like the reference design. */}
+      {/* Content — sits entirely below the hero, no overlap */}
       <div style={{ padding: "24px 20px 0", maxWidth: "1200px", margin: "0 auto" }}>
         {resumeTarget && (
           <div
@@ -199,16 +198,13 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
               borderLeft: "4px solid #d4af37",
               borderRadius: "12px",
               padding: "18px 22px",
-              boxShadow: "0 10px 28px rgba(0,0,0,0.10)",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               gap: "16px",
               flexWrap: "wrap",
-              marginTop: "-56px",
               marginBottom: "28px",
-              position: "relative",
-              zIndex: 2,
             }}
           >
             <div style={{ minWidth: 0 }}>
