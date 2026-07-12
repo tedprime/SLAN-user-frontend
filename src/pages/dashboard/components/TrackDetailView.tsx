@@ -18,6 +18,13 @@ const MOBILE_BP = 768;
 const DESCRIPTION_WORD_LIMIT = 50;
 const MODULE_ACCENT_COLOR = "rgb(0,100,0)";
 
+// Local module images — name each file after the module's `slug` field
+// (ModuleSummary has no thumbnail from the API, so this is the only
+// source). e.g. slug "ethics-integrity-school-governance" →
+// public/images/modules/ethics-integrity-school-governance.jpg
+const MODULE_IMAGE_BASE_PATH = "/images/modules/";
+const MODULE_IMAGE_EXT = ".jpg";
+
 interface ExpandableTextProps {
   text: string;
   wordLimit?: number;
@@ -343,11 +350,70 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                       style={{
                         display: "flex",
                         flexDirection: isMobile ? "column" : "row",
-                        alignItems: isMobile ? "stretch" : "flex-start",
-                        justifyContent: "space-between",
                         gap: isMobile ? "16px" : "20px",
                       }}
                     >
+                      {/* Module image — left on desktop, top on mobile */}
+                      <div
+                        style={{
+                          position: "relative",
+                          width: isMobile ? "100%" : "200px",
+                          height: isMobile ? "160px" : "130px",
+                          flexShrink: 0,
+                          borderRadius: "10px",
+                          overflow: "hidden",
+                          backgroundColor: "#f0f0f0",
+                        }}
+                      >
+                        <img
+                          src={`${MODULE_IMAGE_BASE_PATH}${module.slug}${MODULE_IMAGE_EXT}`}
+                          alt=""
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: `linear-gradient(135deg, ${trackColor.border} 0%, rgba(0,0,0,0.35) 100%)`,
+                            opacity: 0.2,
+                            pointerEvents: "none",
+                          }}
+                        />
+                        <BookOpen
+                          size={22}
+                          style={{
+                            position: "absolute",
+                            bottom: "10px",
+                            left: "10px",
+                            color: "#ffffff",
+                            opacity: 0.9,
+                          }}
+                        />
+                      </div>
+
+                      <div
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          display: "flex",
+                          flexDirection: isMobile ? "column" : "row",
+                          alignItems: isMobile ? "stretch" : "flex-start",
+                          justifyContent: "space-between",
+                          gap: isMobile ? "16px" : "20px",
+                        }}
+                      >
                       <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "flex-start", gap: "12px" }}>
                         <span style={{
                           display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -473,6 +539,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                             <><Play size={14} />{progress > 0 ? "Continue" : "Start"}</>
                           )}
                         </Button>
+                      </div>
                       </div>
                     </div>
                   </div>
