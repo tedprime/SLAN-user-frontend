@@ -23,7 +23,7 @@ const MODULE_ACCENT_COLOR = "rgb(0,100,0)";
 // source). e.g. slug "ethics-integrity-school-governance" →
 // public/images/modules/ethics-integrity-school-governance.jpg
 const MODULE_IMAGE_BASE_PATH = "/images/modules/";
-const MODULE_IMAGE_EXT = ".jpg";
+const MODULE_IMAGE_EXT = ".jpeg";
 
 interface ExpandableTextProps {
   text: string;
