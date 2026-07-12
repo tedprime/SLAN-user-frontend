@@ -151,7 +151,7 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
           <div>
             <h1
               style={{
-                fontSize: "clamp(22px, 5vw, 30px)",
+                fontSize: "clamp(25px, 5vw, 30px)",
                 fontWeight: 800,
                 color: "#ffffff",
                 fontFamily: "var(--font-headline)",
@@ -207,7 +207,7 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
               marginBottom: "28px",
             }}
           >
-            <div style={{ minWidth: 0 }}>
+            <div style={{ minWidth: 0, padding: "1rem 0" }}>
               <h3
                 style={{
                   fontSize: "16px",
@@ -235,7 +235,7 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
 
         <h2
           style={{
-            fontSize: "var( --text-display-xl)",
+            fontSize: "23px",
             fontWeight: 800,
             color: "#101b37",
             fontFamily: "var(--font-headline)",
