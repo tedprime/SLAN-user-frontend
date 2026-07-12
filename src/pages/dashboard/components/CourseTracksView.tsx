@@ -12,6 +12,14 @@ import {
 
 const SORT_OPTIONS = ["Progress", "Title (A-Z)", "Recently Added"];
 
+// Local track images — name each file after the track's `slug` field
+// (e.g. slug "foundational-track" → public/images/tracks/foundational-track.jpg).
+// Drop files straight in that folder; nothing else needs to change here.
+// If a slug has no matching file, the image just fails to load and the
+// gradient underneath shows on its own — no broken-image icon.
+const TRACK_IMAGE_BASE_PATH = "/images/tracks/";
+const TRACK_IMAGE_EXT = ".jpg";
+
 const MOBILE_BP = 768;
 const DESKTOP_BP = 1200;
 
@@ -188,6 +196,27 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
 
       {/* Track Cards Grid — no longer its own scroll region, just regular content */}
       <div style={{ padding: "32px" }}>
+        <style>{`
+          .slan-track-card {
+            transition: box-shadow 0.25s ease, transform 0.25s ease;
+          }
+          .slan-track-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+          }
+          .slan-track-photo {
+            transition: opacity 0.3s ease;
+          }
+          .slan-track-gradient {
+            transition: opacity 0.3s ease;
+          }
+          .slan-track-card:hover .slan-track-photo {
+            opacity: 0.3;
+          }
+          .slan-track-card:hover .slan-track-gradient {
+            opacity: 0.92;
+          }
+        `}</style>
         {tracks.length === 0 ? (
           <div style={{ minHeight: "300px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
             <BookOpen size={48} style={{ color: "#d1d1d1", marginBottom: "16px" }} />
@@ -219,7 +248,7 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                 <div
                   key={track.id}
                   onClick={() => onTrackClick?.(track.id)}
-                  className="cursor-pointer"
+                  className="cursor-pointer slan-track-card"
                   style={{
                     display: "flex",
                     flexDirection: "column",
@@ -229,32 +258,48 @@ export default function CourseTracksView({ course, onTrackClick }: CourseTracksV
                     borderRadius: "12px",
                     overflow: "hidden",
                     boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                    transition: "all 0.2s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)";
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)";
-                    e.currentTarget.style.transform = "translateY(0)";
                   }}
                 >
                   {/* Image section */}
                   <div
                     style={{
                       position: "relative",
-                      height: "140px",
+                      height: "190px",
                       flexShrink: 0,
-                      background: track.thumbnail
-                        ? `url(${track.thumbnail}) center/cover no-repeat`
-                        : gradient,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      backgroundColor: "#f0f0f0",
+                      overflow: "hidden",
                     }}
                   >
-                    <BookOpen size={32} style={{ color: "rgba(255,255,255,0.85)" }} />
+                    <img
+                      src={track.thumbnail || `${TRACK_IMAGE_BASE_PATH}${track.slug}${TRACK_IMAGE_EXT}`}
+                      alt=""
+                      className="slan-track-photo"
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+
+                    <div
+                      className="slan-track-gradient"
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: gradient,
+                        opacity: 0.55,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <BookOpen size={32} style={{ color: "rgba(255,255,255,0.85)" }} />
+                    </div>
 
                     <span
                       style={{
