@@ -1,11 +1,28 @@
 import { useState, useEffect, useMemo } from "react";
-import { BookOpen, TrendingUp, Clock } from "lucide-react";
+import { BookOpen, ArrowRight } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import Progress from "../../../components/ui/Progress";
 import { courseService } from "../../../services/courseService";
-import type { Course } from "../../../services/types/course.types";
+import { getUser } from "../../../services/tokenService";
+import type { Course, CourseTrack } from "../../../services/types/course.types";
 
-export default function Overview({ onExploreClick }: { onExploreClick?: () => void }) {
+// Cycled per card so the "Available Courses" grid doesn't look flat —
+// built from the app's own primary/tertiary palette (input.css @theme),
+// not arbitrary colors.
+const COURSE_GRADIENTS = [
+  "linear-gradient(135deg, #101b37 0%, #006400 100%)",
+  "linear-gradient(135deg, #1e2e55 0%, #1a7a1a 100%)",
+  "linear-gradient(135deg, #090f1f 0%, #268d26 100%)",
+];
+
+interface OverviewProps {
+  /** A course card (or the empty-state CTA) was clicked. */
+  onCourseClick?: (courseId: number) => void;
+  /** "Continue" was clicked on the resume banner. */
+  onResumeClick?: (courseId: number, trackId: number) => void;
+}
+
+export default function Overview({ onCourseClick, onResumeClick }: OverviewProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -29,26 +46,49 @@ export default function Overview({ onExploreClick }: { onExploreClick?: () => vo
     return () => { cancelled = true; };
   }, []);
 
+  const user = useMemo(() => getUser(), []);
+  const firstName = user?.fullName?.split(" ")[0] || "Leader";
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  }, []);
+
   const stats = useMemo(() => {
-    if (!Array.isArray(courses)) return { totalTracks: 0, completedTracks: 0, totalUnits: 0, totalHours: 0, overallProgress: 0 };
-    let totalTracks = 0, completedTracks = 0, totalUnits = 0, totalMinutes = 0, progressSum = 0;
+    if (!Array.isArray(courses)) return { totalTracks: 0, overallProgress: 0 };
+    let totalTracks = 0, progressSum = 0;
     courses.forEach((course) => {
       if (!Array.isArray(course?.tracks)) return;
       course.tracks.forEach((track) => {
         totalTracks++;
-        const p = track?.progressPercent ?? 0;
-        if (p === 100) completedTracks++;
-        totalUnits += track?.unitCount ?? 0;
-        totalMinutes += track?.totalEstimatedMinutes ?? 0;
-        progressSum += p;
+        progressSum += track?.progressPercent ?? 0;
       });
     });
     return {
       totalTracks,
-      completedTracks,
-      totalUnits,
-      totalHours: Math.round(totalMinutes / 60),
       overallProgress: totalTracks > 0 ? Math.round(progressSum / totalTracks) : 0,
+    };
+  }, [courses]);
+
+  // First in-progress track across all courses — the "pick up where you
+  // left off" prompt. Falls back to nothing if everything is either
+  // untouched or already complete.
+  const resumeTarget = useMemo(() => {
+    const match = courses
+      .flatMap((course) =>
+        (Array.isArray(course?.tracks) ? course.tracks : []).map((track: CourseTrack) => ({ course, track }))
+      )
+      .find(({ track }) => (track?.progressPercent ?? 0) > 0 && (track?.progressPercent ?? 0) < 100);
+
+    if (!match) return null;
+
+    return {
+      courseId: match.course.id,
+      courseTitle: match.course.title,
+      trackId: match.track.id,
+      trackTitle: match.track.title,
+      progress: match.track.progressPercent ?? 0,
     };
   }, [courses]);
 
@@ -83,7 +123,7 @@ export default function Overview({ onExploreClick }: { onExploreClick?: () => vo
   }
 
   return (
-    // Single scroll container — header + content scroll together so the
+    // Single scroll container — hero + content scroll together so the
     // page always starts at the top and scrolls naturally to the bottom.
     <div style={{
       flex: 1,
@@ -93,116 +133,145 @@ export default function Overview({ onExploreClick }: { onExploreClick?: () => vo
       backgroundColor: "#fafafa",
       scrollBehavior: "smooth",
     }}>
-      {/* Header — scrolls with the page, not fixed above scroll area */}
-      <div style={{
-        padding: "24px 20px 20px",
-        borderBottom: "1px solid #e0e0e0",
-        backgroundColor: "#ffffff",
-      }}>
-        <h1 style={{
-          fontSize: "clamp(22px, 5vw, 28px)",
-          fontWeight: 800,
-          color: "#101b37",
-          fontFamily: "var(--font-headline)",
-          letterSpacing: "-0.02em",
-          marginBottom: "6px",
-        }}>
-          Welcome back!
-        </h1>
-        <p style={{ fontSize: "14px", color: "#888888", lineHeight: 1.5 }}>
-          Continue your leadership development journey with SLAN Online.
-        </p>
+      {/* Hero — dark navy → primary green gradient, matches the app's
+         tertiary/primary theme tokens rather than a one-off color. */}
+      <div
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          background: "linear-gradient(135deg, #101b37 0%, #0d3d1a 55%, #006400 100%)",
+          padding: "32px 20px 72px",
+        }}
+      >
+        {/* Faint decorative rings, purely CSS — no external art needed */}
+        <div aria-hidden style={{ position: "absolute", top: "-70px", right: "-50px", width: "260px", height: "260px", borderRadius: "50%", border: "1px solid rgba(255,255,255,0.08)" }} />
+        <div aria-hidden style={{ position: "absolute", bottom: "-90px", right: "60px", width: "180px", height: "180px", borderRadius: "50%", border: "1px solid rgba(255,255,255,0.06)" }} />
+
+        <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", maxWidth: "1200px", margin: "0 auto" }}>
+          <div>
+            <h1
+              style={{
+                fontSize: "clamp(22px, 5vw, 30px)",
+                fontWeight: 800,
+                color: "#ffffff",
+                fontFamily: "var(--font-headline)",
+                letterSpacing: "-0.02em",
+                marginBottom: "6px",
+              }}
+            >
+              {greeting}, {firstName}
+            </h1>
+            <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.75)", fontFamily: "var(--font-body)", lineHeight: 1.5 }}>
+              Continue building your leadership toolkit.
+            </p>
+          </div>
+
+          {stats.totalTracks > 0 && (
+            <div
+              style={{
+                width: "80px",
+                height: "80px",
+                minWidth: "80px",
+                borderRadius: "50%",
+                border: "3px solid #d4af37",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <span style={{ fontSize: "17px", fontWeight: 800, color: "#ffffff", fontFamily: "var(--font-headline)" }}>
+                {stats.overallProgress}%
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Content */}
-      <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-
-        {/* Stats Grid — 2 columns on mobile, 4 on desktop */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2, 1fr)",
-          gap: "12px",
-          marginBottom: "20px",
-        }}>
-          {/* Total Tracks */}
-          <StatCard
-            label="Total Tracks"
-            value={stats.totalTracks}
-            sub={`${stats.completedTracks} completed`}
-            icon={<BookOpen size={18} style={{ color: "#10b981" }} />}
-          />
-
-          {/* Total Units */}
-          <StatCard
-            label="Total Units"
-            value={stats.totalUnits}
-            sub="Across all tracks"
-            icon={<TrendingUp size={18} style={{ color: "#3b82f6" }} />}
-          />
-
-          {/* Total Hours */}
-          <StatCard
-            label="Total Hours"
-            value={`${stats.totalHours}h`}
-            sub="To complete all tracks"
-            icon={<Clock size={18} style={{ color: "#8b5cf6" }} />}
-          />
-
-          {/* Overall Progress */}
-          <div style={{
-            backgroundColor: "#ffffff",
-            border: "1px solid #e8e8e8",
-            borderRadius: "12px",
-            padding: "16px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-              <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Progress</span>
-              <div style={{
-                display: "flex", alignItems: "center", justifyContent: "center",
-                height: "24px", width: "24px", borderRadius: "50%",
-                backgroundColor: stats.overallProgress > 0 ? "rgba(16,185,129,0.1)" : "#f5f5f5",
-                fontSize: "10px", fontWeight: 700,
-                color: stats.overallProgress > 0 ? "#10b981" : "#888888",
-              }}>
-                {stats.overallProgress}%
-              </div>
+      {/* Content — pulled up to overlap the hero, like the reference design */}
+      <div style={{ padding: "0 20px", marginTop: "-48px", position: "relative", zIndex: 2, maxWidth: "1200px", margin: "-48px auto 0" }}>
+        {resumeTarget && (
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              border: "1px solid #e8e8e8",
+              borderLeft: "4px solid #d4af37",
+              borderRadius: "12px",
+              padding: "18px 22px",
+              boxShadow: "0 10px 28px rgba(0,0,0,0.10)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "16px",
+              flexWrap: "wrap",
+              marginBottom: "28px",
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <h3
+                style={{
+                  fontSize: "16px",
+                  fontWeight: 700,
+                  color: "#101b37",
+                  fontFamily: "var(--font-headline)",
+                  marginBottom: "4px",
+                }}
+              >
+                Resume: {resumeTarget.trackTitle}
+              </h3>
+              <p style={{ fontSize: "13px", color: "#888888", fontFamily: "var(--font-body)" }}>
+                {resumeTarget.courseTitle} • {resumeTarget.progress}% complete
+              </p>
             </div>
-            <Progress value={stats.overallProgress} color="#10b981" />
-            <p style={{ fontSize: "11px", color: "#888888", marginTop: "8px" }}>
-              {stats.overallProgress > 0 ? "Keep going!" : "Start a track to begin"}
-            </p>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => onResumeClick?.(resumeTarget.courseId, resumeTarget.trackId)}
+            >
+              Continue <ArrowRight size={16} />
+            </Button>
           </div>
-        </div>
+        )}
 
-        {/* Explore CTA */}
-        <div style={{
-          backgroundColor: "#ffffff",
-          border: "1px solid #e8e8e8",
-          borderRadius: "12px",
-          padding: "20px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "12px",
-          flexWrap: "wrap",
-        }}>
-          <div>
-            <h3 style={{
-              fontSize: "15px", fontWeight: 700, color: "#101b37",
-              fontFamily: "var(--font-headline)", marginBottom: "4px",
-            }}>
-              Explore All Tracks
-            </h3>
-            <p style={{ fontSize: "13px", color: "#888888" }}>
-              Browse all available tracks and start learning
-            </p>
+        <h2
+          style={{
+            fontSize: "20px",
+            fontWeight: 800,
+            color: "#101b37",
+            fontFamily: "var(--font-headline)",
+            letterSpacing: "-0.01em",
+            marginBottom: "4px",
+          }}
+        >
+          Available Courses
+        </h2>
+        <p style={{ fontSize: "13px", color: "#888888", fontFamily: "var(--font-body)", marginBottom: "18px" }}>
+          Explore our curated collection of leadership development programs.
+        </p>
+
+        {courses.length === 0 ? (
+          <div style={{ minHeight: "200px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", backgroundColor: "#ffffff", border: "1px solid #e8e8e8", borderRadius: "12px" }}>
+            <BookOpen size={40} style={{ color: "#d1d1d1", marginBottom: "12px" }} />
+            <p style={{ fontSize: "14px", fontWeight: 600, color: "#888888" }}>No courses available yet</p>
           </div>
-          <Button variant="primary" size="md" onClick={() => onExploreClick?.()}>
-            <BookOpen size={16} />
-            Explore
-          </Button>
-        </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+              gap: "20px",
+            }}
+          >
+            {courses.map((course, index) => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                gradient={COURSE_GRADIENTS[index % COURSE_GRADIENTS.length]}
+                onClick={() => onCourseClick?.(course.id)}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Bottom padding so last card isn't flush against edge on mobile */}
         <div style={{ height: "32px" }} />
@@ -211,31 +280,104 @@ export default function Overview({ onExploreClick }: { onExploreClick?: () => vo
   );
 }
 
-// Extracted card to reduce repetition
-function StatCard({
-  label, value, sub, icon,
+function CourseCard({
+  course,
+  gradient,
+  onClick,
 }: {
-  label: string;
-  value: string | number;
-  sub: string;
-  icon: React.ReactNode;
+  course: Course;
+  gradient: string;
+  onClick?: () => void;
 }) {
+  const tracks = Array.isArray(course.tracks) ? course.tracks : [];
+  const trackCount = tracks.length;
+  const totalUnits = tracks.reduce((sum, t) => sum + (t?.unitCount ?? 0), 0);
+  const progress =
+    trackCount > 0
+      ? Math.round(tracks.reduce((sum, t) => sum + (t?.progressPercent ?? 0), 0) / trackCount)
+      : 0;
+
   return (
-    <div style={{
-      backgroundColor: "#ffffff",
-      border: "1px solid #e8e8e8",
-      borderRadius: "12px",
-      padding: "16px",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-        <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>{label}</span>
-        {icon}
+    <div
+      onClick={onClick}
+      className="card-hover cursor-pointer"
+      style={{
+        backgroundColor: "#ffffff",
+        border: "1px solid #e8e8e8",
+        borderRadius: "12px",
+        overflow: "hidden",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div
+        style={{
+          height: "110px",
+          background: gradient,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <BookOpen size={30} style={{ color: "rgba(255,255,255,0.85)" }} />
       </div>
-      <p style={{ fontSize: "28px", fontWeight: 800, color: "#101b37", marginBottom: "2px" }}>
-        {value}
-      </p>
-      <p style={{ fontSize: "11px", color: "#888888" }}>{sub}</p>
+
+      <div style={{ padding: "18px", display: "flex", flexDirection: "column", flex: 1 }}>
+        <h3
+          style={{
+            fontSize: "16px",
+            fontWeight: 800,
+            color: "#101b37",
+            fontFamily: "var(--font-headline)",
+            letterSpacing: "-0.01em",
+            marginBottom: "6px",
+            lineHeight: 1.3,
+          }}
+        >
+          {course.title}
+        </h3>
+        <p
+          style={{
+            fontSize: "13px",
+            color: "#888888",
+            fontFamily: "var(--font-body)",
+            lineHeight: 1.5,
+            marginBottom: "14px",
+            flex: 1,
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
+          {course.shortDescription || course.description}
+        </p>
+
+        <p style={{ fontSize: "12px", color: "#b0b0b0", fontFamily: "var(--font-body)", marginBottom: "12px" }}>
+          {trackCount} tracks • {totalUnits} units
+        </p>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ flex: 1 }}>
+            <Progress value={progress} color="#006400" />
+          </div>
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              fontFamily: "var(--font-body)",
+              color: progress > 0 ? "#10b981" : "#888888",
+              backgroundColor: progress > 0 ? "rgba(16,185,129,0.1)" : "#f5f5f5",
+              padding: "3px 9px",
+              borderRadius: "9999px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {progress}%
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

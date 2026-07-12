@@ -269,9 +269,8 @@ export default function UserDashboard() {
 
           {viewState.type === "overview" && (
             <Overview
-              onExploreClick={() => {
-                if (courses.length > 0) setActiveNav(`course:${courses[0].id}`);
-              }}
+              onCourseClick={(courseId) => setActiveNav(`course:${courseId}`)}
+              onResumeClick={(courseId, trackId) => setActiveNav(`track:${courseId}:${trackId}`)}
             />
           )}
 
