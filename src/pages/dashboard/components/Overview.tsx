@@ -140,7 +140,7 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
           position: "relative",
           overflow: "hidden",
           background: "linear-gradient(135deg, #101b37 0%, #0d3d1a 55%, #006400 100%)",
-          padding: "44px 20px 56px",
+          padding: "60px 20px 60px",
         }}
       >
         {/* Faint decorative rings, purely CSS — no external art needed */}
@@ -235,7 +235,7 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
 
         <h2
           style={{
-            fontSize: "20px",
+            fontSize: "var( --text-display-xl)",
             fontWeight: 800,
             color: "#101b37",
             fontFamily: "var(--font-headline)",
