@@ -140,7 +140,7 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
           position: "relative",
           overflow: "hidden",
           background: "linear-gradient(135deg, #101b37 0%, #0d3d1a 55%, #006400 100%)",
-          padding: "60px 20px 60px",
+          padding: "70px 20px 70px",
         }}
       >
         {/* Faint decorative rings, purely CSS — no external art needed */}
@@ -241,6 +241,7 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
             color: "#101b37",
             fontFamily: "var(--font-headline)",
             letterSpacing: "-0.01em",
+            marginTop: "16px",
             marginBottom: "4px",
           }}
         >
