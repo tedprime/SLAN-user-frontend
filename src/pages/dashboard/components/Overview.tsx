@@ -22,7 +22,10 @@ interface OverviewProps {
   onResumeClick?: (courseId: number, trackId: number) => void;
 }
 
-export default function Overview({ onCourseClick, onResumeClick }: OverviewProps) {
+export default function Overview({
+  onCourseClick,
+  onResumeClick,
+}: OverviewProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -43,7 +46,9 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const user = useMemo(() => getUser(), []);
@@ -57,7 +62,8 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
 
   const stats = useMemo(() => {
     if (!Array.isArray(courses)) return { totalTracks: 0, overallProgress: 0 };
-    let totalTracks = 0, progressSum = 0;
+    let totalTracks = 0,
+      progressSum = 0;
     courses.forEach((course) => {
       if (!Array.isArray(course?.tracks)) return;
       course.tracks.forEach((track) => {
@@ -67,7 +73,8 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
     });
     return {
       totalTracks,
-      overallProgress: totalTracks > 0 ? Math.round(progressSum / totalTracks) : 0,
+      overallProgress:
+        totalTracks > 0 ? Math.round(progressSum / totalTracks) : 0,
     };
   }, [courses]);
 
@@ -77,9 +84,15 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
   const resumeTarget = useMemo(() => {
     const match = courses
       .flatMap((course) =>
-        (Array.isArray(course?.tracks) ? course.tracks : []).map((track: CourseTrack) => ({ course, track }))
+        (Array.isArray(course?.tracks) ? course.tracks : []).map(
+          (track: CourseTrack) => ({ course, track }),
+        ),
       )
-      .find(({ track }) => (track?.progressPercent ?? 0) > 0 && (track?.progressPercent ?? 0) < 100);
+      .find(
+        ({ track }) =>
+          (track?.progressPercent ?? 0) > 0 &&
+          (track?.progressPercent ?? 0) < 100,
+      );
 
     if (!match) return null;
 
@@ -94,14 +107,37 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
 
   if (loading) {
     return (
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#fafafa", minHeight: 0 }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
-          <div style={{
-            width: "40px", height: "40px",
-            border: "3px solid #e8e8e8", borderTopColor: "#006400",
-            borderRadius: "50%", animation: "spin 1s linear infinite",
-          }} />
-          <p style={{ fontSize: "14px", color: "#888888" }}>Loading your dashboard...</p>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#fafafa",
+          minHeight: 0,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "12px",
+          }}
+        >
+          <div
+            style={{
+              width: "40px",
+              height: "40px",
+              border: "3px solid #e8e8e8",
+              borderTopColor: "#006400",
+              borderRadius: "50%",
+              animation: "spin 1s linear infinite",
+            }}
+          />
+          <p style={{ fontSize: "14px", color: "#888888" }}>
+            Loading your dashboard...
+          </p>
         </div>
       </div>
     );
@@ -109,12 +145,32 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
 
   if (error) {
     return (
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#fafafa", minHeight: 0 }}>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#fafafa",
+          minHeight: 0,
+        }}
+      >
         <div style={{ textAlign: "center" }}>
-          <p style={{ fontSize: "16px", fontWeight: 600, color: "#d32f2f", marginBottom: "8px" }}>
+          <p
+            style={{
+              fontSize: "16px",
+              fontWeight: 600,
+              color: "#d32f2f",
+              marginBottom: "8px",
+            }}
+          >
             Failed to load dashboard
           </p>
-          <Button variant="primary" size="sm" onClick={() => window.location.reload()}>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => window.location.reload()}
+          >
             Retry
           </Button>
         </div>
@@ -125,29 +181,77 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
   return (
     // Single scroll container — hero + content scroll together so the
     // page always starts at the top and scrolls naturally to the bottom.
-    <div style={{
-      flex: 1,
-      overflowY: "auto",
-      overflowX: "hidden",
-      minHeight: 0,
-      backgroundColor: "#fafafa",
-      scrollBehavior: "smooth",
-    }}>
+    <div
+      style={{
+        flex: 1,
+        overflowY: "auto",
+        overflowX: "hidden",
+        minHeight: 0,
+        backgroundColor: "#fafafa",
+        scrollBehavior: "smooth",
+        animation: "pageFadeIn 0.4s ease both",
+      }}
+    >
+      <style>{`
+        @keyframes pageFadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
       {/* Hero — dark navy → primary green gradient, matches the app's
          tertiary/primary theme tokens rather than a one-off color. */}
       <div
         style={{
           position: "relative",
           overflow: "hidden",
-          background: "linear-gradient(135deg, #101b37 0%, #0d3d1a 55%, #006400 100%)",
-          padding: "70px 20px 70px",
+          background:
+            "linear-gradient(135deg, #101b37 0%, #0d3d1a 55%, #006400 100%)",
+          padding: "100px 20px 100px",
         }}
       >
         {/* Faint decorative rings, purely CSS — no external art needed */}
-        <div aria-hidden style={{ position: "absolute", top: "-70px", right: "-50px", width: "260px", height: "260px", borderRadius: "50%", border: "1px solid rgba(255,255,255,0.08)" }} />
-        <div aria-hidden style={{ position: "absolute", bottom: "-90px", right: "60px", width: "180px", height: "180px", borderRadius: "50%", border: "1px solid rgba(255,255,255,0.06)" }} />
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: "-70px",
+            right: "-50px",
+            width: "260px",
+            height: "260px",
+            borderRadius: "50%",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}
+        />
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            bottom: "-90px",
+            right: "60px",
+            width: "180px",
+            height: "180px",
+            borderRadius: "50%",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}
+        />
 
-        <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", maxWidth: "1200px", margin: "0 auto" }}>
+        <div
+          style={{
+            position: "relative",
+            zIndex: 1,
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: "20px",
+            flexWrap: "wrap",
+            maxWidth: "1200px",
+            margin: "0 auto",
+          }}
+        >
           <div>
             <h1
               style={{
@@ -161,7 +265,14 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
             >
               {greeting}, {firstName}
             </h1>
-            <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.75)", fontFamily: "var(--font-body)", lineHeight: 1.5 }}>
+            <p
+              style={{
+                fontSize: "14px",
+                color: "rgba(255,255,255,0.75)",
+                fontFamily: "var(--font-body)",
+                lineHeight: 1.5,
+              }}
+            >
               Continue building your leadership toolkit.
             </p>
           </div>
@@ -180,7 +291,14 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
                 flexShrink: 0,
               }}
             >
-              <span style={{ fontSize: "17px", fontWeight: 800, color: "#ffffff", fontFamily: "var(--font-headline)" }}>
+              <span
+                style={{
+                  fontSize: "17px",
+                  fontWeight: 800,
+                  color: "#ffffff",
+                  fontFamily: "var(--font-headline)",
+                }}
+              >
                 {stats.overallProgress}%
               </span>
             </div>
@@ -189,7 +307,9 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
       </div>
 
       {/* Content — sits entirely below the hero, no overlap */}
-      <div style={{ padding: "24px 20px 0", maxWidth: "1200px", margin: "0 auto" }}>
+      <div
+        style={{ padding: "48px 24px 0", maxWidth: "1200px", margin: "0 auto" }}
+      >
         {resumeTarget && (
           <div
             style={{
@@ -197,15 +317,15 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
               border: "1px solid #e8e8e8",
               borderLeft: "4px solid #d4af37",
               borderRadius: "12px",
-              margin: "2rem 0",
-              padding: "18px 22px",
+              padding: "22px 26px",
               boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               gap: "16px",
               flexWrap: "wrap",
-              marginBottom: "28px",
+              marginBottom: "44px",
+              animation: "fadeInUp 0.5s ease 0.05s both",
             }}
           >
             <div style={{ minWidth: 0, padding: "1rem 0" }}>
@@ -220,14 +340,22 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
               >
                 Resume: {resumeTarget.trackTitle}
               </h3>
-              <p style={{ fontSize: "13px", color: "#888888", fontFamily: "var(--font-body)" }}>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#888888",
+                  fontFamily: "var(--font-body)",
+                }}
+              >
                 {resumeTarget.courseTitle} • {resumeTarget.progress}% complete
               </p>
             </div>
             <Button
               variant="primary"
               size="md"
-              onClick={() => onResumeClick?.(resumeTarget.courseId, resumeTarget.trackId)}
+              onClick={() =>
+                onResumeClick?.(resumeTarget.courseId, resumeTarget.trackId)
+              }
             >
               Continue <ArrowRight size={16} />
             </Button>
@@ -241,42 +369,74 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
             color: "#101b37",
             fontFamily: "var(--font-headline)",
             letterSpacing: "-0.01em",
-            marginTop: "16px",
-            marginBottom: "4px",
+            marginTop: "8px",
+            marginBottom: "8px",
+            animation: "fadeInUp 0.5s ease 0.1s both",
           }}
         >
           Available Courses
         </h2>
-        <p style={{ fontSize: "13px", color: "#888888", fontFamily: "var(--font-body)", marginBottom: "18px" }}>
+        <p
+          style={{
+            fontSize: "13px",
+            color: "#888888",
+            fontFamily: "var(--font-body)",
+            marginBottom: "28px",
+            animation: "fadeInUp 0.5s ease 0.15s both",
+          }}
+        >
           Explore our curated collection of leadership development programs.
         </p>
 
         {courses.length === 0 ? (
-          <div style={{ minHeight: "200px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", backgroundColor: "#ffffff", border: "1px solid #e8e8e8", borderRadius: "12px" }}>
-            <BookOpen size={40} style={{ color: "#d1d1d1", marginBottom: "12px" }} />
-            <p style={{ fontSize: "14px", fontWeight: 600, color: "#888888" }}>No courses available yet</p>
+          <div
+            style={{
+              minHeight: "200px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+              backgroundColor: "#ffffff",
+              border: "1px solid #e8e8e8",
+              borderRadius: "12px",
+            }}
+          >
+            <BookOpen
+              size={40}
+              style={{ color: "#d1d1d1", marginBottom: "12px" }}
+            />
+            <p style={{ fontSize: "14px", fontWeight: 600, color: "#888888" }}>
+              No courses available yet
+            </p>
           </div>
         ) : (
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-              gap: "20px",
+              gap: "28px",
             }}
           >
             {courses.map((course, index) => (
-              <CourseCard
+              <div
                 key={course.id}
-                course={course}
-                gradient={COURSE_GRADIENTS[index % COURSE_GRADIENTS.length]}
-                onClick={() => onCourseClick?.(course.id)}
-              />
+                style={{
+                  animation: `fadeInUp 0.5s ease ${0.15 + index * 0.06}s both`,
+                }}
+              >
+                <CourseCard
+                  course={course}
+                  gradient={COURSE_GRADIENTS[index % COURSE_GRADIENTS.length]}
+                  onClick={() => onCourseClick?.(course.id)}
+                />
+              </div>
             ))}
           </div>
         )}
 
         {/* Bottom padding so last card isn't flush against edge on mobile */}
-        <div style={{ height: "32px" }} />
+        <div style={{ height: "48px" }} />
       </div>
     </div>
   );
@@ -296,7 +456,10 @@ function CourseCard({
   const totalUnits = tracks.reduce((sum, t) => sum + (t?.unitCount ?? 0), 0);
   const progress =
     trackCount > 0
-      ? Math.round(tracks.reduce((sum, t) => sum + (t?.progressPercent ?? 0), 0) / trackCount)
+      ? Math.round(
+          tracks.reduce((sum, t) => sum + (t?.progressPercent ?? 0), 0) /
+            trackCount,
+        )
       : 0;
 
   return (
@@ -325,7 +488,15 @@ function CourseCard({
         <BookOpen size={30} style={{ color: "rgba(255,255,255,0.85)" }} />
       </div>
 
-      <div style={{ padding: "18px", display: "flex", flexDirection: "column", flex: 1 }}>
+      <div
+        style={{
+          padding: "22px",
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+          gap: "0",
+        }}
+      >
         <h3
           style={{
             fontSize: "16px",
@@ -333,7 +504,7 @@ function CourseCard({
             color: "#101b37",
             fontFamily: "var(--font-headline)",
             letterSpacing: "-0.01em",
-            marginBottom: "6px",
+            marginBottom: "8px",
             lineHeight: 1.3,
           }}
         >
@@ -345,7 +516,7 @@ function CourseCard({
             color: "#888888",
             fontFamily: "var(--font-body)",
             lineHeight: 1.5,
-            marginBottom: "14px",
+            marginBottom: "18px",
             flex: 1,
             display: "-webkit-box",
             WebkitLineClamp: 2,
@@ -356,7 +527,14 @@ function CourseCard({
           {course.shortDescription || course.description}
         </p>
 
-        <p style={{ fontSize: "12px", color: "#b0b0b0", fontFamily: "var(--font-body)", marginBottom: "12px" }}>
+        <p
+          style={{
+            fontSize: "12px",
+            color: "#b0b0b0",
+            fontFamily: "var(--font-body)",
+            marginBottom: "16px",
+          }}
+        >
           {trackCount} tracks • {totalUnits} units
         </p>
 
@@ -370,7 +548,8 @@ function CourseCard({
               fontWeight: 700,
               fontFamily: "var(--font-body)",
               color: progress > 0 ? "#10b981" : "#888888",
-              backgroundColor: progress > 0 ? "rgba(16,185,129,0.1)" : "#f5f5f5",
+              backgroundColor:
+                progress > 0 ? "rgba(16,185,129,0.1)" : "#f5f5f5",
               padding: "3px 9px",
               borderRadius: "9999px",
               whiteSpace: "nowrap",
