@@ -197,6 +197,7 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
               border: "1px solid #e8e8e8",
               borderLeft: "4px solid #d4af37",
               borderRadius: "12px",
+              margin: "2rem 0",
               padding: "18px 22px",
               boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
               display: "flex",
@@ -207,9 +208,7 @@ export default function Overview({ onCourseClick, onResumeClick }: OverviewProps
               marginBottom: "28px",
             }}
           >
-            <div style={{ minWidth: 0, padding: "1rem 0",
-              margin: "2rem 0"
-             }}>
+            <div style={{ minWidth: 0, padding: "1rem 0" }}>
               <h3
                 style={{
                   fontSize: "16px",
