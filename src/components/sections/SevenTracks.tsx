@@ -18,6 +18,7 @@ const tracks = [
       "Shift from classroom practitioner to strategic school leader. Build the mindset, vocabulary, and decision-making habits that define effective Nigerian administrators.",
     modules: 3,
     units: 15,
+    backgroundImage: "/images/tracks/track_1.jpeg",
   },
   {
     number: 2,
@@ -27,6 +28,7 @@ const tracks = [
       "Lead learning at scale. Master instructional supervision, curriculum alignment, and the data-driven routines that lift student outcomes across every classroom.",
     modules: 3,
     units: 15,
+    backgroundImage: "/images/tracks/track_2.png",
   },
   {
     number: 3,
@@ -36,6 +38,7 @@ const tracks = [
       "Run a school that runs itself. Cover financial management, statutory records, UBEC compliance, and the governance structures that keep institutions audit-ready.",
     modules: 3,
     units: 15,
+    backgroundImage: "/images/tracks/track_3.png",
   },
   {
     number: 4,
@@ -45,6 +48,7 @@ const tracks = [
       "Build the team behind the results. Learn staff motivation, conflict resolution, parent engagement, and how to shape a professional learning culture from the inside out.",
     modules: 3,
     units: 15,
+    backgroundImage: "/images/tracks/track_4.jpeg",
   },
   {
     number: 5,
@@ -54,6 +58,7 @@ const tracks = [
       "Lead with confidence when it matters most. Develop school safety protocols, crisis response plans, and the environmental standards that protect every learner.",
     modules: 3,
     units: 15,
+    backgroundImage: "/images/tracks/track_5.png",
   },
   {
     number: 6,
@@ -63,6 +68,7 @@ const tracks = [
       "Future-proof your school. Integrate EdTech tools, manage digital learning environments, and cultivate external partnerships that expand your institution's reach.",
     modules: 3,
     units: 15,
+    backgroundImage: "/images/tracks/track_6.jpeg",
   },
   {
     number: 7,
@@ -72,6 +78,7 @@ const tracks = [
       "Apply everything in a real-world capstone. Design and present a school improvement project that demonstrates full programme mastery and earns your certification.",
     modules: 3,
     units: 15,
+    backgroundImage: "/images/tracks/track_7.png",
   },
 ];
 
@@ -79,7 +86,6 @@ export default function SevenTracks() {
   return (
     <section id="curriculum" className="bg-neutral-50 py-24">
       <div className="max-w-7xl mx-auto px-6">
-        {/* Header row */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-12">
           <div>
             <h2
@@ -101,7 +107,6 @@ export default function SevenTracks() {
           </a>
         </div>
 
-        {/* Track cards grid — items-stretch ensures all cards in a row share equal height */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
           {tracks.map((track, i) => (
             <TrackCard key={track.number} track={track} delay={i * 75} />
