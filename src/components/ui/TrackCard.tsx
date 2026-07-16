@@ -24,15 +24,15 @@ export default function TrackCard({ track, delay = 0 }: TrackCardProps) {
       style={{ animationDelay: `${delay}ms` }}
     >
       {backgroundImage && (
-        <>
-          {/* Faint image, fixed opacity — no hover dependency */}
-          <div
-            className="absolute inset-0 z-0 bg-cover bg-center opacity-[0.06]"
-            style={{ backgroundImage: `url(${backgroundImage})` }}
-          />
-          {/* Strong white overlay so text is always fully readable */}
-          <div className="absolute inset-0 z-0 bg-white/90" />
-        </>
+        <div
+          className="absolute inset-0 z-0 bg-cover bg-center opacity-5"
+          style={{ backgroundImage: `url(${backgroundImage})` }}
+        />
+      )}
+
+      {/* Solid overlay — guarantees readable text regardless of image */}
+      {backgroundImage && (
+        <div className="absolute inset-0 z-0 bg-white opacity-95" />
       )}
 
       {/* ── Card body ─────────────────────────────────────────── */}
@@ -66,4 +66,4 @@ export default function TrackCard({ track, delay = 0 }: TrackCardProps) {
       </div>
     </div>
   );
-      }
+}
