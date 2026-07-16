@@ -25,13 +25,9 @@ export default function TrackCard({ track, delay = 0 }: TrackCardProps) {
     >
       {backgroundImage && (
         <div
-          className="absolute inset-0 z-0 bg-cover bg-center opacity-10"
+          className="absolute inset-0 z-0 bg-cover bg-center opacity-20"
           style={{ backgroundImage: `url(${backgroundImage})` }}
         />
-      )}
-
-      {backgroundImage && (
-        <div className="absolute inset-0 z-0 bg-white opacity-70" />
       )}
 
       <div className="relative z-10 flex flex-col gap-3 p-6 flex-1">
