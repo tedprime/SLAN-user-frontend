@@ -38,6 +38,9 @@ interface UnitViewerProps {
   /** Land on the module's last unit instead of its first — used when
    * returning here from an exited/finished assessment. */
   startAtLastUnit?: boolean;
+  /** Land on this specific unit — used when the sidebar links directly
+   * to a unit (e.g. "Unit 4") rather than just the module. */
+  initialUnitId?: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,6 +71,7 @@ export default function UnitViewer({
   onProgressChange,
   onTakeAssessment,
   startAtLastUnit,
+  initialUnitId,
 }: UnitViewerProps) {
   const isMobile = useIsMobile();
 
@@ -158,6 +162,12 @@ export default function UnitViewer({
       cancelled = true;
     };
   }, [module.id, refreshModuleProgress, startAtLastUnit]);
+
+  useEffect(() => {
+    if (initialUnitId && units.some((u) => u.id === initialUnitId)) {
+      setSelectedUnitId(initialUnitId);
+    }
+  }, [initialUnitId, units]);
 
   useEffect(() => {
     if (!selectedUnitId) return;
@@ -767,31 +777,30 @@ export default function UnitViewer({
                     </p>
                   )}
 
-                  {(activeUnit.videoUrl || activeUnit.pdfUrl) && (
-                    <div
+                  <div
+                    style={{
+                      marginTop: "32px",
+                      padding: "20px",
+                      backgroundColor: "#f5f5f5",
+                      borderRadius: "12px",
+                      border: "1px solid #e8e8e8",
+                    }}
+                  >
+                    <h4
                       style={{
-                        marginTop: "32px",
-                        padding: "20px",
-                        backgroundColor: "#f5f5f5",
-                        borderRadius: "12px",
-                        border: "1px solid #e8e8e8",
+                        fontSize: "14px",
+                        fontWeight: 700,
+                        color: "#101b37",
+                        marginBottom: "12px",
+                        fontFamily: "var(--font-headline)",
                       }}
                     >
-                      <h4
-                        style={{
-                          fontSize: "14px",
-                          fontWeight: 700,
-                          color: "#101b37",
-                          marginBottom: "12px",
-                          fontFamily: "var(--font-headline)",
-                        }}
-                      >
-                        Resources
-                      </h4>
+                      Resources
+                    </h4>
+                    {(activeUnit.videoUrl || activeUnit.pdfUrl) ? (
                       <div className="space-y-2">
                         {activeUnit.videoUrl && (
-                          
-                            <a href={activeUnit.videoUrl}
+                          <a href={activeUnit.videoUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
@@ -808,8 +817,7 @@ export default function UnitViewer({
                           </a>
                         )}
                         {activeUnit.pdfUrl && (
-                          
-                           <a href={activeUnit.pdfUrl}
+                          <a href={activeUnit.pdfUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
@@ -826,8 +834,12 @@ export default function UnitViewer({
                           </a>
                         )}
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <p style={{ fontSize: "13px", color: "#888888", margin: 0 }}>
+                        No resources available
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -953,4 +965,4 @@ export default function UnitViewer({
       </div>
     </div>
   );
-}
+          }
