@@ -5,7 +5,7 @@ interface Track {
   description: string;
   modules?: number;
   units?: number;
-  backgroundImage?: string; // NEW
+  backgroundImage?: string;
 }
 
 interface TrackCardProps {
@@ -23,15 +23,15 @@ export default function TrackCard({ track, delay = 0 }: TrackCardProps) {
                  overflow-hidden"
       style={{ animationDelay: `${delay}ms` }}
     >
-      {/* Background image layer */}
       {backgroundImage && (
         <>
+          {/* Faint image, fixed opacity — no hover dependency */}
           <div
-            className="absolute inset-0 z-0 bg-cover bg-center opacity-10 group-hover:opacity-15 transition-opacity duration-300"
+            className="absolute inset-0 z-0 bg-cover bg-center opacity-[0.06]"
             style={{ backgroundImage: `url(${backgroundImage})` }}
           />
-          {/* Optional gradient so text stays readable */}
-          <div className="absolute inset-0 z-0 bg-gradient-to-b from-white/60 via-white/80 to-white" />
+          {/* Strong white overlay so text is always fully readable */}
+          <div className="absolute inset-0 z-0 bg-white/90" />
         </>
       )}
 
@@ -66,4 +66,4 @@ export default function TrackCard({ track, delay = 0 }: TrackCardProps) {
       </div>
     </div>
   );
-}
+      }
