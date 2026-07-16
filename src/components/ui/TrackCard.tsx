@@ -25,17 +25,15 @@ export default function TrackCard({ track, delay = 0 }: TrackCardProps) {
     >
       {backgroundImage && (
         <div
-          className="absolute inset-0 z-0 bg-cover bg-center opacity-5"
+          className="absolute inset-0 z-0 bg-cover bg-center opacity-10"
           style={{ backgroundImage: `url(${backgroundImage})` }}
         />
       )}
 
-      {/* Solid overlay — guarantees readable text regardless of image */}
       {backgroundImage && (
-        <div className="absolute inset-0 z-0 bg-white opacity-95" />
+        <div className="absolute inset-0 z-0 bg-white opacity-70" />
       )}
 
-      {/* ── Card body ─────────────────────────────────────────── */}
       <div className="relative z-10 flex flex-col gap-3 p-6 flex-1">
         <div className="w-11 h-11 rounded-sm p-2 text-primary-500 flex items-center justify-center
                         text-base group-hover:text-white group-hover:bg-primary-500 transition-all duration-200">
@@ -55,7 +53,6 @@ export default function TrackCard({ track, delay = 0 }: TrackCardProps) {
         </p>
       </div>
 
-      {/* ── Card footer ───────────────────────────────────────── */}
       <div className="relative z-10 flex items-center justify-between px-6 mb-1">
         <span className="text-[11px] font-label uppercase text-neutral-600">
           {modules} Modules
