@@ -128,7 +128,11 @@ export default function UserDashboard() {
         return { type: "loading" as const };
       }
 
-      return { type: "unit" as const, course, track, startAtLastUnit: parts[4] === "last" };
+      const startAtLastUnit = parts[4] === "last";
+      const initialUnitId =
+        !startAtLastUnit && parts[4] ? parseInt(parts[4], 10) : undefined;
+
+      return { type: "unit" as const, course, track, startAtLastUnit, initialUnitId };
     }
 
     if (activeNav.startsWith("assessment:")) {
@@ -176,9 +180,10 @@ export default function UserDashboard() {
     }
   };
 
-  const handleModuleNavigate = (module: ModuleSummary, courseId: number, trackId: number) => {
+  const handleModuleNavigate = (module: ModuleSummary, courseId: number, trackId: number, unitId?: number) => {
     setSelectedModule(module);
-    navigateTo(`unit:${courseId}:${trackId}:${module.id}`);
+    const suffix = unitId ? `:${unitId}` : "";
+    navigateTo(`unit:${courseId}:${trackId}:${module.id}${suffix}`);
   };
 
   const handleModuleClick = (module: ModuleSummary) => {
@@ -342,6 +347,7 @@ export default function UserDashboard() {
               courseName={viewState.course.title}
               trackName={viewState.track.title}
               startAtLastUnit={viewState.startAtLastUnit}
+              initialUnitId={viewState.initialUnitId}
               onBack={handleBackToCourse}
               onBackToTrack={() => {
                 if (viewState.type === "unit" && viewState.course && viewState.track) {
@@ -376,4 +382,4 @@ export default function UserDashboard() {
       </div>
     </div>
   );
-}
+          }
