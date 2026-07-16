@@ -73,7 +73,7 @@ const tracks = [
   {
     number: 7,
     icon: <GraduationCap size={25} />,
-    title: "Leadership Growth and Certification Track",
+    title: "Leadership Growth and Certification",
     description:
       "Apply everything in a real-world capstone. Design and present a school improvement project that demonstrates full programme mastery and earns your certification.",
     modules: 3,
