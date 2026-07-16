@@ -156,7 +156,308 @@ export default function DashboardSidebar({
     try {
       const raw = await progressService.getTrackCompletedUnits(trackId);
       // Unwrap envelope and handle both array and wrapped forms
-< truncated lines 159-460 >
+      const entries: { unitId: number }[] = Array.isArray(raw)
+        ? raw
+        : Array.isArray(unwrap<{ unitId: number }[]>(raw))
+        ? unwrap<{ unitId: number }[]>(raw)
+        : [];
+      setCompletedUnitIdsByTrack((prev) => ({
+        ...prev,
+        [trackId]: new Set(entries.map((e) => e.unitId)),
+      }));
+    } catch { /* keep existing state */ }
+  }, []);
+
+  useEffect(() => {
+    if (courses.length === 0) return;
+    let cancelled = false;
+    const allTracks = courses.flatMap((c) => c.tracks);
+    (async () => {
+      await Promise.all(
+        allTracks.map((track) => (cancelled ? Promise.resolve() : refreshCompletionForTrack(track.id)))
+      );
+    })();
+    return () => { cancelled = true; };
+  }, [courses, progressVersion, refreshCompletionForTrack]);
+
+  const toggleCourse = (courseId: number) => {
+    setExpandedCourseIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(courseId)) { next.delete(courseId); } else { next.add(courseId); }
+      return next;
+    });
+    onNavChange(`course:${courseId}`);
+  };
+
+  const toggleTrack = async (courseId: number, trackId: number) => {
+    const isExpanding = !expandedTrackIds.has(trackId);
+    setExpandedTrackIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(trackId)) { next.delete(trackId); } else { next.add(trackId); }
+      return next;
+    });
+    onNavChange(`track:${courseId}:${trackId}`);
+    if (isExpanding && !trackModules[trackId]) {
+      setLoadingTracks((prev) => new Set(prev).add(trackId));
+      try {
+        const res = await courseService.getTrackModules(trackId);
+        const modules = Array.isArray(res?.modules) ? res.modules : [];
+        setTrackModules((prev) => ({ ...prev, [trackId]: modules }));
+      } catch {
+        setTrackModules((prev) => ({ ...prev, [trackId]: [] }));
+      } finally {
+        setLoadingTracks((prev) => { const s = new Set(prev); s.delete(trackId); return s; });
+      }
+    }
+  };
+
+  const toggleModule = async (moduleId: number) => {
+    const isExpanding = !expandedModuleIds.has(moduleId);
+    setExpandedModuleIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(moduleId)) { next.delete(moduleId); } else { next.add(moduleId); }
+      return next;
+    });
+    if (isExpanding && !moduleUnits[moduleId]) {
+      setLoadingModules((prev) => new Set(prev).add(moduleId));
+      try {
+        const res = await courseService.getModuleUnits(moduleId);
+        const units = Array.isArray(res?.units) ? res.units : [];
+        setModuleUnits((prev) => ({ ...prev, [moduleId]: units }));
+      } catch {
+        setModuleUnits((prev) => ({ ...prev, [moduleId]: [] }));
+      } finally {
+        setLoadingModules((prev) => { const s = new Set(prev); s.delete(moduleId); return s; });
+      }
+    }
+  };
+
+  const isOverviewActive = activeNav === "overview";
+  const isAnyCourseActive = activeNav.startsWith("course:") || activeNav.startsWith("track:") || activeNav.startsWith("unit:");
+
+  const sidebarStyle: React.CSSProperties = isMobile
+    ? {
+        position: "fixed", top: 0, left: 0,
+        height: "100dvh",
+        width: "280px",
+        backgroundColor: "#ffffff", borderRight: "1px solid #e8e8e8",
+        display: "flex", flexDirection: "column", zIndex: 50,
+        transform: isOpen ? "translateX(0)" : "translateX(-100%)",
+        transition: "transform 0.25s ease", overflow: "hidden",
+        boxShadow: isOpen ? "4px 0 24px rgba(0,0,0,0.10)" : "none",
+      }
+    : {
+        backgroundColor: "#ffffff",
+        width: isOpen ? "260px" : "60px",
+        borderRight: "1px solid #e8e8e8",
+        height: "100dvh", overflow: "hidden",
+        transition: "width 0.25s ease",
+        flexShrink: 0, display: "flex", flexDirection: "column", zIndex: 20,
+      };
+
+  const sidebar = (
+    <div style={sidebarStyle}>
+      {/* Header */}
+      <div style={{
+        height: "64px", borderBottom: "1px solid #e8e8e8", display: "flex",
+        alignItems: "center", justifyContent: isOpen ? "space-between" : "center",
+        paddingLeft: isOpen ? "20px" : "0", paddingRight: isOpen ? "10px" : "0", flexShrink: 0,
+        backgroundColor: "#ffffff",
+      }}>
+        {isOpen && (
+          <span style={{ fontSize: "16px", fontWeight: 800, letterSpacing: "-0.02em", color: "#101b37", whiteSpace: "nowrap", fontFamily: "var(--font-headline)" }}>
+            SLAN <span style={{ color: "#006400" }}>Online</span>
+          </span>
+        )}
+        <button
+          onClick={onToggle}
+          style={{
+            padding: "6px", borderRadius: "8px", transition: "background-color 0.15s",
+            flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+            backgroundColor: "transparent", border: "none", cursor: "pointer",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f5f5f5"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+        >
+          {isOpen ? <X size={18} style={{ color: "#888888" }} /> : <Menu size={18} style={{ color: "#888888" }} />}
+        </button>
+      </div>
+
+      <nav style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "12px 0 8px", minHeight: 0, height: 0 }}>
+        {/* Overview */}
+        <button
+          onClick={() => handleNavChange("overview")}
+          title={!isOpen ? "Overview" : undefined}
+          className="w-full flex items-center text-left"
+          style={{
+            padding: isOpen ? "9px 16px" : "10px 0",
+            margin: isOpen ? "0 8px" : "0",
+            width: isOpen ? "calc(100% - 16px)" : "100%",
+            borderRadius: isOpen ? "8px" : "0",
+            fontSize: "13px", fontWeight: isOverviewActive ? 600 : 500,
+            transition: "all 0.15s",
+            backgroundColor: isOverviewActive ? "rgba(0,100,0,0.08)" : "transparent",
+            color: isOverviewActive ? "#006400" : "#666666",
+            justifyContent: isOpen ? "flex-start" : "center",
+            gap: isOpen ? "10px" : "0",
+            border: "none", cursor: "pointer",
+          }}
+          onMouseEnter={(e) => { if (!isOverviewActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f5f5f5"; }}
+          onMouseLeave={(e) => { if (!isOverviewActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+        >
+          <LayoutDashboard size={17} style={{ flexShrink: 0, color: isOverviewActive ? "#006400" : "#aaaaaa" }} />
+          {isOpen && <span>Overview</span>}
+        </button>
+
+        {/* Collapsed sidebar: courses icon */}
+        {!isOpen && !isMobile && (
+          <button
+            title="Courses"
+            className="w-full flex items-center justify-center"
+            style={{
+              padding: "10px 0", marginTop: "4px", transition: "all 0.15s",
+              width: "100%", margin: "0",
+              backgroundColor: isAnyCourseActive ? "rgba(0,100,0,0.08)" : "transparent",
+              color: isAnyCourseActive ? "#006400" : "#aaaaaa",
+              border: "none", cursor: "pointer",
+            }}
+          >
+            <BookOpen size={17} />
+          </button>
+        )}
+
+        {/* Section label */}
+        {isOpen && (
+          <div style={{
+            padding: "16px 24px 6px",
+            fontSize: "10px", fontWeight: 700, color: "#cccccc",
+            textTransform: "uppercase", letterSpacing: "0.1em",
+          }}>
+            Courses
+          </div>
+        )}
+
+        {/* Expanded sidebar: full course tree */}
+        {isOpen && (
+          <div>
+            {coursesLoading && (
+              <div style={{ padding: "10px 24px", fontSize: "12px", color: "#bbbbbb", display: "flex", alignItems: "center", gap: "10px" }}>
+                <BookOpen size={15} style={{ opacity: 0.4 }} />
+                Loading…
+              </div>
+            )}
+            {!coursesLoading && coursesError && (
+              <div style={{ padding: "10px 24px", fontSize: "12px", color: "#d32f2f", lineHeight: 1.4 }}>
+                Couldn't load courses.{" "}
+                <button onClick={() => { setCoursesLoading(true); setCoursesError(false); courseService.getCourses().then((data) => { setCourses(data); onCoursesLoaded?.(data); }).catch(() => setCoursesError(true)).finally(() => setCoursesLoading(false)); }} style={{ border: "none", background: "none", color: "#006400", fontWeight: 600, cursor: "pointer", padding: 0, textDecoration: "underline" }}>Retry</button>
+              </div>
+            )}
+            {!coursesLoading && !coursesError && courses.length === 0 && (
+              <div style={{ padding: "10px 24px", fontSize: "12px", color: "#bbbbbb" }}>No courses yet.</div>
+            )}
+
+            {!coursesLoading && !coursesError && courses.map((course) => {
+              const isCourseExpanded = expandedCourseIds.has(course.id);
+              const isCourseActive = activeNav === `course:${course.id}` || activeNav.startsWith(`track:${course.id}:`);
+
+              return (
+                <div key={course.id} style={{ marginBottom: "2px" }}>
+                  {/* Course row */}
+                  <button
+                    onClick={() => toggleCourse(course.id)}
+                    aria-expanded={isCourseExpanded}
+                    className="w-full flex items-center justify-between text-left"
+                    style={{
+                      padding: "9px 16px", margin: "0 8px", width: "calc(100% - 16px)",
+                      borderRadius: "8px", fontSize: "13px", fontWeight: isCourseActive ? 600 : 500,
+                      transition: "all 0.15s",
+                      backgroundColor: isCourseActive ? "rgba(0,100,0,0.08)" : "transparent",
+                      color: isCourseActive ? "#006400" : "#555555",
+                      border: "none", cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => { if (!isCourseActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f5f5f5"; }}
+                    onMouseLeave={(e) => { if (!isCourseActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+                  >
+                    <span style={{ display: "flex", alignItems: "center", gap: "9px", overflow: "hidden", flex: 1, minWidth: 0 }}>
+                      <BookOpen size={15} style={{ flexShrink: 0, color: isCourseActive ? "#006400" : "#aaaaaa" }} />
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textTransform: "uppercase" }}>{course.title}</span>
+                    </span>
+                    <span style={{ flexShrink: 0, color: "#cccccc", marginLeft: "6px" }}>
+                      {isCourseExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </span>
+                  </button>
+
+                  <Collapsible open={isCourseExpanded}>
+                    <div style={{ paddingBottom: "4px" }}>
+                      {course.tracks.length === 0 && (
+                        <div style={{ padding: "6px 16px 6px 52px", fontSize: "11px", color: "#cccccc" }}>No tracks yet.</div>
+                      )}
+                      {course.tracks.map((track) => {
+                        const isTrackExpanded = expandedTrackIds.has(track.id);
+                        const isTrackActive = activeNav === `track:${course.id}:${track.id}` || activeNav.startsWith(`unit:${course.id}:${track.id}:`);
+                        const modules = trackModules[track.id] ?? [];
+                        const isLoadingTrackModules = loadingTracks.has(track.id);
+                        const completedUnitIds = completedUnitIdsByTrack[track.id] ?? new Set<number>();
+
+                        const isModuleComplete = (mod: ModuleSummary) => {
+                          const units = moduleUnits[mod.id];
+                          if (!units || units.length === 0) return false;
+                          return units.every((u) => completedUnitIds.has(u.id));
+                        };
+                        const isTrackComplete = modules.length > 0 && modules.every((mod) => isModuleComplete(mod));
+
+                        return (
+                          <div key={track.id}>
+                            {/* Track row */}
+                            <button
+                              onClick={() => toggleTrack(course.id, track.id)}
+                              title={track.title}
+                              className="w-full flex items-center justify-between text-left"
+                              style={{
+                                padding: "7px 12px 7px 40px",
+                                margin: "1px 8px", width: "calc(100% - 16px)",
+                                borderRadius: "7px", fontSize: "12px", fontWeight: isTrackActive ? 600 : 400,
+                                transition: "all 0.15s",
+                                backgroundColor: isTrackActive ? "rgba(0,100,0,0.07)" : "transparent",
+                                color: isTrackActive ? "#006400" : "#777777",
+                                border: "none", cursor: "pointer",
+                              }}
+                              onMouseEnter={(e) => { if (!isTrackActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f5f5f5"; }}
+                              onMouseLeave={(e) => { if (!isTrackActive) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+                            >
+                              <span style={{ display: "flex", alignItems: "center", gap: "7px", overflow: "hidden", flex: 1, minWidth: 0 }}>
+                                <Layers size={12} style={{ flexShrink: 0, color: isTrackActive ? "#006400" : "#cccccc" }} />
+                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textTransform: "uppercase" }}>{track.title}</span>
+                              </span>
+                              <span style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0, marginLeft: "4px" }}>
+                                {isTrackComplete && <CheckCircle size={11} style={{ color: "#10b981" }} />}
+                                {!track.isFree && <Lock size={10} style={{ color: "#dddddd" }} />}
+                                {isLoadingTrackModules
+                                  ? <div style={{ width: "10px", height: "10px", border: "2px solid #e0e0e0", borderTopColor: "#006400", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                                  : isTrackExpanded ? <ChevronDown size={12} style={{ color: "#cccccc" }} /> : <ChevronRight size={12} style={{ color: "#cccccc" }} />}
+                              </span>
+                            </button>
+
+                            <Collapsible open={isTrackExpanded && !isLoadingTrackModules}>
+                              <div>
+                                {modules.length === 0 && (
+                                  <div style={{ padding: "5px 12px 5px 60px", fontSize: "11px", color: "#cccccc" }}>No modules yet.</div>
+                                )}
+                                {modules.map((mod, modIndex) => {
+                                  // A module is locked unless it's the first in the track, or the
+                                  // module directly before it has been fully completed — mirrors
+                                  // the lock logic in TrackDetailView.tsx.
+                                  const locked = modIndex > 0 && !isModuleComplete(modules[modIndex - 1]);
+                                  const isModExpanded = expandedModuleIds.has(mod.id) && !locked;
+                                  const units = moduleUnits[mod.id] ?? [];
+                                  const isLoadingUnits = loadingModules.has(mod.id);
+                                  const isModuleActive =
+                                    activeNav === `unit:${course.id}:${track.id}:${mod.id}` ||
+                                    activeNav.startsWith(`unit:${course.id}:${track.id}:${mod.id}:`);
+                                  const moduleComplete = units.length > 0 && units.every((u) => completedUnitIds.has(u.id));
+
+                                  return (
+                                    <div key={mod.id}>
                                       {/* Module row */}
                                       <div
                                         className="w-full flex items-center justify-between"
@@ -313,4 +614,4 @@ export default function DashboardSidebar({
   }
 
   return sidebar;
-}
+                                  }
