@@ -260,7 +260,7 @@ export default function ReflectionView({
             {!isMobile && "Back"}
           </Button>
           <Button variant="primary" size="sm" onClick={onContinue} disabled={!allSaved}>
-            {isMobile ? "Assessment" : "Continue to Assessment"}
+            {isMobile ? "Practice Quiz" : "Continue to Practice Quiz"}
           </Button>
         </div>
       </div>
