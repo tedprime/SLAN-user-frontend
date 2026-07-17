@@ -176,7 +176,7 @@ export default function ReflectionView({
       {/* Body */}
       <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px" : "32px" }}>
         <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-          <p style={{ fontSize: "13px", color: "#888888", marginBottom: "8px" }}>Before the assessment</p>
+          <p style={{ fontSize: "13px", color: "#888888", marginBottom: "8px" }}>Before the quiz</p>
           <h1 style={{ fontSize: isMobile ? "20px" : "24px", fontWeight: 800, color: "#101b37", fontFamily: "var(--font-headline)", marginBottom: "8px", lineHeight: 1.2 }}>
             Reflect on this module
           </h1>
@@ -202,15 +202,13 @@ export default function ReflectionView({
                 <p style={{ fontSize: "13px", fontWeight: 700, color: "#006400", marginBottom: "8px" }}>
                   Prompt {index + 1} of {prompts.length}
                 </p>
-                <p style={{ fontSize: "15px", color: "#101b37", lineHeight: 1.5, marginBottom: prompt.criteria?.length ? "12px" : "16px" }}>
+                <p style={{ fontSize: "15px", color: "#101b37", lineHeight: 1.5, marginBottom: prompt.criteria ? "12px" : "16px" }}>
                   {prompt.description}
                 </p>
-                {prompt.criteria && prompt.criteria.length > 0 && (
-                  <ul style={{ margin: "0 0 16px", paddingLeft: "20px" }}>
-                    {prompt.criteria.map((c, i) => (
-                      <li key={i} style={{ fontSize: "13px", color: "#888888", lineHeight: 1.6 }}>{c}</li>
-                    ))}
-                  </ul>
+                {prompt.criteria && (
+                  <p style={{ fontSize: "13px", color: "#888888", lineHeight: 1.6, marginBottom: "16px", fontStyle: "italic" }}>
+                    {prompt.criteria}
+                  </p>
                 )}
                 <textarea
                   value={text}
@@ -260,10 +258,10 @@ export default function ReflectionView({
             {!isMobile && "Back"}
           </Button>
           <Button variant="primary" size="sm" onClick={onContinue} disabled={!allSaved}>
-            {isMobile ? "Practice Quiz" : "Continue to Practice Quiz"}
+            {isMobile ? "Quiz" : "Practice Quiz"}
           </Button>
         </div>
       </div>
     </div>
   );
-}
+                   }
