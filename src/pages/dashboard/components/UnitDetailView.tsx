@@ -892,7 +892,7 @@ export default function UnitViewer({
                       {isLastUnitInModule ? (
                         <>
                           <ClipboardCheck size={14} />
-                          {isMobile ? "Assessment" : "Take Assessment"}
+                          {isMobile ? "Reflection" : "Module Reflection"}
                         </>
                       ) : (
                         <>
