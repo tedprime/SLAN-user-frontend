@@ -1,14 +1,20 @@
 import { apiRequest } from "./api";
 
-// NOTE: exact field names for the prompt (`description`, `criteria`) are
-// inferred from the Swagger summary ("Array of reflection prompts with
-// description and criteria") — the docs don't show a full example body.
-// If the real response uses different keys, this is the only place to fix.
+// Unwrap API envelope { success, data } — same pattern as progressService,
+// since these endpoints wrap responses the same way.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function unwrap<T>(res: any): T {
+  if (res && typeof res === "object" && "data" in res) return res.data as T;
+  return res as T;
+}
+
 export interface ReflectionPrompt {
   id: number;
   moduleId: number;
   description: string;
-  criteria: string[];
+  criteria: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ReflectionResponse {
@@ -26,7 +32,10 @@ export const reflectionService = {
    */
   getModuleReflection: async (moduleId: number): Promise<ReflectionPrompt[] | null> => {
     try {
-      return await apiRequest<ReflectionPrompt[]>(`/modules/${moduleId}/reflection`);
+      const raw = await apiRequest<{ data: ReflectionPrompt[] } | ReflectionPrompt[]>(
+        `/modules/${moduleId}/reflection`
+      );
+      return unwrap<ReflectionPrompt[]>(raw);
     } catch (err) {
       if ((err as { status?: number })?.status === 404) return null;
       throw err;
@@ -38,10 +47,12 @@ export const reflectionService = {
    * Returns whatever the learner has already submitted so the form can be
    * pre-filled, or null if they haven't answered yet.
    */
-  getMyReflectionResponse: (moduleId: number) =>
-    apiRequest<ReflectionResponse[] | ReflectionResponse | null>(
-      `/modules/${moduleId}/reflection/my-response`
-    ),
+  getMyReflectionResponse: async (moduleId: number) => {
+    const raw = await apiRequest<
+      { data: ReflectionResponse[] | ReflectionResponse | null } | ReflectionResponse[] | ReflectionResponse | null
+    >(`/modules/${moduleId}/reflection/my-response`);
+    return unwrap<ReflectionResponse[] | ReflectionResponse | null>(raw);
+  },
 
   /**
    * POST /modules/{moduleId}/reflection/response
