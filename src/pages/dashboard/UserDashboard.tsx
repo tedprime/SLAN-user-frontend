@@ -5,6 +5,7 @@ import Overview from "./components/Overview";
 import CourseTracksView from "./components/CourseTracksView";
 import TrackDetailView from "./components/TrackDetailView";
 import UnitViewer from "./components/UnitDetailView";
+import ReflectionView from "./components/ReflectionView";
 import AssessmentView from "./components/AssessmentView";
 import { courseService } from "../../services/courseService";
 import type { Course, ModuleSummary } from "../../services/types/course.types";
@@ -135,6 +136,26 @@ export default function UserDashboard() {
       return { type: "unit" as const, course, track, startAtLastUnit, initialUnitId };
     }
 
+    if (activeNav.startsWith("reflection:")) {
+      const parts = activeNav.split(":");
+      const courseId = parseInt(parts[1], 10);
+      const trackId = parseInt(parts[2], 10);
+      const moduleId = parseInt(parts[3], 10);
+      const course = courses.find((c) => c.id === courseId);
+      const track = course?.tracks.find((t) => t.id === trackId);
+
+      if (!course || !track) return { type: "overview" as const };
+
+      const mod =
+        selectedModule && selectedModule.id === moduleId
+          ? selectedModule
+          : (trackModules[trackId]?.find((m) => m.id === moduleId) ?? null);
+
+      if (!mod) return { type: "loading" as const };
+
+      return { type: "reflection" as const, course, track, module: mod };
+    }
+
     if (activeNav.startsWith("assessment:")) {
       const parts = activeNav.split(":");
       const courseId = parseInt(parts[1], 10);
@@ -193,7 +214,13 @@ export default function UserDashboard() {
   const handleTakeAssessment = (module: ModuleSummary) => {
     if (viewState.type === "unit" && viewState.course && viewState.track) {
       setSelectedModule(module);
-      navigateTo(`assessment:${viewState.course.id}:${viewState.track.id}:${module.id}`);
+      navigateTo(`reflection:${viewState.course.id}:${viewState.track.id}:${module.id}`);
+    }
+  };
+
+  const handleReflectionContinue = () => {
+    if (viewState.type === "reflection" && viewState.course && viewState.track && viewState.module) {
+      navigateTo(`assessment:${viewState.course.id}:${viewState.track.id}:${viewState.module.id}`);
     }
   };
 
@@ -231,7 +258,7 @@ export default function UserDashboard() {
   // Resolves modules if we land on a unit or assessment URL directly
   useEffect(() => {
     const needsModule =
-      activeNav.startsWith("unit:") || activeNav.startsWith("assessment:");
+      activeNav.startsWith("unit:") || activeNav.startsWith("assessment:") || activeNav.startsWith("reflection:");
     if (!needsModule || selectedModule) return;
     if (courses.length === 0) return;
 
@@ -364,6 +391,17 @@ export default function UserDashboard() {
             />
           )}
 
+          {viewState.type === "reflection" && viewState.course && viewState.track && viewState.module && (
+            <ReflectionView
+              moduleId={viewState.module.id}
+              moduleTitle={viewState.module.title}
+              courseName={viewState.course.title}
+              trackName={viewState.track.title}
+              onBack={() => navigateTo(`unit:${viewState.course!.id}:${viewState.track!.id}:${viewState.module!.id}:last`)}
+              onContinue={handleReflectionContinue}
+            />
+          )}
+
           {viewState.type === "assessment" && viewState.course && viewState.track && viewState.module && (
             <AssessmentView
               moduleId={viewState.module.id}
@@ -382,4 +420,4 @@ export default function UserDashboard() {
       </div>
     </div>
   );
-          }
+    }
