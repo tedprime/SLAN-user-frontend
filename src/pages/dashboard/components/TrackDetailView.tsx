@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { ChevronRight, Lock, Play, BookOpen, Clock, Layers, CheckCircle } from "lucide-react";
+import { ChevronRight, Lock, Play, BookOpen, Clock, Layers, CheckCircle, ClipboardCheck } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import Progress from "../../../components/ui/Progress";
 import { courseService } from "../../../services/courseService";
@@ -85,9 +85,10 @@ interface TrackDetailViewProps {
   onModuleClick?: (module: ModuleSummary) => void;
   onPlayClick?: (module: ModuleSummary) => void;
   onModulesLoaded?: (modules: ModuleSummary[]) => void;
+  onTrackAssessmentClick?: (track: CourseTrack) => void;
 }
 
-export default function TrackDetailView({ course, track, onBack, onModuleClick, onPlayClick, onModulesLoaded }: TrackDetailViewProps) {
+export default function TrackDetailView({ course, track, onBack, onModuleClick, onPlayClick, onModulesLoaded, onTrackAssessmentClick }: TrackDetailViewProps) {
   const isMobile = useIsMobile();
   const [modules, setModules] = useState<ModuleSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -168,6 +169,10 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
     const previousModule = modules[index - 1];
     return previousModule ? !isModuleCompleted(previousModule) : false;
   };
+
+  // The track assessment stays locked until every module in the track has
+  // been completed.
+  const allModulesCompleted = modules.length > 0 && modules.every((m) => isModuleCompleted(m));
 
   const displayedTrackProgress = trackProgress?.progressPercent ?? track.progressPercent ?? 0;
 
@@ -266,6 +271,28 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                 <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{displayedTrackProgress}%</span>
               </div>
               <Progress value={displayedTrackProgress} color={trackColor.border} />
+            </div>
+          )}
+
+          {!loading && modules.length > 0 && (
+            <div style={{ marginTop: "20px" }}>
+              <Button
+                variant={allModulesCompleted ? "primary" : "outlined"}
+                size="md"
+                disabled={!allModulesCompleted}
+                title={allModulesCompleted ? undefined : "Complete every module in this track first"}
+                style={
+                  allModulesCompleted
+                    ? { backgroundColor: trackColor.border, borderColor: trackColor.border }
+                    : undefined
+                }
+                onClick={() => {
+                  if (allModulesCompleted) onTrackAssessmentClick?.(track);
+                }}
+              >
+                {allModulesCompleted ? <ClipboardCheck size={16} /> : <Lock size={16} />}
+                {allModulesCompleted ? "Take Track Assessment" : "Complete all modules to unlock assessment"}
+              </Button>
             </div>
           )}
         </div>
