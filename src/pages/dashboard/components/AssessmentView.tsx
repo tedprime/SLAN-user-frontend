@@ -101,6 +101,87 @@ function buildAnswersPayload(answers: Record<number, string>): AttemptAnswerInpu
     .map(([questionId, answer]) => ({ questionId: Number(questionId), answer }));
 }
 
+// ── Local persistence: resume-in-progress + attempts cooldown ──────────
+// The API contract has no "resume" or "attempt history with timestamps"
+// endpoint, so both of these are tracked client-side in localStorage,
+// keyed by the assessment's own id (config.id).
+
+const PROGRESS_STORAGE_PREFIX = "slan_assessment_progress_";
+const COOLDOWN_STORAGE_PREFIX = "slan_assessment_cooldown_";
+const COOLDOWN_HOURS = 24;
+
+interface SavedProgress {
+  attempt: AttemptStart;
+  answers: Record<number, string>;
+  markedForReview: number[];
+  currentIndex: number;
+  savedAt: string;
+}
+
+function readSavedProgress(assessmentId: number): SavedProgress | null {
+  try {
+    const raw = localStorage.getItem(`${PROGRESS_STORAGE_PREFIX}${assessmentId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SavedProgress;
+    // Discard silently if the attempt's time window already ran out.
+    if (parsed.attempt?.expiresAt && secondsUntil(parsed.attempt.expiresAt) <= 0) {
+      localStorage.removeItem(`${PROGRESS_STORAGE_PREFIX}${assessmentId}`);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeSavedProgress(assessmentId: number, progress: SavedProgress) {
+  try {
+    localStorage.setItem(`${PROGRESS_STORAGE_PREFIX}${assessmentId}`, JSON.stringify(progress));
+  } catch {
+    // Storage may be unavailable (private mode, quota) — non-critical.
+  }
+}
+
+function clearSavedProgress(assessmentId: number) {
+  try {
+    localStorage.removeItem(`${PROGRESS_STORAGE_PREFIX}${assessmentId}`);
+  } catch {
+    // ignore
+  }
+}
+
+function readCooldownUntil(assessmentId: number): string | null {
+  try {
+    return localStorage.getItem(`${COOLDOWN_STORAGE_PREFIX}${assessmentId}`);
+  } catch {
+    return null;
+  }
+}
+
+function writeCooldownUntil(assessmentId: number, isoDate: string) {
+  try {
+    localStorage.setItem(`${COOLDOWN_STORAGE_PREFIX}${assessmentId}`, isoDate);
+  } catch {
+    // ignore
+  }
+}
+
+function clearCooldown(assessmentId: number) {
+  try {
+    localStorage.removeItem(`${COOLDOWN_STORAGE_PREFIX}${assessmentId}`);
+  } catch {
+    // ignore
+  }
+}
+
+function formatCooldownRemaining(totalSeconds: number): string {
+  const safe = Math.max(0, totalSeconds);
+  const h = Math.floor(safe / 3600);
+  const m = Math.floor((safe % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
 type Phase = "loading" | "error" | "none" | "intro" | "taking" | "submitting" | "results";
 
 export default function AssessmentView({
@@ -133,6 +214,22 @@ export default function AssessmentView({
   const elapsedRef = useRef(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Resume-in-progress + manual save feedback.
+  const [savedProgress, setSavedProgress] = useState<SavedProgress | null>(null);
+  const [saveNotice, setSaveNotice] = useState<"idle" | "saving" | "saved">("idle");
+  const saveNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Attempts-exhausted cooldown (24h, tracked client-side).
+  const [cooldownEndsAt, setCooldownEndsAt] = useState<string | null>(null);
+  const [nowTick, setNowTick] = useState(() => Date.now());
+
+  // Keep the cooldown countdown roughly fresh while looking at the intro screen.
+  useEffect(() => {
+    if (phase !== "intro") return;
+    const id = setInterval(() => setNowTick(Date.now()), 60000);
+    return () => clearInterval(id);
+  }, [phase]);
+
   // ── Load config + past attempts ────────────────────────────────────
   const loadIntro = useCallback(async () => {
     setPhase("loading");
@@ -144,13 +241,39 @@ export default function AssessmentView({
         setPhase("none");
         return;
       }
+      setSavedProgress(readSavedProgress(cfg.id));
+
+      let usedCount = 0;
       try {
         const attempts = await assessmentService.listAttempts(ASSESSMENT_TYPE, cfg.id);
-        setPastAttempts(Array.isArray(attempts) ? attempts : []);
+        const list = Array.isArray(attempts) ? attempts : [];
+        setPastAttempts(list);
+        usedCount = list.length;
       } catch {
         // Non-fatal — attempts history just won't show.
         setPastAttempts([]);
       }
+
+      // Cooldown bookkeeping: start the 24h clock the first time attempts
+      // are found exhausted, and clear it once that window has elapsed.
+      const exhausted = cfg.maxAttempts > 0 && usedCount >= cfg.maxAttempts;
+      if (exhausted) {
+        const existing = readCooldownUntil(cfg.id);
+        if (!existing) {
+          const until = new Date(Date.now() + COOLDOWN_HOURS * 60 * 60 * 1000).toISOString();
+          writeCooldownUntil(cfg.id, until);
+          setCooldownEndsAt(until);
+        } else if (new Date(existing).getTime() <= Date.now()) {
+          clearCooldown(cfg.id);
+          setCooldownEndsAt(null);
+        } else {
+          setCooldownEndsAt(existing);
+        }
+      } else {
+        clearCooldown(cfg.id);
+        setCooldownEndsAt(null);
+      }
+
       setPhase("intro");
     } catch {
       setPhase("error");
@@ -162,37 +285,63 @@ export default function AssessmentView({
     loadIntro();
   }, [loadIntro]);
 
-  // ── Start a new attempt ─────────────────────────────────────────────
-  const handleStart = useCallback(async () => {
-    if (!config) return;
-    setStartError(false);
-    setPhase("loading");
-    try {
-      const started = await assessmentService.startAttempt({
-        assessmentType: ASSESSMENT_TYPE,
-        assessmentId: config.id,
-      });
-      setAttempt(started);
-      setAnswers({});
-      setMarkedForReview(new Set());
-      setCurrentIndex(0);
-      setSubmitResult(null);
-      setAttemptResult(null);
-      setSubmitError(false);
-      elapsedRef.current = 0;
-      setSecondsRemaining(
-        started.expiresAt
-          ? secondsUntil(started.expiresAt)
-          : started.timeLimitMinutes > 0
-            ? started.timeLimitMinutes * 60
-            : null
-      );
-      setPhase("taking");
-    } catch {
-      setStartError(true);
-      setPhase("intro");
-    }
-  }, [config]);
+  // ── Start a new attempt, or resume a saved in-progress one ──────────
+  const handleStart = useCallback(
+    async (options?: { resume?: boolean }) => {
+      if (!config) return;
+      setStartError(false);
+
+      if (options?.resume && savedProgress) {
+        setAttempt(savedProgress.attempt);
+        setAnswers(savedProgress.answers);
+        setMarkedForReview(new Set(savedProgress.markedForReview));
+        setCurrentIndex(savedProgress.currentIndex);
+        setSubmitResult(null);
+        setAttemptResult(null);
+        setSubmitError(false);
+        elapsedRef.current = 0;
+        setSecondsRemaining(
+          savedProgress.attempt.expiresAt
+            ? secondsUntil(savedProgress.attempt.expiresAt)
+            : savedProgress.attempt.timeLimitMinutes > 0
+              ? savedProgress.attempt.timeLimitMinutes * 60
+              : null
+        );
+        setPhase("taking");
+        return;
+      }
+
+      setPhase("loading");
+      try {
+        const started = await assessmentService.startAttempt({
+          assessmentType: ASSESSMENT_TYPE,
+          assessmentId: config.id,
+        });
+        clearSavedProgress(config.id);
+        setSavedProgress(null);
+        setAttempt(started);
+        setAnswers({});
+        setMarkedForReview(new Set());
+        setCurrentIndex(0);
+        setSubmitResult(null);
+        setAttemptResult(null);
+        setSubmitError(false);
+        elapsedRef.current = 0;
+        setSecondsRemaining(
+          started.expiresAt
+            ? secondsUntil(started.expiresAt)
+            : started.timeLimitMinutes > 0
+              ? started.timeLimitMinutes * 60
+              : null
+        );
+        setPhase("taking");
+      } catch {
+        setStartError(true);
+        setPhase("intro");
+      }
+    },
+    [config, savedProgress]
+  );
 
   // ── Submit the attempt ──────────────────────────────────────────────
   const handleSubmit = useCallback(async () => {
@@ -203,6 +352,8 @@ export default function AssessmentView({
       const res = await assessmentService.submitAttempt(attempt.attemptId, {
         answers: buildAnswersPayload(answers),
       });
+      clearSavedProgress(attempt.assessmentId);
+      setSavedProgress(null);
       setSubmitResult(res);
       // Full per-question breakdown is a separate call — best effort, the
       // results screen still works with just the summary if this fails.
@@ -245,6 +396,71 @@ export default function AssessmentView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [answers, phase, attempt]);
 
+  useEffect(() => {
+    return () => {
+      if (saveNoticeTimeoutRef.current) clearTimeout(saveNoticeTimeoutRef.current);
+    };
+  }, []);
+
+  // ── Manual "Save" — persists progress but keeps the person on the quiz ──
+  const handleSaveProgress = useCallback(async () => {
+    if (!attempt) return;
+    setSaveNotice("saving");
+    writeSavedProgress(attempt.assessmentId, {
+      attempt,
+      answers,
+      markedForReview: Array.from(markedForReview),
+      currentIndex,
+      savedAt: new Date().toISOString(),
+    });
+    try {
+      await assessmentService.saveAttempt(attempt.attemptId, {
+        answers: buildAnswersPayload(answers),
+      });
+    } catch {
+      // Progress is still kept locally even if the backend save fails.
+    } finally {
+      setSaveNotice("saved");
+      if (saveNoticeTimeoutRef.current) clearTimeout(saveNoticeTimeoutRef.current);
+      saveNoticeTimeoutRef.current = setTimeout(() => setSaveNotice("idle"), 2000);
+    }
+  }, [attempt, answers, markedForReview, currentIndex]);
+
+  // ── "Save & Exit" — persists progress, then leaves the module entirely ──
+  const handleSaveAndExit = useCallback(() => {
+    if (attempt) {
+      writeSavedProgress(attempt.assessmentId, {
+        attempt,
+        answers,
+        markedForReview: Array.from(markedForReview),
+        currentIndex,
+        savedAt: new Date().toISOString(),
+      });
+      assessmentService
+        .saveAttempt(attempt.attemptId, { answers: buildAnswersPayload(answers) })
+        .catch(() => {});
+    }
+    onExit();
+  }, [attempt, answers, markedForReview, currentIndex, onExit]);
+
+  // ── X icon in the quiz/results — goes back to the assessment page, ──
+  // ── not out of the assessment flow entirely. ────────────────────────
+  const handleExitToIntro = useCallback(() => {
+    if (attempt && phase === "taking") {
+      writeSavedProgress(attempt.assessmentId, {
+        attempt,
+        answers,
+        markedForReview: Array.from(markedForReview),
+        currentIndex,
+        savedAt: new Date().toISOString(),
+      });
+      assessmentService
+        .saveAttempt(attempt.attemptId, { answers: buildAnswersPayload(answers) })
+        .catch(() => {});
+    }
+    loadIntro();
+  }, [attempt, phase, answers, markedForReview, currentIndex, loadIntro]);
+
   // Ticking clock while the assessment is in progress.
   useEffect(() => {
     if (phase !== "taking") return;
@@ -281,6 +497,18 @@ export default function AssessmentView({
   const attemptsUsed = pastAttempts.length;
   const maxAttempts = config?.maxAttempts ?? 0;
   const attemptsExhausted = maxAttempts > 0 && attemptsUsed >= maxAttempts;
+
+  // Once the 24h cooldown has elapsed, treat attempts as reset to 0 for
+  // display and unlock the Start button again.
+  const cooldownSecondsRemaining = cooldownEndsAt
+    ? Math.max(0, Math.floor((new Date(cooldownEndsAt).getTime() - nowTick) / 1000))
+    : 0;
+  const cooldownActive = attemptsExhausted && cooldownSecondsRemaining > 0;
+  const attemptsLocked = attemptsExhausted && cooldownActive;
+  const displayAttemptsUsed = attemptsExhausted && !cooldownActive ? 0 : attemptsUsed;
+
+  const highestScore = config?.userHighestScore ?? null;
+  const hasPriorAttempts = config?.hasTakenAssessment ?? false;
 
   if (phase === "loading") {
     return (
@@ -333,10 +561,22 @@ export default function AssessmentView({
         moduleTitle={moduleTitle}
         courseName={courseName}
         trackName={trackName}
-        attemptsUsed={attemptsUsed}
-        attemptsExhausted={attemptsExhausted}
+        attemptsUsed={displayAttemptsUsed}
+        attemptsExhausted={attemptsLocked}
+        highestScore={highestScore}
+        hasPriorAttempts={hasPriorAttempts}
+        hasSavedProgress={!!savedProgress}
+        cooldownActive={cooldownActive}
+        cooldownRemainingLabel={
+          cooldownActive ? formatCooldownRemaining(cooldownSecondsRemaining) : null
+        }
         startError={startError}
-        onStart={handleStart}
+        onStart={() => handleStart()}
+        onContinue={() => handleStart({ resume: true })}
+        onDiscardProgress={() => {
+          if (config) clearSavedProgress(config.id);
+          setSavedProgress(null);
+        }}
         onExit={onExit}
       />
     );
@@ -358,10 +598,10 @@ export default function AssessmentView({
         moduleTitle={moduleTitle}
         submitResult={submitResult}
         attemptResult={attemptResult}
-        onExit={onExit}
+        onBackToAssessment={handleExitToIntro}
         onFinish={onFinish}
         onRetry={
-          !submitResult.passed && !attemptsExhausted ? () => loadIntro() : undefined
+          !submitResult.passed && !attemptsLocked ? () => loadIntro() : undefined
         }
       />
     );
@@ -436,8 +676,8 @@ export default function AssessmentView({
       >
         <div style={{ display: "flex", alignItems: "center", gap: "14px", minWidth: 0 }}>
           <button
-            onClick={onExit}
-            aria-label="Exit assessment"
+            onClick={handleExitToIntro}
+            aria-label="Back to assessment page"
             style={{
               background: "none",
               border: "none",
@@ -489,9 +729,25 @@ export default function AssessmentView({
               {formatTime(secondsRemaining)}
             </div>
           )}
+          <button
+            onClick={handleSaveProgress}
+            disabled={saveNotice === "saving"}
+            style={{
+              background: "none",
+              border: "1px solid #e0e0e0",
+              borderRadius: "8px",
+              padding: "6px 12px",
+              cursor: saveNotice === "saving" ? "default" : "pointer",
+              fontSize: "13px",
+              fontWeight: 600,
+              color: saveNotice === "saved" ? "#006400" : "#444444",
+            }}
+          >
+            {saveNotice === "saved" ? "Saved ✓" : saveNotice === "saving" ? "Saving..." : "Save"}
+          </button>
           {!isMobile && (
             <button
-              onClick={onExit}
+              onClick={handleSaveAndExit}
               style={{
                 background: "none",
                 border: "none",
@@ -767,8 +1023,15 @@ function IntroScreen({
   trackName,
   attemptsUsed,
   attemptsExhausted,
+  highestScore,
+  hasPriorAttempts,
+  hasSavedProgress,
+  cooldownActive,
+  cooldownRemainingLabel,
   startError,
   onStart,
+  onContinue,
+  onDiscardProgress,
   onExit,
 }: {
   isMobile: boolean;
@@ -778,8 +1041,15 @@ function IntroScreen({
   trackName: string;
   attemptsUsed: number;
   attemptsExhausted: boolean;
+  highestScore: number | null;
+  hasPriorAttempts: boolean;
+  hasSavedProgress: boolean;
+  cooldownActive: boolean;
+  cooldownRemainingLabel: string | null;
   startError: boolean;
   onStart: () => void;
+  onContinue: () => void;
+  onDiscardProgress: () => void;
   onExit: () => void;
 }) {
   const disabled = !config.isActive || attemptsExhausted;
@@ -905,6 +1175,9 @@ function IntroScreen({
                 config.maxAttempts > 0 ? `${attemptsUsed} / ${config.maxAttempts}` : `${attemptsUsed} used`
               }
             />
+            {hasPriorAttempts && highestScore !== null && (
+              <InfoPill label="Best Score" value={`${Math.round(highestScore)}%`} />
+            )}
           </div>
 
           {!config.isActive && (
@@ -913,10 +1186,10 @@ function IntroScreen({
               This assessment isn't currently open.
             </div>
           )}
-          {config.isActive && attemptsExhausted && (
+          {config.isActive && attemptsExhausted && cooldownActive && (
             <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#d32f2f", marginBottom: "16px" }}>
               <RotateCcw size={15} />
-              You've used all your attempts for this assessment.
+              You've used all your attempts. You can try again in {cooldownRemainingLabel}.
             </div>
           )}
           {startError && (
@@ -926,10 +1199,25 @@ function IntroScreen({
             </div>
           )}
 
-          <Button variant="primary" size="md" onClick={onStart} disabled={disabled}>
-            <PlayCircle size={16} />
-            Start Assessment
-          </Button>
+          <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: "10px" }}>
+            {hasSavedProgress ? (
+              <>
+                <Button variant="primary" size="md" onClick={onContinue} disabled={!config.isActive}>
+                  <PlayCircle size={16} />
+                  Continue Assessment
+                </Button>
+                <Button variant="outlined" size="md" onClick={onDiscardProgress} disabled={disabled}>
+                  <RotateCcw size={16} />
+                  Start Over
+                </Button>
+              </>
+            ) : (
+              <Button variant="primary" size="md" onClick={onStart} disabled={disabled}>
+                {hasPriorAttempts ? <RotateCcw size={16} /> : <PlayCircle size={16} />}
+                {hasPriorAttempts ? "Retry Assessment" : "Start Assessment"}
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Bottom padding so content isn't flush against edge on mobile */}
@@ -962,7 +1250,7 @@ function ResultsScreen({
   moduleTitle,
   submitResult,
   attemptResult,
-  onExit,
+  onBackToAssessment,
   onFinish,
   onRetry,
 }: {
@@ -970,7 +1258,7 @@ function ResultsScreen({
   moduleTitle: string;
   submitResult: SubmitAttemptResult;
   attemptResult: AttemptResult | null;
-  onExit: () => void;
+  onBackToAssessment: () => void;
   onFinish: () => void;
   onRetry?: () => void;
 }) {
@@ -993,8 +1281,8 @@ function ResultsScreen({
         }}
       >
         <button
-          onClick={onExit}
-          aria-label="Close"
+          onClick={onBackToAssessment}
+          aria-label="Back to assessment page"
           style={{ background: "none", border: "none", cursor: "pointer", color: "#444444" }}
         >
           <X size={20} />
@@ -1319,4 +1607,4 @@ function Spinner() {
       }}
     />
   );
-}
+  }
