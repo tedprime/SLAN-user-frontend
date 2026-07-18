@@ -15,6 +15,7 @@ import Button from "../../../components/ui/Button";
 import Progress from "../../../components/ui/Progress";
 import { courseService } from "../../../services/courseService";
 import { progressService } from "../../../services/progressService";
+import { reflectionService } from "../../../services/reflectionService";
 import type {
   ModuleSummary,
   UnitSummary,
@@ -33,8 +34,10 @@ interface UnitViewerProps {
   onProgressChange?: () => void;
   onNextModule?: (module: ModuleSummary) => void;
   /** Called when the learner completes the last unit of a module and
-   * clicks through to that module's assessment. */
-  onTakeAssessment?: (module: ModuleSummary) => void;
+   * clicks through to what comes next. `hasReflection` tells the caller
+   * whether to route through the reflection step or straight to the
+   * assessment — the module may not have a reflection configured. */
+  onTakeAssessment?: (module: ModuleSummary, hasReflection: boolean) => void;
   /** Land on the module's last unit instead of its first — used when
    * returning here from an exited/finished assessment. */
   startAtLastUnit?: boolean;
@@ -95,6 +98,9 @@ export default function UnitViewer({
   );
   const [moduleProgressPercent, setModuleProgressPercent] = useState(0);
   const [marking, setMarking] = useState(false);
+  // null = still checking. Defaults to "treat as having a reflection" while
+  // unknown, which just falls back to the old (safe) reflection-first route.
+  const [hasReflection, setHasReflection] = useState<boolean | null>(null);
 
   // Measures the "Mark complete" button so it can smoothly slide from the
   // right edge to dead-center once the Next button appears, instead of
@@ -137,11 +143,22 @@ export default function UnitViewer({
       // -1 and the header to show "Unit 0 of N" until a manual refresh).
       setSelectedUnitId(null);
       setActiveUnit(null);
+      setHasReflection(null);
       try {
         const [res] = await Promise.all([
           courseService.getModuleUnits(module.id),
           refreshModuleProgress(),
         ]);
+        reflectionService
+          .getModuleReflection(module.id)
+          .then((prompts) => {
+            if (!cancelled) setHasReflection(!!prompts && prompts.length > 0);
+          })
+          .catch(() => {
+            // Unknown — fall back to the reflection-first route, which
+            // itself skips forward safely if there's truly nothing there.
+            if (!cancelled) setHasReflection(true);
+          });
         const unitList = Array.isArray(res?.units) ? res.units : [];
         if (!cancelled) {
           setUnits(unitList);
@@ -209,7 +226,7 @@ export default function UnitViewer({
     if (!isLastUnitInModule) {
       setSelectedUnitId(units[currentIndex + 1].id);
     } else {
-      onTakeAssessment?.(module);
+      onTakeAssessment?.(module, hasReflection !== false);
     }
   };
 
@@ -892,7 +909,7 @@ export default function UnitViewer({
                       {isLastUnitInModule ? (
                         <>
                           <ClipboardCheck size={14} />
-                          {isMobile ? "Reflection" : "Module Reflection"}
+                          {hasReflection === false ? (isMobile ? "Quiz" : "Practice Quiz") : "Reflection"}
                         </>
                       ) : (
                         <>
@@ -965,4 +982,4 @@ export default function UnitViewer({
       </div>
     </div>
   );
-          }
+     }
