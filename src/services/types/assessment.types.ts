@@ -27,6 +27,8 @@ export interface AssessmentConfig {
   timeLimitMinutes: number;
   isActive: boolean;
   questionCount: number;
+  hasTakenAssessment: boolean;
+  userHighestScore: number | null;
 }
 
 export interface AssessmentConfigResponse {
