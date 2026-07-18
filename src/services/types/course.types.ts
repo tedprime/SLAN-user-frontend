@@ -23,6 +23,7 @@ export interface ModuleSummary {
   title: string;
   slug: string;
   description: string;
+  thumbnail: string | null;
   estimatedReadMinutes: number;
   unitCount: number;
   totalEstimatedMinutes: number;
