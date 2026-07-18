@@ -18,13 +18,6 @@ const MOBILE_BP = 768;
 const DESCRIPTION_WORD_LIMIT = 50;
 const MODULE_ACCENT_COLOR = "rgb(0,100,0)";
 
-// Local module images — name each file after the module's `slug` field
-// (ModuleSummary has no thumbnail from the API, so this is the only
-// source). e.g. slug "ethics-integrity-school-governance" →
-// public/images/modules/ethics-integrity-school-governance.jpg
-const MODULE_IMAGE_BASE_PATH = "/images/modules/";
-const MODULE_IMAGE_EXT = ".jpeg";
-
 interface ExpandableTextProps {
   text: string;
   wordLimit?: number;
@@ -365,20 +358,22 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                           backgroundColor: "#f0f0f0",
                         }}
                       >
-                        <img
-                          src={`${MODULE_IMAGE_BASE_PATH}${module.slug}${MODULE_IMAGE_EXT}`}
-                          alt=""
-                          style={{
-                            position: "absolute",
-                            inset: 0,
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                          }}
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).style.display = "none";
-                          }}
-                        />
+                        {module.thumbnail && (
+                          <img
+                            src={module.thumbnail}
+                            alt=""
+                            style={{
+                              position: "absolute",
+                              inset: 0,
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                            }}
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        )}
                         <div
                           style={{
                             position: "absolute",
@@ -407,11 +402,6 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                         style={{
                           flex: 1,
                           minWidth: 0,
-                          display: "flex",
-                          flexDirection: isMobile ? "column" : "row",
-                          alignItems: isMobile ? "stretch" : "flex-start",
-                          justifyContent: "space-between",
-                          gap: isMobile ? "16px" : "20px",
                         }}
                       >
                       <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "flex-start", gap: "12px" }}>
@@ -433,7 +423,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                         </span>
 
                         {/* Everything below shares this column, so it lines up under the title — not under the badge */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ flex: 1, minWidth: 0, maxWidth: "640px" }}>
                           <span style={{
                             display: "block",
                             fontSize: "11px",
@@ -485,7 +475,7 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                           </div>
 
                           {!locked && (
-                            <div>
+                            <div style={{ marginBottom: "16px" }}>
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
                                 <span style={{ fontSize: "12px", fontWeight: 600, color: "#888888" }}>Progress</span>
                                 <span style={{ fontSize: "12px", fontWeight: 700, color: "#101b37" }}>{progress}%</span>
@@ -493,52 +483,50 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
                               <Progress value={progress} color={MODULE_ACCENT_COLOR} />
                             </div>
                           )}
-                        </div>
-                      </div>
 
-                      <div style={{ flexShrink: 0, display: "flex", width: isMobile ? "100%" : "auto" }}>
-                        <Button
-                          variant={isCompleted ? "outlined" : "primary"}
-                          size="sm"
-                          disabled={locked}
-                          style={
-                            isCompleted
-                              ? { color: MODULE_ACCENT_COLOR, borderColor: MODULE_ACCENT_COLOR }
-                              : { backgroundColor: MODULE_ACCENT_COLOR, borderColor: MODULE_ACCENT_COLOR }
-                          }
-                          onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                            if (locked) return;
-                            const btn = e.currentTarget;
-                            if (isCompleted) {
-                              btn.style.backgroundColor = MODULE_ACCENT_COLOR;
-                              btn.style.color = "#ffffff";
-                            } else {
-                              btn.style.filter = "brightness(1.1)";
+                          <Button
+                            variant={isCompleted ? "outlined" : "primary"}
+                            size="sm"
+                            disabled={locked}
+                            style={
+                              isCompleted
+                                ? { color: MODULE_ACCENT_COLOR, borderColor: MODULE_ACCENT_COLOR }
+                                : { backgroundColor: MODULE_ACCENT_COLOR, borderColor: MODULE_ACCENT_COLOR }
                             }
-                          }}
-                          onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                            if (locked) return;
-                            const btn = e.currentTarget;
-                            if (isCompleted) {
-                              btn.style.backgroundColor = "transparent";
-                              btn.style.color = MODULE_ACCENT_COLOR;
-                            } else {
-                              btn.style.filter = "brightness(1)";
-                            }
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (!locked) onPlayClick?.(module);
-                          }}
-                        >
-                          {locked ? (
-                            <><Lock size={14} />Locked</>
-                          ) : isCompleted ? (
-                            <><CheckCircle size={14} />Completed</>
-                          ) : (
-                            <><Play size={14} />{progress > 0 ? "Continue" : "Start"}</>
-                          )}
-                        </Button>
+                            onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
+                              if (locked) return;
+                              const btn = e.currentTarget;
+                              if (isCompleted) {
+                                btn.style.backgroundColor = MODULE_ACCENT_COLOR;
+                                btn.style.color = "#ffffff";
+                              } else {
+                                btn.style.filter = "brightness(1.1)";
+                              }
+                            }}
+                            onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
+                              if (locked) return;
+                              const btn = e.currentTarget;
+                              if (isCompleted) {
+                                btn.style.backgroundColor = "transparent";
+                                btn.style.color = MODULE_ACCENT_COLOR;
+                              } else {
+                                btn.style.filter = "brightness(1)";
+                              }
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!locked) onPlayClick?.(module);
+                            }}
+                          >
+                            {locked ? (
+                              <><Lock size={14} />Locked</>
+                            ) : isCompleted ? (
+                              <><CheckCircle size={14} />Completed</>
+                            ) : (
+                              <><Play size={14} />{progress > 0 ? "Continue" : "Start"}</>
+                            )}
+                          </Button>
+                        </div>
                       </div>
                       </div>
                     </div>
@@ -571,4 +559,4 @@ function getTrackColor(trackId: number): { border: string; bg: string } {
 
 function getTrackIndex(course: Course, track: CourseTrack): number {
   return course.tracks.findIndex((t) => t.id === track.id);
-}
+      }
