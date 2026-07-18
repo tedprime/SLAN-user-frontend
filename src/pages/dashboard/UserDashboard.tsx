@@ -211,10 +211,14 @@ export default function UserDashboard() {
     console.log("Module clicked:", module.id);
   };
 
-  const handleTakeAssessment = (module: ModuleSummary) => {
+  const handleTakeAssessment = (module: ModuleSummary, hasReflection: boolean) => {
     if (viewState.type === "unit" && viewState.course && viewState.track) {
       setSelectedModule(module);
-      navigateTo(`reflection:${viewState.course.id}:${viewState.track.id}:${module.id}`);
+      if (hasReflection) {
+        navigateTo(`reflection:${viewState.course.id}:${viewState.track.id}:${module.id}`);
+      } else {
+        navigateTo(`assessment:${viewState.course.id}:${viewState.track.id}:${module.id}`);
+      }
     }
   };
 
