@@ -42,6 +42,25 @@ export const assessmentService = {
   },
 
   /**
+   * GET /tracks/{trackId}/assessment
+   * Same shape as the module config, but for the track-level assessment
+   * unlocked once every module in the track is completed. Returns null
+   * (not throws) on 404, since "no assessment configured for this track"
+   * is a normal state, not an error.
+   */
+  getTrackAssessmentConfig: async (trackId: number): Promise<AssessmentConfig | null> => {
+    try {
+      const res = await apiRequest<AssessmentConfigResponse | AssessmentConfig>(
+        `/tracks/${trackId}/assessment`
+      );
+      return "data" in res && res.data ? res.data : (res as AssessmentConfig);
+    } catch (err) {
+      if ((err as ApiError).status === 404) return null;
+      throw err;
+    }
+  },
+
+  /**
    * GET /attempts?assessmentType=&assessmentId=
    * Past attempts for this assessment, most recent first.
    */
