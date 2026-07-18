@@ -156,6 +156,18 @@ export default function UserDashboard() {
       return { type: "reflection" as const, course, track, module: mod };
     }
 
+    if (activeNav.startsWith("trackassessment:")) {
+      const parts = activeNav.split(":");
+      const courseId = parseInt(parts[1], 10);
+      const trackId = parseInt(parts[2], 10);
+      const course = courses.find((c) => c.id === courseId);
+      const track = course?.tracks.find((t) => t.id === trackId);
+
+      if (!course || !track) return { type: "overview" as const };
+
+      return { type: "trackassessment" as const, course, track };
+    }
+
     if (activeNav.startsWith("assessment:")) {
       const parts = activeNav.split(":");
       const courseId = parseInt(parts[1], 10);
@@ -192,6 +204,28 @@ export default function UserDashboard() {
     } else {
       navigateTo("overview");
     }
+  };
+
+  const handleTrackAssessmentClick = (trackId: number, courseId?: number) => {
+    const cid = courseId || (viewState.type === "track" ? viewState.course?.id : undefined);
+    if (cid) navigateTo(`trackassessment:${cid}:${trackId}`);
+  };
+
+  const handleTrackAssessmentExit = () => {
+    if (viewState.type === "trackassessment" && viewState.course && viewState.track) {
+      navigateTo(`track:${viewState.course.id}:${viewState.track.id}`);
+    } else {
+      navigateTo("overview");
+    }
+  };
+
+  const handleTrackAssessmentFinish = () => {
+    if (viewState.type === "trackassessment" && viewState.course && viewState.track) {
+      navigateTo(`track:${viewState.course.id}:${viewState.track.id}`);
+    } else {
+      navigateTo("overview");
+    }
+    handleProgressChange();
   };
 
   const handlePlayClick = (module: ModuleSummary) => {
@@ -366,6 +400,7 @@ export default function UserDashboard() {
               onModuleClick={handleModuleClick}
               onPlayClick={handlePlayClick}
               onModulesLoaded={(mods) => handleModulesLoaded(viewState.track!.id, mods)}
+              onTrackAssessmentClick={(track) => handleTrackAssessmentClick(track.id, viewState.course?.id)}
             />
           )}
 
@@ -406,6 +441,18 @@ export default function UserDashboard() {
             />
           )}
 
+          {viewState.type === "trackassessment" && viewState.course && viewState.track && (
+            <AssessmentView
+              trackId={viewState.track.id}
+              moduleTitle={`${viewState.track.title} Assessment`}
+              courseName={viewState.course.title}
+              trackName={viewState.track.title}
+              onExit={handleTrackAssessmentExit}
+              onFinish={handleTrackAssessmentFinish}
+              onExamActiveChange={setAssessmentExamActive}
+            />
+          )}
+
           {viewState.type === "assessment" && viewState.course && viewState.track && viewState.module && (
             <AssessmentView
               moduleId={viewState.module.id}
@@ -425,3 +472,4 @@ export default function UserDashboard() {
     </div>
   );
     }
+
