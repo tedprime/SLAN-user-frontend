@@ -637,7 +637,7 @@ export default function AssessmentView({
   const question = questions[currentIndex];
   const total = questions.length;
   const isLastQuestion = currentIndex === total - 1;
-  const percentComplete = Math.round(((currentIndex + 1) / total) * 100);
+  const percentComplete = Math.round((currentIndex / total) * 100);
   const isMarked = markedForReview.has(question.id);
 
   const toggleMarked = () => {
@@ -1607,4 +1607,4 @@ function Spinner() {
       }}
     />
   );
-  }
+    }
