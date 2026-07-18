@@ -82,7 +82,12 @@ export async function apiRequest<T>(
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  const data = await response.json();
+  // Some endpoints 404 with an empty or non-JSON body rather than a JSON
+  // error object. Without this, response.json() throws a SyntaxError here
+  // — before `status` is ever attached — so callers relying on err.status
+  // (e.g. treating a 404 as "nothing configured" rather than a failure)
+  // never see it, and just get a generic parse error instead.
+  const data = await response.json().catch(() => null);
 
   if (!response.ok) {
     // One silent refresh-and-retry per request. Never for the refresh
