@@ -98,8 +98,8 @@ export default function UnitViewer({
   );
   const [moduleProgressPercent, setModuleProgressPercent] = useState(0);
   const [marking, setMarking] = useState(false);
-  // null = still checking. Defaults to "treat as having a reflection" while
-  // unknown, which just falls back to the old (safe) reflection-first route.
+  // null = still checking. The last-unit button stays hidden until this
+  // resolves (see canGoNext below) — no guessing which destination to show.
   const [hasReflection, setHasReflection] = useState<boolean | null>(null);
 
   // Measures the "Mark complete" button so it can smoothly slide from the
@@ -155,9 +155,11 @@ export default function UnitViewer({
             if (!cancelled) setHasReflection(!!prompts && prompts.length > 0);
           })
           .catch(() => {
-            // Unknown — fall back to the reflection-first route, which
-            // itself skips forward safely if there's truly nothing there.
-            if (!cancelled) setHasReflection(true);
+            // Unknown — default to "no reflection" so the learner always
+            // gets a working "Practice Quiz" button rather than risking a
+            // broken reflection page. Confirmed reflections come back from
+            // the .then() above; this only covers genuine failures.
+            if (!cancelled) setHasReflection(false);
           });
         const unitList = Array.isArray(res?.units) ? res.units : [];
         if (!cancelled) {
@@ -210,8 +212,11 @@ export default function UnitViewer({
   const isCurrentUnitCompleted =
     selectedUnitId !== null && completedUnitIds.has(selectedUnitId);
   // Completing the last unit always unlocks the next step — either the
-  // next unit, or (on the final unit) that module's assessment.
-  const canGoNext = isCurrentUnitCompleted;
+  // next unit, or (on the final unit) the reflection/quiz. For the final
+  // unit specifically, also wait for hasReflection to resolve so goNext
+  // never has to guess which one to route to.
+  const canGoNext =
+    isCurrentUnitCompleted && (!isLastUnitInModule || hasReflection !== null);
 
   useLayoutEffect(() => {
     if (markCompleteWrapRef.current) {
@@ -982,4 +987,4 @@ export default function UnitViewer({
       </div>
     </div>
   );
-     }
+}
