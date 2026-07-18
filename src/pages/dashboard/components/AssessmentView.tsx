@@ -40,9 +40,17 @@ import type {
 } from "../../../services/types/assessment.types";
 
 interface AssessmentViewProps {
-  moduleId: number;
+  /**
+   * Exactly one of moduleId / trackId is provided depending on scope.
+   * moduleId -> module-level assessment (GET /modules/{id}/assessment).
+   * trackId  -> track-level assessment (GET /tracks/{id}/assessment),
+   * unlocked once every module in the track is completed.
+   */
+  moduleId?: number;
+  trackId?: number;
+  /** Title shown on the intro/quiz header — module title or track title. */
   moduleTitle: string;
-  /** Position of this module within its track (1-based), used in the exam header. */
+  /** Position of this module within its track (1-based), used in the exam header. Module scope only. */
   moduleNumber?: number;
   courseName: string;
   trackName: string;
@@ -58,9 +66,8 @@ interface AssessmentViewProps {
   onExamActiveChange?: (active: boolean) => void;
 }
 
-// This view is always rendered for a module-level assessment. Track- and
-// course-level assessments would reuse the same UI with a different type.
-const ASSESSMENT_TYPE: AssessmentType = "module_assessment";
+// Scope is derived per-instance from which id prop is provided (see
+// ASSESSMENT_TYPE inside the component below).
 
 const MOBILE_BP = 768;
 
@@ -186,6 +193,7 @@ type Phase = "loading" | "error" | "none" | "intro" | "taking" | "submitting" | 
 
 export default function AssessmentView({
   moduleId,
+  trackId,
   moduleTitle,
   moduleNumber,
   courseName,
@@ -195,6 +203,10 @@ export default function AssessmentView({
   onExamActiveChange,
 }: AssessmentViewProps) {
   const isMobile = useIsMobile();
+
+  // Track scope takes precedence when both would somehow be provided.
+  const ASSESSMENT_TYPE: AssessmentType = trackId != null ? "track_assessment" : "module_assessment";
+  const entityId = trackId != null ? trackId : moduleId;
 
   const [phase, setPhase] = useState<Phase>("loading");
   const [config, setConfig] = useState<AssessmentConfig | null>(null);
@@ -235,7 +247,14 @@ export default function AssessmentView({
     setPhase("loading");
     setStartError(false);
     try {
-      const cfg = await assessmentService.getModuleAssessmentConfig(moduleId);
+      if (entityId == null) {
+        setPhase("error");
+        return;
+      }
+      const cfg =
+        trackId != null
+          ? await assessmentService.getTrackAssessmentConfig(trackId)
+          : await assessmentService.getModuleAssessmentConfig(moduleId!);
       setConfig(cfg);
       if (!cfg) {
         setPhase("none");
@@ -278,7 +297,7 @@ export default function AssessmentView({
     } catch {
       setPhase("error");
     }
-  }, [moduleId]);
+  }, [moduleId, trackId, entityId]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -340,7 +359,7 @@ export default function AssessmentView({
         setPhase("intro");
       }
     },
-    [config, savedProgress]
+    [config, savedProgress, trackId]
   );
 
   // ── Submit the attempt ──────────────────────────────────────────────
@@ -377,7 +396,7 @@ export default function AssessmentView({
       setSubmitError(true);
       setPhase("taking");
     }
-  }, [attempt, answers, config]);
+  }, [attempt, answers, config, trackId]);
 
   // ── Best-effort autosave, debounced on answer changes ───────────────
   useEffect(() => {
@@ -526,7 +545,9 @@ export default function AssessmentView({
           No assessment configured
         </p>
         <p style={{ fontSize: "13px", color: "#888888", marginBottom: "8px" }}>
-          This module doesn't have an assessment yet.
+          {trackId != null
+            ? "This track doesn't have an assessment yet."
+            : "This module doesn't have an assessment yet."}
         </p>
         <Button variant="outlined" size="sm" onClick={onExit}>
           Back
@@ -561,6 +582,7 @@ export default function AssessmentView({
         moduleTitle={moduleTitle}
         courseName={courseName}
         trackName={trackName}
+        isTrackAssessment={trackId != null}
         attemptsUsed={displayAttemptsUsed}
         attemptsExhausted={attemptsLocked}
         highestScore={highestScore}
@@ -708,7 +730,8 @@ export default function AssessmentView({
             </p>
             <p style={{ fontSize: "12px", color: "#888888", textTransform: "uppercase", letterSpacing: "0.03em" }}>
               {trackName}
-              {moduleNumber ? ` • Module ${moduleNumber}` : ""} • Assessment
+              {moduleNumber ? ` • Module ${moduleNumber}` : ""}
+              {trackId != null ? " • Track Assessment" : " • Assessment"}
             </p>
           </div>
         </div>
@@ -1021,6 +1044,7 @@ function IntroScreen({
   moduleTitle,
   courseName,
   trackName,
+  isTrackAssessment,
   attemptsUsed,
   attemptsExhausted,
   highestScore,
@@ -1039,6 +1063,7 @@ function IntroScreen({
   moduleTitle: string;
   courseName: string;
   trackName: string;
+  isTrackAssessment: boolean;
   attemptsUsed: number;
   attemptsExhausted: boolean;
   highestScore: number | null;
@@ -1110,7 +1135,7 @@ function IntroScreen({
               marginBottom: "14px",
             }}
           >
-            Assessment
+            {isTrackAssessment ? "Track Assessment" : "Assessment"}
           </span>
 
           <h1
@@ -1607,4 +1632,4 @@ function Spinner() {
       }}
     />
   );
-    }
+}
