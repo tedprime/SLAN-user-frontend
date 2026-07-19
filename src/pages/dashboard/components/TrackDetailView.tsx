@@ -275,12 +275,14 @@ export default function TrackDetailView({ course, track, onBack, onModuleClick, 
           )}
 
           {!loading && modules.length > 0 && (
-            <div style={{ marginTop: "20px" }}>
+            <div
+              style={{ marginTop: "20px" }}
+              title={allModulesCompleted ? undefined : "Complete every module in this track first"}
+            >
               <Button
                 variant={allModulesCompleted ? "primary" : "outlined"}
                 size="md"
                 disabled={!allModulesCompleted}
-                title={allModulesCompleted ? undefined : "Complete every module in this track first"}
                 style={
                   allModulesCompleted
                     ? { backgroundColor: trackColor.border, borderColor: trackColor.border }
