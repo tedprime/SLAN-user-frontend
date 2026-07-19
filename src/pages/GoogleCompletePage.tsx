@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { jwtDecode } from "jwt-decode";
 import { Loader2, BadgeCheck, X, AlertCircle } from "lucide-react";
 import AuthNavbar from "../components/layout/AuthNavbar";
@@ -87,17 +87,16 @@ function Toast({
 }
 
 // ── Main Page ───────────────────────────────────────────────────────────────
-export default function GoogleCompletePage() {
-  const navigateTo = (path: string, replace = false) => {
-    if (replace) {
-      window.history.replaceState({}, "", path);
-    } else {
-      window.history.pushState({}, "", path);
-    }
-    window.dispatchEvent(new Event("popstate"));
-  };
+function navigateTo(path: string, replace = false) {
+  if (replace) {
+    window.history.replaceState({}, "", path);
+  } else {
+    window.history.pushState({}, "", path);
+  }
+  window.dispatchEvent(new Event("popstate"));
+}
 
-  // Parse URL params once, synchronously
+export default function GoogleCompletePage() {  // Parse URL params once, synchronously
   const params = new URLSearchParams(
     typeof window !== "undefined" ? window.location.search : ""
   );
@@ -116,22 +115,22 @@ export default function GoogleCompletePage() {
   let initialPhone    = "";
   let initialToastMsg = "";
 
-  if (errorParam) {
-    initialToastMsg = errorParam.includes("already exists")
-      ? "An account with this Google account already exists. Please log in instead."
-      : decodeURIComponent(errorParam);
-    initialStatus = "toast_then_redirect";
-  } else if (accessToken && refreshToken) {
-    // Fully authenticated (Google login success) — store and go to dashboard
-    // ── FIX #2: Normalize user shape and ensure setUser is called ──────
+  // Pure computation only — no side effects here. The actual token storage
+  // and redirect for this case happens in a useEffect further down, once
+  // the component has actually mounted. Doing it here in the render body
+  // used to fire a synthetic "popstate" event synchronously *during*
+  // React's render pass, which raced with App.tsx's own render and could
+  // silently drop the navigation — that was the cause of needing to click
+  // "Sign in with Google" twice.
+  let normalizedUser: { id: string; fullName: string; email: string; role: string } | null = null;
+  if (accessToken && refreshToken) {
     let parsedUser: GoogleUserResponse | null = null;
     if (userRaw) {
       try {
         parsedUser = JSON.parse(decodeURIComponent(userRaw));
       } catch { /* ignore */ }
     }
-
-    const normalizedUser = parsedUser
+    normalizedUser = parsedUser
       ? {
           id: parsedUser.id ?? "",
           fullName: (parsedUser.fullName ?? parsedUser.name) || "User",
@@ -139,11 +138,16 @@ export default function GoogleCompletePage() {
           role: parsedUser.role ?? "teacher",
         }
       : null;
+  }
 
-    setTokens({ accessToken, refreshToken });
-    if (normalizedUser) setUser(normalizedUser);
-
-    navigateTo("/dashboard", true);
+  if (errorParam) {
+    initialToastMsg = errorParam.includes("already exists")
+      ? "An account with this Google account already exists. Please log in instead."
+      : decodeURIComponent(errorParam);
+    initialStatus = "toast_then_redirect";
+  } else if (accessToken && refreshToken) {
+    // Fully authenticated (Google login success) — status stays "loading"
+    // while the useEffect below stores tokens and redirects.
   } else if (incomingTempToken) {
     try {
       const decoded = jwtDecode<GoogleTempTokenPayload>(incomingTempToken);
@@ -177,6 +181,21 @@ export default function GoogleCompletePage() {
   const [schoolType,     setSchoolType]     = useState("Private");
   const [isSubmitting,   setIsSubmitting]   = useState(false);
   const [errorMsg,       setErrorMsg]       = useState("");
+
+  // Store tokens and redirect to the dashboard — done here, in an effect
+  // that runs once after mount, rather than in the render body. A ref
+  // guard (not the dependency array) enforces "exactly once," since
+  // accessToken/refreshToken/normalizedUser are freshly computed each
+  // render and aren't stable references to depend on.
+  const hasRedirectedRef = useRef(false);
+  useEffect(() => {
+    if (hasRedirectedRef.current) return;
+    if (!(accessToken && refreshToken)) return;
+    hasRedirectedRef.current = true;
+    setTokens({ accessToken, refreshToken });
+    if (normalizedUser) setUser(normalizedUser);
+    navigateTo("/dashboard", true);
+  });
 
   // Auto-redirect after toast for error states
   useEffect(() => {
