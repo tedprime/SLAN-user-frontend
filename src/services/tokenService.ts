@@ -42,8 +42,23 @@ export function setTokens(
   setCookie(REFRESH_TOKEN_KEY, tokens.refreshToken, 7);  // 7 days
 }
 
+// Some backend responses (notably Google OAuth) send `name` instead of
+// `fullName`. Every caller (App.tsx's query-param handler, GoogleCompletePage,
+// authService, etc.) funnels through here, so normalizing once in this one
+// place guarantees `fullName` is always populated no matter which caller
+// or code path stored the user.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeUser(user: any): AuthTokenResponse["data"]["user"] {
+  return {
+    id: user?.id ?? "",
+    fullName: user?.fullName || user?.name || "User",
+    email: user?.email ?? "",
+    role: user?.role ?? "teacher",
+  };
+}
+
 export function setUser(user: AuthTokenResponse["data"]["user"]): void {
-  setCookie(USER_KEY, JSON.stringify(user), 7); // 7 days
+  setCookie(USER_KEY, JSON.stringify(normalizeUser(user)), 7); // 7 days
 }
 
 export function getUser(): AuthTokenResponse["data"]["user"] | null {
