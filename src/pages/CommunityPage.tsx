@@ -531,4 +531,3 @@ function ThreadView({
     </div>
   );
 }
-
