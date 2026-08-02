@@ -4,6 +4,10 @@ import { getAccessToken } from "../../services/tokenService";
 
 const navItems: string[] = ["Programmes", "About", "Partners", "Community"];
 
+function hrefFor(item: string): string {
+  return item === "Community" ? "/community" : `#${item.toLowerCase()}`;
+}
+
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const isLoggedIn = !!getAccessToken();
@@ -32,7 +36,8 @@ export default function Navbar() {
           {navItems.map((item) => (
             <li key={item}>
               <a
-                href={`#${item.toLowerCase()}`}
+                href={hrefFor(item)}
+                onClick={item === "Community" ? (e) => navigateTo("/community", e) : undefined}
                 className="font-body text-sm font-500 text-neutral-700 hover:text-primary-500 transition-colors duration-150 pb-1 border-b-2 border-transparent hover:border-primary-500"
               >
                 {item}
@@ -87,9 +92,9 @@ export default function Navbar() {
           {navItems.map((item) => (
             <a
               key={item}
-              href={`#${item.toLowerCase()}`}
+              href={hrefFor(item)}
               className="text-sm font-500 font-body text-tertiary-500 hover:text-primary-500"
-              onClick={() => setMenuOpen(false)}
+              onClick={item === "Community" ? (e) => navigateTo("/community", e) : () => setMenuOpen(false)}
             >
               {item}
             </a>
@@ -126,4 +131,4 @@ export default function Navbar() {
       )}
     </header>
   );
-}
+          }
