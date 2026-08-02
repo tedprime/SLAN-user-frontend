@@ -1,3 +1,9 @@
+// NOTE: the full Discussion/Reply schema wasn't visible in the Swagger
+// screenshot (only SuccessResponse/ErrorResponse/UserPayload/AuthTokens
+// were expanded). These shapes are inferred from the example request
+// bodies and standard REST conventions — adjust field names here if the
+// real API differs, everything else keys off this one file.
+
 export interface DiscussionAuthor {
   id: number;
   fullName: string;
@@ -74,4 +80,3 @@ export interface PinDiscussionPayload {
 export interface LockDiscussionPayload {
   isLocked: boolean;
 }
-
