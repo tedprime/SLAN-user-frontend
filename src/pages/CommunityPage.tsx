@@ -173,7 +173,7 @@ function DiscussionListView({
                 </div>
                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
                   <div className="flex items-center gap-1 text-neutral-400 text-xs font-600">
-                    <MessageSquare size={13} /> {d.replyCount}
+                    <MessageSquare size={13} /> {d.replyCount ?? 0}
                   </div>
                 </div>
               </div>
@@ -468,11 +468,11 @@ function ThreadView({
       </div>
 
       <h2 className="text-sm font-700 text-neutral-700 font-body mb-3">
-        {discussion.replies.length} {discussion.replies.length === 1 ? "Reply" : "Replies"}
+        {(discussion.replies ?? []).length} {(discussion.replies ?? []).length === 1 ? "Reply" : "Replies"}
       </h2>
 
       <div className="flex flex-col gap-3 mb-6">
-        {discussion.replies.map((r) => (
+        {(discussion.replies ?? []).map((r) => (
           <div key={r.id} className="bg-white border border-neutral-200 rounded-lg p-4">
             <div className="flex items-start justify-between gap-3">
               <p className="text-sm text-neutral-700 font-body leading-relaxed whitespace-pre-wrap flex-1">
@@ -496,7 +496,7 @@ function ThreadView({
             </div>
           </div>
         ))}
-        {discussion.replies.length === 0 && (
+        {(discussion.replies ?? []).length === 0 && (
           <p className="text-sm text-neutral-400 font-body text-center py-6">
             No replies yet — be the first to respond.
           </p>
