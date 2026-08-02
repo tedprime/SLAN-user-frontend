@@ -43,7 +43,6 @@ export default function CommunityPage() {
         <div className="max-w-3xl mx-auto px-6 py-10">
           {view.type === "list" && (
             <DiscussionListView
-              isAdmin={isAdmin}
               onOpenThread={(id) => setView({ type: "thread", id })}
               onNewDiscussion={() => setView({ type: "new" })}
             />
@@ -75,11 +74,9 @@ export default function CommunityPage() {
 // ────────────────────────────────────────────────────────────
 
 function DiscussionListView({
-  isAdmin,
   onOpenThread,
   onNewDiscussion,
 }: {
-  isAdmin: boolean;
   onOpenThread: (id: number) => void;
   onNewDiscussion: () => void;
 }) {
@@ -531,3 +528,4 @@ function ThreadView({
     </div>
   );
 }
+
