@@ -7,6 +7,8 @@ import TrackDetailView from "./components/TrackDetailView";
 import UnitViewer from "./components/UnitDetailView";
 import ReflectionView from "./components/ReflectionView";
 import AssessmentView from "./components/AssessmentView";
+import ProfileView from "./components/ProfileView";
+import SettingsView from "./components/SettingsView";
 import { courseService } from "../../services/courseService";
 import type { Course, ModuleSummary } from "../../services/types/course.types";
 
@@ -93,6 +95,8 @@ export default function UserDashboard() {
   // Derive the active view state directly from existing parameters
   const viewState = useMemo(() => {
     if (activeNav === "overview") return { type: "overview" as const };
+    if (activeNav === "profile") return { type: "profile" as const };
+    if (activeNav === "settings") return { type: "settings" as const };
 
     // While courses are loading, show the spinner if we are trying to access a deep route
     if (courses.length === 0 && activeNav !== "overview") {
@@ -362,6 +366,8 @@ export default function UserDashboard() {
             searchVal={searchVal}
             onSearchChange={setSearchVal}
             onMenuClick={handleToggleSidebar}
+            onProfileClick={() => navigateTo("profile")}
+            onSettingsClick={() => navigateTo("settings")}
           />
         )}
         <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
@@ -384,6 +390,10 @@ export default function UserDashboard() {
               onResumeClick={(courseId, trackId) => navigateTo(`track:${courseId}:${trackId}`)}
             />
           )}
+
+          {viewState.type === "profile" && <ProfileView />}
+
+          {viewState.type === "settings" && <SettingsView />}
 
           {viewState.type === "course" && viewState.course && (
             <CourseTracksView
