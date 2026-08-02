@@ -13,6 +13,7 @@ import OtpPage from "./pages/OtpPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import UserDashboard from "./pages/dashboard/UserDashboard";
 import GoogleCompletePage from "./pages/GoogleCompletePage";
+import CommunityPage from "./pages/CommunityPage";
 import { setTokens, setUser, getAccessToken, getRefreshToken } from "./services/tokenService";
 
 function requireAuth() {
@@ -75,6 +76,7 @@ export default function App() {
     case "/forgot-password":      return <ForgotPasswordPage />;
     case "/reset-password":       return <ForgotPasswordPage />;
     case "/dashboard":            return requireAuth() ? <UserDashboard /> : null;
+    case "/community":            return requireAuth() ? <CommunityPage /> : null;
     case "/auth/google/complete": return <GoogleCompletePage />;
     default:
       return (
