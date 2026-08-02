@@ -23,6 +23,11 @@ function buildQuery(params: ListDiscussionsParams): string {
   return search.toString();
 }
 
+// The exact response wrapper wasn't confirmed against the live API, so this
+// tolerates a couple of shapes instead of assuming { success, data }:
+// - { success, data: [...] }
+// - { data: [...] }
+// - [...] directly
 function unwrapList<T>(res: unknown): T[] {
   if (Array.isArray(res)) return res as T[];
   const data = (res as { data?: unknown })?.data;
