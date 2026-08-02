@@ -23,11 +23,61 @@ function buildQuery(params: ListDiscussionsParams): string {
   return search.toString();
 }
 
+function unwrapList<T>(res: unknown): T[] {
+  if (Array.isArray(res)) return res as T[];
+  const data = (res as { data?: unknown })?.data;
+  if (Array.isArray(data)) return data as T[];
+  return [];
+}
+
+function unwrapItem<T>(res: unknown): T | null {
+  const data = (res as { data?: unknown })?.data;
+  if (data && typeof data === "object") return data as T;
+  if (res && typeof res === "object" && !("success" in (res as object))) return res as T;
+  return null;
+}
+
+function normalizeDiscussion(raw: unknown): Discussion {
+  const d = (raw ?? {}) as Partial<Discussion>;
+  return {
+    id: d.id ?? 0,
+    title: d.title ?? "",
+    body: d.body ?? "",
+    unitId: d.unitId ?? null,
+    moduleId: d.moduleId ?? null,
+    author: d.author ?? { id: 0, fullName: "Unknown" },
+    replyCount: d.replyCount ?? 0,
+    isPinned: d.isPinned ?? false,
+    isLocked: d.isLocked ?? false,
+    createdAt: d.createdAt ?? new Date().toISOString(),
+    updatedAt: d.updatedAt ?? d.createdAt ?? new Date().toISOString(),
+  };
+}
+
+function normalizeThread(raw: unknown): DiscussionWithReplies {
+  const base = normalizeDiscussion(raw);
+  const replies = (raw as { replies?: unknown })?.replies;
+  return {
+    ...base,
+    replies: Array.isArray(replies) ? (replies as DiscussionReply[]) : [],
+  };
+}
+
+function normalizeReply(raw: unknown): DiscussionReply {
+  const r = (raw ?? {}) as Partial<DiscussionReply>;
+  return {
+    id: r.id ?? 0,
+    body: r.body ?? "",
+    author: r.author ?? { id: 0, fullName: "Unknown" },
+    createdAt: r.createdAt ?? new Date().toISOString(),
+  };
+}
+
 export const discussionService = {
   /** GET /discussions — filterable by unitId/moduleId, paginated, pinned-first. */
   listDiscussions: async (params: ListDiscussionsParams = {}): Promise<Discussion[]> => {
     const res = await apiRequest<DiscussionListResponse>(`/discussions?${buildQuery(params)}`);
-    return res.data;
+    return unwrapList<unknown>(res).map(normalizeDiscussion);
   },
 
   /** POST /discussions — starts a new thread. */
@@ -36,13 +86,13 @@ export const discussionService = {
       method: "POST",
       body: payload,
     });
-    return res.data;
+    return normalizeThread(unwrapItem(res));
   },
 
   /** GET /discussions/{id} — thread with all replies. */
   getDiscussion: async (id: number): Promise<DiscussionWithReplies> => {
     const res = await apiRequest<DiscussionResponse>(`/discussions/${id}`);
-    return res.data;
+    return normalizeThread(unwrapItem(res));
   },
 
   /** PATCH /discussions/{id} — author or admin only. */
@@ -51,7 +101,7 @@ export const discussionService = {
       method: "PATCH",
       body: payload,
     });
-    return res.data;
+    return normalizeThread(unwrapItem(res));
   },
 
   /** DELETE /discussions/{id} — author or admin only. */
@@ -64,7 +114,7 @@ export const discussionService = {
       method: "POST",
       body: payload,
     });
-    return res.data;
+    return normalizeReply(unwrapItem(res));
   },
 
   /** DELETE /discussions/{discussionId}/replies/{replyId} — author or admin only. */
@@ -79,7 +129,7 @@ export const discussionService = {
       method: "PATCH",
       body: payload,
     });
-    return res.data;
+    return normalizeDiscussion(unwrapItem(res));
   },
 
   /** PATCH /discussions/{id}/lock — admin only. */
@@ -88,7 +138,6 @@ export const discussionService = {
       method: "PATCH",
       body: payload,
     });
-    return res.data;
+    return normalizeDiscussion(unwrapItem(res));
   },
 };
-
