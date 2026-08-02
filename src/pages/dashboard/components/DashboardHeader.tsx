@@ -1,12 +1,15 @@
-import { useState, useEffect } from "react";
-import { Bell, Search, Menu } from "lucide-react";
-import { getUser } from "../../../services/tokenService";
+import { useState, useEffect, useRef } from "react";
+import { Bell, Search, Menu, User, Settings, LogOut } from "lucide-react";
+import { getUser, getRefreshToken, clearTokens } from "../../../services/tokenService";
+import { authService } from "../../../services/authService";
 
 interface DashboardHeaderProps {
   activeNav: string;
   searchVal: string;
   onSearchChange: (val: string) => void;
   onMenuClick?: () => void;
+  onProfileClick?: () => void;
+  onSettingsClick?: () => void;
 }
 
 function getInitials(fullName: string): string {
@@ -23,8 +26,13 @@ export default function DashboardHeader({
   searchVal,
   onSearchChange,
   onMenuClick,
+  onProfileClick,
+  onSettingsClick,
 }: DashboardHeaderProps) {
   const [user, setUserState] = useState(getUser());
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleStorageChange = () => setUserState(getUser());
@@ -41,6 +49,41 @@ export default function DashboardHeader({
       clearInterval(interval);
     };
   }, []);
+
+  // Close the dropdown on outside click or Escape.
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isMenuOpen]);
+
+  const handleLogout = async () => {
+    setIsMenuOpen(false);
+    setIsLoggingOut(true);
+    const refreshToken = getRefreshToken();
+    try {
+      if (refreshToken) {
+        await authService.logout({ refreshToken });
+      }
+    } catch {
+      // Even if the server call fails, still clear the local session below.
+    } finally {
+      clearTokens();
+      window.location.href = "/login";
+    }
+  };
 
   const initials = user?.fullName ? getInitials(user.fullName) : "U";
 
@@ -114,19 +157,103 @@ export default function DashboardHeader({
           />
         </button>
 
-        <div
-          title={user?.fullName || "User"}
-          style={{
-            width: "40px", height: "40px", minWidth: "36px", borderRadius: "50%",
-            backgroundColor: "#1e2e55", color: "#c0c6d8",
-            fontSize: "12px", fontWeight: "700",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", letterSpacing: "0.3px",
-          }}
-        >
-          {initials}
+        <div ref={menuRef} className="relative">
+          <button
+            title={user?.fullName || "User"}
+            aria-label="Account menu"
+            aria-haspopup="true"
+            aria-expanded={isMenuOpen}
+            onClick={() => setIsMenuOpen((prev) => !prev)}
+            style={{
+              width: "40px", height: "40px", minWidth: "36px", borderRadius: "50%",
+              backgroundColor: "#1e2e55", color: "#c0c6d8",
+              fontSize: "12px", fontWeight: "700",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", letterSpacing: "0.3px",
+              border: isMenuOpen ? "2px solid #006400" : "2px solid transparent",
+              padding: 0,
+            }}
+          >
+            {initials}
+          </button>
+
+          {isMenuOpen && (
+            <div
+              role="menu"
+              className="absolute right-0 mt-2 z-20"
+              style={{
+                width: "220px",
+                backgroundColor: "#ffffff",
+                border: "1px solid #e0e0e0",
+                borderRadius: "10px",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  padding: "12px 14px",
+                  borderBottom: "1px solid #eeeeee",
+                }}
+              >
+                <div
+                  className="font-body"
+                  style={{ fontSize: "13px", fontWeight: 600, color: "#222222", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                >
+                  {user?.fullName || "User"}
+                </div>
+                {user?.email && (
+                  <div
+                    className="font-body"
+                    style={{ fontSize: "11px", color: "#888888", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                  >
+                    {user.email}
+                  </div>
+                )}
+              </div>
+
+              <button
+                role="menuitem"
+                onClick={() => { setIsMenuOpen(false); onProfileClick?.(); }}
+                className="w-full flex items-center gap-2.5 font-body transition-colors duration-150"
+                style={{ padding: "10px 14px", fontSize: "13px", color: "#333333", backgroundColor: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f5f5f5"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+              >
+                <User size={15} style={{ color: "#888888" }} />
+                Profile
+              </button>
+
+              <button
+                role="menuitem"
+                onClick={() => { setIsMenuOpen(false); onSettingsClick?.(); }}
+                className="w-full flex items-center gap-2.5 font-body transition-colors duration-150"
+                style={{ padding: "10px 14px", fontSize: "13px", color: "#333333", backgroundColor: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#f5f5f5"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+              >
+                <Settings size={15} style={{ color: "#888888" }} />
+                Settings
+              </button>
+
+              <div style={{ borderTop: "1px solid #eeeeee" }}>
+                <button
+                  role="menuitem"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="w-full flex items-center gap-2.5 font-body transition-colors duration-150"
+                  style={{ padding: "10px 14px", fontSize: "13px", color: "#b91c1c", backgroundColor: "transparent", border: "none", cursor: isLoggingOut ? "default" : "pointer", textAlign: "left", opacity: isLoggingOut ? 0.6 : 1 }}
+                  onMouseEnter={(e) => { if (!isLoggingOut) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#fef2f2"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+                >
+                  <LogOut size={15} style={{ color: "#b91c1c" }} />
+                  {isLoggingOut ? "Logging out..." : "Log out"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>
   );
-}
+      }
